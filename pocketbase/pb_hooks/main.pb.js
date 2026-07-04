@@ -304,7 +304,7 @@ onRecordAfterCreateSuccess((e) => {
   } catch {
     existing = null
   }
-  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug")
+  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug") && !e.record.get("suspended")
   if (!isPublic) {
     if (existing) e.app.delete(existing)
     e.next()
@@ -348,7 +348,7 @@ onRecordAfterUpdateSuccess((e) => {
   } catch {
     existing = null
   }
-  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug")
+  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug") && !e.record.get("suspended")
   if (!isPublic) {
     if (existing) e.app.delete(existing)
     e.next()
