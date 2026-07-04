@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { trackEvent } from "@/lib/track";
+import { emitActivity } from "@/lib/emit-activity";
 import {
   CATEGORIES,
   EXPERIENCE,
@@ -334,6 +335,7 @@ export function JobPostForm({
         featuredUntil: autoFeaturedUntil,
       });
       trackEvent("Empresa: aviso publicado");
+      emitActivity("job_created", { jobId: record.id });
       try {
         window.localStorage.removeItem(draftKey(mode));
       } catch {

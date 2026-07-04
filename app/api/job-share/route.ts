@@ -1,6 +1,7 @@
 import { NextResponse } from "next/server";
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { logActivity } from "@/lib/activity";
+import { coarseLocality } from "@/lib/anonymize";
 
 const VALID_PLATFORMS = new Set(["whatsapp", "x", "instagram"]);
 
@@ -24,7 +25,7 @@ export async function POST(req: Request) {
     await logActivity(admin, {
       type: "job_shared",
       actorType: "company",
-      zone: (job.address_zone as string) || "",
+      zone: coarseLocality((job.address_zone as string) || "", true),
       jobId,
       visibility: "public",
       metadata: { platform, category: (job.category as string) || "" },

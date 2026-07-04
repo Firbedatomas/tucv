@@ -80,17 +80,16 @@ export async function GET(req: Request) {
     for (const e of events.items) {
       const meta = (e.metadata as { category?: string }) ?? {};
       const type = e.type as string;
-      const text =
-        type === "job_shared"
-          ? `Compartieron una búsqueda de ${categoryLabel(meta.category ?? "")}`
-          : "Movimiento en TuCV";
-      items.push({
-        id: `ev_${e.id}`,
-        kind: type,
-        text,
-        zone: coarseLocality(e.zone as string, true),
-        at: e.created as string,
-      });
+      const cat = categoryLabel(meta.category ?? "");
+      // job_created / candidate_registered / public_enabled ya salen por los
+      // items derivados (recentJobs / recentCands) -> no los duplicamos acá.
+      let text: string | null = null;
+      if (type === "job_shared") text = `Compartieron una búsqueda de ${cat}`;
+      else if (type === "application_sent") text = `Nueva postulación en ${cat}`;
+      else if (type === "profile_completed") text = `Nuevo perfil completo de ${cat}`;
+      if (!text) continue;
+      // La zona ya viene anonimizada desde el emisor (/api/activity, job-share).
+      items.push({ id: `ev_${e.id}`, kind: type, text, zone: (e.zone as string) || "", at: e.created as string });
     }
 
     items.sort((a, b) => (a.at < b.at ? 1 : -1));
