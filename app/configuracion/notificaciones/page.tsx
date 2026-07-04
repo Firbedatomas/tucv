@@ -14,6 +14,9 @@ type Prefs = {
   profileViewsFrequency: "weekly" | "never";
   profileTips: boolean;
   marketing: boolean;
+  quietHoursEnabled: boolean;
+  quietHoursStart: number;
+  quietHoursEnd: number;
 };
 
 // Comparte esta pantalla entre postulante y empresa a propósito (misma
@@ -39,6 +42,9 @@ export default function NotificacionesPage() {
           profileViewsFrequency: record.profile_views_frequency || "weekly",
           profileTips: record.profile_tips !== false,
           marketing: record.marketing === true,
+          quietHoursEnabled: typeof record.quiet_hours_start === "number" && typeof record.quiet_hours_end === "number",
+          quietHoursStart: typeof record.quiet_hours_start === "number" ? record.quiet_hours_start : 20,
+          quietHoursEnd: typeof record.quiet_hours_end === "number" ? record.quiet_hours_end : 8,
         }),
       )
       .catch(() => {
@@ -59,6 +65,10 @@ export default function NotificacionesPage() {
               profileViewsFrequency: record.profileViewsFrequency,
               profileTips: record.profileTips,
               marketing: record.marketing,
+              quietHoursEnabled:
+                typeof record.quietHoursStart === "number" && typeof record.quietHoursEnd === "number",
+              quietHoursStart: typeof record.quietHoursStart === "number" ? record.quietHoursStart : 20,
+              quietHoursEnd: typeof record.quietHoursEnd === "number" ? record.quietHoursEnd : 8,
             }),
           )
           .catch(() => {});
@@ -76,6 +86,10 @@ export default function NotificacionesPage() {
         profile_views_frequency: next.profileViewsFrequency,
         profile_tips: next.profileTips,
         marketing: next.marketing,
+        // Ambos en null = horario silencioso apagado (así lo lee
+        // isWithinQuietHours en lib/email/quiet-hours.ts).
+        quiet_hours_start: next.quietHoursEnabled ? next.quietHoursStart : null,
+        quiet_hours_end: next.quietHoursEnabled ? next.quietHoursEnd : null,
       });
       setSaved(true);
       setTimeout(() => setSaved(false), 2000);
@@ -151,6 +165,50 @@ export default function NotificacionesPage() {
             <input type="checkbox" checked={prefs.marketing} onChange={(e) => save({ ...prefs, marketing: e.target.checked })} />
             Novedades de TuCV
           </label>
+
+          <div className="mt-4 pt-4" style={{ borderTop: "1.5px solid var(--tucv-border)" }}>
+            <label className="flex items-center gap-2 text-sm">
+              <input
+                type="checkbox"
+                checked={prefs.quietHoursEnabled}
+                onChange={(e) => save({ ...prefs, quietHoursEnabled: e.target.checked })}
+              />
+              Horario silencioso (no recibir emails en un rango de horas)
+            </label>
+            {prefs.quietHoursEnabled && (
+              <div className="flex items-center gap-2 mt-3 text-sm flex-wrap">
+                <span style={{ color: "var(--tucv-muted)" }}>Desde</span>
+                <select
+                  className={inputClass}
+                  style={{ ...inputStyle, width: "auto" }}
+                  value={prefs.quietHoursStart}
+                  onChange={(e) => save({ ...prefs, quietHoursStart: Number(e.target.value) })}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, "0")}:00
+                    </option>
+                  ))}
+                </select>
+                <span style={{ color: "var(--tucv-muted)" }}>hasta</span>
+                <select
+                  className={inputClass}
+                  style={{ ...inputStyle, width: "auto" }}
+                  value={prefs.quietHoursEnd}
+                  onChange={(e) => save({ ...prefs, quietHoursEnd: Number(e.target.value) })}
+                >
+                  {Array.from({ length: 24 }, (_, h) => (
+                    <option key={h} value={h}>
+                      {String(h).padStart(2, "0")}:00
+                    </option>
+                  ))}
+                </select>
+                <span className="text-xs w-full" style={{ color: "var(--tucv-muted)" }}>
+                  Los avisos que caigan en ese rango llegan cuando termina, no se pierden. Hora de Argentina.
+                </span>
+              </div>
+            )}
+          </div>
 
           <div className="mt-3 h-5">
             {saving && (

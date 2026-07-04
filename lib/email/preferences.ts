@@ -63,9 +63,7 @@ export async function getPreferencesByUnsubscribeToken(token: string): Promise<N
   return record ? mapRecord(record as unknown as Record<string, unknown>) : null;
 }
 
-// Nota: horario silencioso (quiet_hours_start/end) queda guardado en el
-// modelo pero todavía NO se aplica al envío -- respetarlo de verdad
-// significa NO perder el email (reprogramarlo para después de las 8am), lo
-// que necesita una cola con reintento (ver Fase 3: digests + cron). Aplicar
-// el corte ahora sin esa cola sería simplemente descartar el email en
-// silencio, peor que ignorarlo por ahora.
+// Horario silencioso (quiet_hours_start/end): se aplica en
+// lib/email/send.ts -- un email que cae dentro de la ventana se encola
+// (lib/email/queue.ts) y lo manda /api/cron/flush-email-queue cuando la
+// ventana termina, en vez de descartarlo. Ver lib/email/quiet-hours.ts.

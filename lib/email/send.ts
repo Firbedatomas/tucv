@@ -2,6 +2,8 @@ import "server-only";
 import { EMAIL_FROM, getResendClient } from "@/lib/email/client";
 import { logEmailEvent } from "@/lib/email/log";
 import { getOrCreatePreferences, type NotificationPreferences } from "@/lib/email/preferences";
+import { enqueueEmail } from "@/lib/email/queue";
+import { currentHourInArgentina, isWithinQuietHours, nextQuietHoursEndUtc } from "@/lib/email/quiet-hours";
 import { isSuppressed } from "@/lib/email/suppression";
 import type { EmailType, RenderedEmail } from "@/lib/email/types";
 
@@ -16,11 +18,6 @@ const GATES: Partial<Record<EmailType, (prefs: NotificationPreferences) => boole
   profile_started: (prefs) => prefs.profileTips,
   profile_completed: (prefs) => prefs.profileTips,
   public_profile_enabled: (prefs) => prefs.profileTips,
-  // "daily" también desactiva el envío instantáneo -- hoy (Fase 1) todavía
-  // no existe el digest diario que lo reemplace (Fase 3), así que con
-  // "daily" el aviso simplemente no llega hasta que se construya ese
-  // digest. No es pérdida de datos: la postulación/búsqueda sigue
-  // existiendo, solo cambia CUÁNDO se avisa por mail.
   application_received_candidate: (prefs) => prefs.applicationsFrequency === "instant",
   new_application_company: (prefs) => prefs.applicationsFrequency === "instant",
   // El digest diario de empresa cubre dos preferencias: la explícita
@@ -33,31 +30,31 @@ const GATES: Partial<Record<EmailType, (prefs: NotificationPreferences) => boole
   candidate_weekly_profile_views: (prefs) => prefs.profileViewsFrequency !== "never",
 };
 
-export type SendResult = { sent: boolean; reason?: "suppressed" | "preference" | "no_client" | "error" };
+export type SendResult = {
+  sent: boolean;
+  reason?: "suppressed" | "preference" | "no_client" | "error" | "deferred";
+};
 
-export async function sendTransactionalEmail(params: {
+// Envío real (Resend) + logging + chequeo de supresión. Separado de
+// sendTransactionalEmail para que el flush de la cola (app/api/cron/
+// flush-email-queue) lo reuse sin volver a pasar por gates/quiet-hours (que
+// ya se evaluaron al encolar -- reevaluarlos ahí podría re-diferir el mismo
+// email para siempre). Rechequea supresión a propósito: entre encolar y
+// mandar pudo rebotar/quejarse la dirección.
+export async function deliverEmail(params: {
   type: EmailType;
   to: string;
   userId?: string;
   rendered: RenderedEmail;
   unsubscribeUrl?: string;
   metadata?: Record<string, unknown>;
+  skipSuppressionCheck?: boolean;
 }): Promise<SendResult> {
-  const { type, to, userId, rendered, unsubscribeUrl, metadata } = params;
+  const { type, to, userId, rendered, unsubscribeUrl, metadata, skipSuppressionCheck } = params;
 
-  if (await isSuppressed(to)) {
+  if (!skipSuppressionCheck && (await isSuppressed(to))) {
     await logEmailEvent({ userId, email: to, type, status: "suppressed", metadata });
     return { sent: false, reason: "suppressed" };
-  }
-
-  if (userId) {
-    const gate = GATES[type];
-    if (gate) {
-      const prefs = await getOrCreatePreferences(userId);
-      if (!gate(prefs)) {
-        return { sent: false, reason: "preference" };
-      }
-    }
   }
 
   const resend = getResendClient();
@@ -103,4 +100,51 @@ export async function sendTransactionalEmail(params: {
     metadata,
   });
   return { sent: true };
+}
+
+export async function sendTransactionalEmail(params: {
+  type: EmailType;
+  to: string;
+  userId?: string;
+  rendered: RenderedEmail;
+  unsubscribeUrl?: string;
+  metadata?: Record<string, unknown>;
+  now?: Date;
+}): Promise<SendResult> {
+  const { type, to, userId, rendered, unsubscribeUrl, metadata } = params;
+  // `now` inyectable para tests -- ver el default acá y no un Date.now()
+  // suelto adentro.
+  const now = params.now ?? new Date();
+
+  if (await isSuppressed(to)) {
+    await logEmailEvent({ userId, email: to, type, status: "suppressed", metadata });
+    return { sent: false, reason: "suppressed" };
+  }
+
+  if (userId) {
+    const prefs = await getOrCreatePreferences(userId);
+
+    const gate = GATES[type];
+    if (gate && !gate(prefs)) {
+      return { sent: false, reason: "preference" };
+    }
+
+    // Horario silencioso: si estamos dentro de la ventana del usuario, en vez
+    // de descartar el email lo encolamos para después de que termine (lo
+    // manda /api/cron/flush-email-queue). "descartar" en silencio sería peor
+    // que ignorar la preferencia -- por eso no se aplicaba hasta tener esta
+    // cola. Nota: los digests salen del cron a una hora controlada (ej. 9am),
+    // así que en la práctica esto solo difiere los avisos instantáneos.
+    const hour = currentHourInArgentina(now);
+    if (isWithinQuietHours(hour, prefs.quietHoursStart, prefs.quietHoursEnd)) {
+      const scheduledFor = nextQuietHoursEndUtc(now, prefs.quietHoursEnd as number);
+      await enqueueEmail({ type, to, userId, rendered, unsubscribeUrl, scheduledFor });
+      await logEmailEvent({ userId, email: to, type, status: "queued", metadata });
+      return { sent: false, reason: "deferred" };
+    }
+  }
+
+  // Supresión ya chequeada arriba -- no repetir la consulta en el camino
+  // caliente (cada postulación pasa por acá).
+  return deliverEmail({ type, to, userId, rendered, unsubscribeUrl, metadata, skipSuppressionCheck: true });
 }

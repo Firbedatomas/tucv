@@ -2,9 +2,19 @@ import "server-only";
 import { NextRequest, NextResponse } from "next/server";
 import { cookies } from "next/headers";
 import PocketBase from "pocketbase";
-import { ADMIN_SESSION_COOKIE, createAdminSessionCookieValue } from "@/lib/admin-session";
+import { ADMIN_SESSION_COOKIE, createAdminSessionCookieValue, verifyAdminSessionCookieValue } from "@/lib/admin-session";
 
 const POCKETBASE_URL = process.env.POCKETBASE_URL || "http://127.0.0.1:8092";
+
+// Excluido del proxy (proxy.ts) igual que el POST -- la cookie de admin es
+// httpOnly (no la puede leer el JS del cliente), así que el Navbar
+// compartido necesita esta ruta para saber si mostrar el link/identidad de
+// admin. No expone nada sensible más allá de "sos admin sí/no" + el email.
+export async function GET() {
+  const store = await cookies();
+  const email = await verifyAdminSessionCookieValue(store.get(ADMIN_SESSION_COOKIE)?.value);
+  return NextResponse.json({ isAdmin: Boolean(email), email: email ?? null });
+}
 
 // Excluido del chequeo de cookie en middleware.ts a propósito -- este es el
 // endpoint que la CREA. La seguridad acá no depende de la cookie sino de

@@ -109,4 +109,59 @@ describe("sendTransactionalEmail", () => {
     expect(call.headers["List-Unsubscribe"]).toContain("https://tucv.ar/api/email/unsubscribe?token=abc");
     expect(call.headers["List-Unsubscribe-Post"]).toBe("List-Unsubscribe=One-Click");
   });
+
+  it("defers an email into the queue instead of sending when inside quiet hours", async () => {
+    fakeAdmin.current = createFakeAdmin({
+      notification_preferences: [
+        {
+          id: "np_q",
+          user: "user_q",
+          applications_frequency: "instant",
+          quiet_hours_start: 20,
+          quiet_hours_end: 8,
+          unsubscribe_token: "tok",
+        },
+      ],
+    });
+    // 01:00 UTC = 22:00 en Argentina -> dentro de la ventana 20-08.
+    const result = await sendTransactionalEmail({
+      type: "application_received_candidate",
+      to: "juan@ejemplo.com",
+      userId: "user_q",
+      rendered: RENDERED,
+      now: new Date("2026-07-05T01:00:00Z"),
+    });
+    expect(result.sent).toBe(false);
+    expect(result.reason).toBe("deferred");
+    expect(fakeResend.current!.emails.send).not.toHaveBeenCalled();
+    const store = (fakeAdmin.current as unknown as { _store: Record<string, unknown[]> })._store;
+    expect(store.email_queue).toHaveLength(1);
+    const events = store.email_events as Record<string, unknown>[];
+    expect(events[events.length - 1].status).toBe("queued");
+  });
+
+  it("sends normally (no defer) when outside the quiet-hours window", async () => {
+    fakeAdmin.current = createFakeAdmin({
+      notification_preferences: [
+        {
+          id: "np_q2",
+          user: "user_q2",
+          applications_frequency: "instant",
+          quiet_hours_start: 20,
+          quiet_hours_end: 8,
+          unsubscribe_token: "tok",
+        },
+      ],
+    });
+    // 12:00 UTC = 09:00 en Argentina -> fuera de la ventana 20-08.
+    const result = await sendTransactionalEmail({
+      type: "application_received_candidate",
+      to: "juan@ejemplo.com",
+      userId: "user_q2",
+      rendered: RENDERED,
+      now: new Date("2026-07-05T12:00:00Z"),
+    });
+    expect(result.sent).toBe(true);
+    expect(fakeResend.current!.emails.send).toHaveBeenCalledTimes(1);
+  });
 });

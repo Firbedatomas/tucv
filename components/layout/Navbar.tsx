@@ -170,7 +170,54 @@ export function Navbar() {
   // dropdown atrás de este toggle. En sm:+ se ve todo inline como antes.
   const [menuOpen, setMenuOpen] = useState(false);
 
-  const navLinks = isBusiness ? (
+  // La sesión de admin es una cookie httpOnly aparte (tucv_admin_session,
+  // ver lib/admin-session.ts) -- este Navbar no la puede leer directo, así
+  // que la consulta a /api/admin/session. Antes de esto, un admin navegando
+  // el sitio público (login de Google real en `users`, sin business_accounts
+  // ni candidate_profiles) hacía que isAuthenticated diera true pero
+  // isBusiness/postulanteProfile quedaran vacíos -- el navbar renderizaba la
+  // rama "autenticado" sin nada adentro (ni links, ni identidad, ni el link
+  // a /admin), en vez de mostrar algo útil o caer al navbar público.
+  const [isAdmin, setIsAdmin] = useState(false);
+  const [adminEmail, setAdminEmail] = useState<string | null>(null);
+
+  useEffect(() => {
+    fetch("/api/admin/session")
+      .then((r) => r.json())
+      .then((data: { isAdmin: boolean; email: string | null }) => {
+        setIsAdmin(data.isAdmin);
+        setAdminEmail(data.email);
+      })
+      .catch(() => {});
+  }, []);
+
+  async function handleAdminLogout() {
+    await fetch("/api/admin/session", { method: "DELETE" }).catch(() => {});
+    window.location.href = "/";
+  }
+
+  // Ni dueño/colaborador de negocio, ni postulante, ni admin -- no hay nada
+  // "autenticado" que mostrar (aunque isAuthenticated sea true por alguna
+  // sesión de Google residual), así que cae al navbar público en vez de un
+  // shell vacío.
+  const showAuthedNav = isAdmin || isBusiness || Boolean(postulanteProfile);
+
+  const navLinks = isAdmin ? (
+    <Link
+      href="/admin"
+      className="text-sm font-bold px-3 py-1.5 text-center"
+      style={{
+        backgroundColor: "var(--tucv-accent)",
+        color: "var(--tucv-text)",
+        border: "2px solid var(--tucv-border)",
+        borderRadius: "var(--tucv-radius)",
+        boxShadow: "2px 2px 0 var(--tucv-border)",
+      }}
+      onClick={() => setMenuOpen(false)}
+    >
+      Panel admin
+    </Link>
+  ) : isBusiness ? (
     <>
       <Link href="/empresa/panel" className={linkClass} style={{ color: "var(--tucv-text)" }} onClick={() => setMenuOpen(false)}>
         Mis búsquedas
@@ -202,7 +249,14 @@ export function Navbar() {
     </>
   ) : null;
 
-  const identity = isBusiness
+  const identity = isAdmin ? (
+    <IdentityDropdown
+      name={adminEmail ?? "Admin"}
+      profileHref="/admin"
+      profileLabel="Panel admin"
+      onLogout={handleAdminLogout}
+    />
+  ) : isBusiness
     ? business && (
         <IdentityDropdown
           name={business.business_name}
@@ -232,11 +286,25 @@ export function Navbar() {
           <Logo />
         </Link>
 
-        {isAuthenticated ? (
+        {showAuthedNav ? (
           <>
             {/* Mobile: dropdown (sin nombre, ya se ve como avatar solo) + toggle de links. Todo en una línea. */}
             <div className="flex sm:hidden items-center gap-3">
               {identity}
+              {isAdmin && (
+                <Link
+                  href="/admin"
+                  className="text-xs font-bold px-2 py-1"
+                  style={{
+                    backgroundColor: "var(--tucv-accent)",
+                    color: "var(--tucv-text)",
+                    border: "2px solid var(--tucv-border)",
+                    borderRadius: "var(--tucv-radius)",
+                  }}
+                >
+                  Panel admin
+                </Link>
+              )}
               {isBusiness && (
                 <button
                   type="button"
