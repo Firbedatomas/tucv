@@ -2,6 +2,7 @@
 
 import { useBusinessAuth } from "@/lib/use-business-auth";
 import { JobPostList } from "@/components/empresa/JobPostList";
+import { ExportApplicationsButton } from "@/components/empresa/ExportApplicationsButton";
 import { LinkButton } from "@/components/ui/Button";
 
 export default function PanelEmpresaPage() {
@@ -42,6 +43,7 @@ export default function PanelEmpresaPage() {
               <LinkButton href="/empresa/candidatos" variant="secondary">
                 Buscar candidatos
               </LinkButton>
+              <ExportApplicationsButton />
             </div>
           )}
         </div>
