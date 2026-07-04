@@ -5,6 +5,7 @@ import { pbAdmin } from "@/lib/pocketbase-admin";
 import { getOrCreatePreferences } from "@/lib/email/preferences";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildCandidateInvitationEmail } from "@/lib/email/templates/candidate-invitation";
+import { logActivity } from "@/lib/activity";
 
 const POCKETBASE_URL = process.env.POCKETBASE_URL || "http://127.0.0.1:8092";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
@@ -70,6 +71,18 @@ export async function POST(req: Request) {
         { status: 409 },
       );
     }
+
+    // Evento interno (no sale en el feed público: invitar es sensible), sirve
+    // para métricas de "empresas moviéndose".
+    await logActivity(admin, {
+      type: "company_invited_candidate",
+      actorType: "company",
+      zone: (business.city_zone as string) || "",
+      jobId: jobPostId,
+      candidateId,
+      visibility: "internal",
+      metadata: { jobTitle: (job.role as string) || (job.name as string) || "" },
+    });
 
     // Email best-effort: solo si el candidato tiene cuenta con email. Los
     // perfiles anónimos igual ven la invitación in-app en su editor.

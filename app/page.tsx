@@ -1,5 +1,6 @@
 import { LinkButton } from "@/components/ui/Button";
 import { HeroVisual } from "@/components/landing/HeroVisual";
+import { LiveActivity } from "@/components/landing/LiveActivity";
 import { LiveJobsFeed } from "@/components/landing/LiveJobsFeed";
 import { BeforeAfter } from "@/components/landing/BeforeAfter";
 import { CategoryChips } from "@/components/landing/CategoryChips";
@@ -53,6 +54,7 @@ export default function LandingPage() {
         </div>
       </section>
 
+      <LiveActivity />
       <LiveJobsFeed />
       <BeforeAfter />
       <CategoryChips />
