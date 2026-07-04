@@ -45,6 +45,23 @@ type JobPost = {
   expand?: { business?: { plan?: string; business_name?: string; logo?: string; collectionId?: string; id?: string } };
 };
 
+type HistoryEvent = {
+  id: string;
+  status: string;
+  from_status: string | null;
+  note: string | null;
+  by: string | null;
+  byMe: boolean;
+  created: string;
+};
+
+function formatEventDate(iso: string): string {
+  const d = new Date(iso);
+  const day = d.toLocaleDateString("es-AR", { day: "numeric", month: "short" });
+  const time = d.toLocaleTimeString("es-AR", { hour: "2-digit", minute: "2-digit" });
+  return `${day} · ${time}`;
+}
+
 const STATUS_ACTIONS: { status: string; label: string }[] = [
   { status: "contactado", label: "Contactar" },
   { status: "entrevista", label: "Entrevista" },
@@ -63,6 +80,11 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
   const [notFound, setNotFound] = useState(false);
   const [togglingActive, setTogglingActive] = useState(false);
   const [favoritesCount, setFavoritesCount] = useState<number | null>(null);
+  // Nota interna en borrador por postulante (se adjunta al próximo cambio de
+  // estado o se guarda sola) e historial cargado por postulante.
+  const [noteDrafts, setNoteDrafts] = useState<Record<string, string>>({});
+  const [history, setHistory] = useState<Record<string, HistoryEvent[]>>({});
+  const [savingNoteId, setSavingNoteId] = useState<string | null>(null);
 
   useEffect(() => {
     const client = pb();
@@ -90,15 +112,63 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
       .catch(() => setFavoritesCount(null));
   }, [jobPostId]);
 
+  async function loadHistory(applicationId: string) {
+    try {
+      const res = await fetch(`/api/applications/${applicationId}/status`, {
+        headers: { Authorization: `Bearer ${pb().authStore.token}` },
+      });
+      if (!res.ok) return;
+      const data = await res.json();
+      setHistory((prev) => ({ ...prev, [applicationId]: data.events ?? [] }));
+    } catch {
+      // el historial es informativo; si falla, no rompemos la pantalla
+    }
+  }
+
+  function toggleExpand(applicationId: string) {
+    const next = expandedId === applicationId ? null : applicationId;
+    setExpandedId(next);
+    if (next && !history[next]) loadHistory(next);
+  }
+
+  // Todo cambio de estado (y toda nota interna) pasa por el server: escribe el
+  // evento de auditoría con quién/desde-qué-estado/nota, cosa que no se puede
+  // hacer client-side (createRule de application_status_events cerrado).
+  async function submitChange(applicationId: string, newStatus: string, note: string) {
+    const res = await fetch(`/api/applications/${applicationId}/status`, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ pbToken: pb().authStore.token, status: newStatus, note }),
+    });
+    if (!res.ok) throw new Error("update-failed");
+    setApplications(
+      (prev) => prev?.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)) ?? prev,
+    );
+    setNoteDrafts((prev) => ({ ...prev, [applicationId]: "" }));
+    if (expandedId === applicationId) loadHistory(applicationId);
+  }
+
   async function updateStatus(applicationId: string, newStatus: string) {
     setUpdatingId(applicationId);
     try {
-      await pb().collection("applications").update(applicationId, { status: newStatus });
-      setApplications(
-        (prev) => prev?.map((a) => (a.id === applicationId ? { ...a, status: newStatus } : a)) ?? prev,
-      );
+      await submitChange(applicationId, newStatus, (noteDrafts[applicationId] ?? "").trim());
+    } catch {
+      // no cambiamos el estado local si falló
     } finally {
       setUpdatingId(null);
+    }
+  }
+
+  async function saveNoteOnly(applicationId: string, currentStatus: string) {
+    const note = (noteDrafts[applicationId] ?? "").trim();
+    if (!note) return;
+    setSavingNoteId(applicationId);
+    try {
+      await submitChange(applicationId, currentStatus, note);
+    } catch {
+      // idem
+    } finally {
+      setSavingNoteId(null);
     }
   }
 
@@ -373,7 +443,7 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
                         <div className="flex flex-wrap gap-2 mt-3">
                           <button
                             type="button"
-                            onClick={() => setExpandedId(expanded ? null : app.id)}
+                            onClick={() => toggleExpand(app.id)}
                             className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border"
                             style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-text)" }}
                           >
@@ -426,6 +496,75 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
                             );
                           })}
                         </div>
+
+                        {expanded && (
+                          <div
+                            className="mt-4 p-3 rounded-[var(--tucv-radius)] space-y-4"
+                            style={{ backgroundColor: "var(--tucv-bg)", border: "1.5px solid var(--tucv-border)" }}
+                          >
+                            <div>
+                              <label
+                                className="text-xs font-semibold uppercase tracking-wide block mb-1.5"
+                                style={{ color: "var(--tucv-muted)" }}
+                              >
+                                Nota interna
+                              </label>
+                              <textarea
+                                value={noteDrafts[app.id] ?? ""}
+                                onChange={(e) => setNoteDrafts((prev) => ({ ...prev, [app.id]: e.target.value }))}
+                                placeholder="Queda para tu equipo, no la ve el postulante."
+                                rows={2}
+                                className={inputClass}
+                                style={inputStyle}
+                              />
+                              <div className="flex items-center gap-3 mt-1.5 flex-wrap">
+                                <button
+                                  type="button"
+                                  onClick={() => saveNoteOnly(app.id, app.status)}
+                                  disabled={savingNoteId === app.id || !(noteDrafts[app.id] ?? "").trim()}
+                                  className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border disabled:opacity-50"
+                                  style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-text)" }}
+                                >
+                                  {savingNoteId === app.id ? "Guardando..." : "Guardar nota"}
+                                </button>
+                                <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
+                                  También se adjunta si cambiás el estado.
+                                </span>
+                              </div>
+                            </div>
+
+                            {history[app.id] && history[app.id].length > 0 && (
+                              <div>
+                                <p
+                                  className="text-xs font-semibold uppercase tracking-wide mb-2"
+                                  style={{ color: "var(--tucv-muted)" }}
+                                >
+                                  Historial
+                                </p>
+                                <ul className="space-y-2">
+                                  {history[app.id].map((ev) => (
+                                    <li key={ev.id} className="text-sm">
+                                      <div className="flex flex-wrap items-baseline gap-x-2">
+                                        <span className="font-semibold">
+                                          {ev.from_status ? `${labelFor(APPLICATION_STATUS, ev.from_status)} → ` : ""}
+                                          {labelFor(APPLICATION_STATUS, ev.status)}
+                                        </span>
+                                        <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
+                                          {ev.byMe ? "vos" : ev.by} · {formatEventDate(ev.created)}
+                                        </span>
+                                      </div>
+                                      {ev.note && (
+                                        <p className="text-sm mt-0.5" style={{ color: "var(--tucv-muted)" }}>
+                                          “{ev.note}”
+                                        </p>
+                                      )}
+                                    </li>
+                                  ))}
+                                </ul>
+                              </div>
+                            )}
+                          </div>
+                        )}
                       </div>
                     </div>
                   </Card>

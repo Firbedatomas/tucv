@@ -55,7 +55,10 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
       return NextResponse.json({ error: "already_has_business" }, { status: 409 });
     }
 
-    await admin.collection("business_members").create({ business: invite.business, user: userId });
+    // El rol viaja en la invitación; cae a "reviewer" (el más acotado) si por
+    // algo faltara, nunca a admin por defecto.
+    const role = invite.role === "admin" ? "admin" : "reviewer";
+    await admin.collection("business_members").create({ business: invite.business, user: userId, role });
     await admin.collection("business_invites").update(invite.id, { status: "accepted" });
 
     return NextResponse.json({ ok: true });

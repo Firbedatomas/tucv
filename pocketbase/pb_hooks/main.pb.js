@@ -304,7 +304,7 @@ onRecordAfterCreateSuccess((e) => {
   } catch {
     existing = null
   }
-  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug")
+  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug") && !e.record.get("suspended")
   if (!isPublic) {
     if (existing) e.app.delete(existing)
     e.next()
@@ -323,6 +323,9 @@ onRecordAfterCreateSuccess((e) => {
   card.set("slug", e.record.get("profile_slug"))
   card.set("display_name", displayName)
   card.set("city_zone", e.record.get("city_zone") || "")
+  card.set("city", e.record.get("city") || "")
+  card.set("province", e.record.get("province") || "")
+  card.set("country", e.record.get("country") || "")
   card.set("categories", e.record.get("categories") || [])
   card.set("category_other", e.record.get("category_other") || "")
   card.set("experience", e.record.get("experience") || "")
@@ -345,7 +348,7 @@ onRecordAfterUpdateSuccess((e) => {
   } catch {
     existing = null
   }
-  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug")
+  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug") && !e.record.get("suspended")
   if (!isPublic) {
     if (existing) e.app.delete(existing)
     e.next()
@@ -364,6 +367,9 @@ onRecordAfterUpdateSuccess((e) => {
   card.set("slug", e.record.get("profile_slug"))
   card.set("display_name", displayName)
   card.set("city_zone", e.record.get("city_zone") || "")
+  card.set("city", e.record.get("city") || "")
+  card.set("province", e.record.get("province") || "")
+  card.set("country", e.record.get("country") || "")
   card.set("categories", e.record.get("categories") || [])
   card.set("category_other", e.record.get("category_other") || "")
   card.set("experience", e.record.get("experience") || "")

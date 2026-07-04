@@ -1,20 +1,37 @@
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { DataTable } from "@/components/admin/DataTable";
 import { Pagination } from "@/components/admin/Pagination";
+import { AdminFilters } from "@/components/admin/AdminFilters";
+import { CATEGORIES } from "@/lib/constants";
+import { CandidateActions } from "@/components/admin/CandidateActions";
 
 const PAGE_SIZE = 50;
 
 export default async function AdminPostulantesPage({
   searchParams,
 }: {
-  searchParams: Promise<{ page?: string }>;
+  searchParams: Promise<{ page?: string; q?: string; categoria?: string }>;
 }) {
-  const { page: pageParam } = await searchParams;
+  const { page: pageParam, q, categoria } = await searchParams;
   const page = Math.max(1, Number(pageParam) || 1);
 
   const admin = await pbAdmin();
+
+  const filterParts: string[] = [];
+  const filterArgs: Record<string, string> = {};
+  if (q?.trim()) {
+    filterParts.push("(name ~ {:q} || whatsapp ~ {:q} || city_zone ~ {:q})");
+    filterArgs.q = q.trim();
+  }
+  if (categoria) {
+    filterParts.push("categories ?= {:categoria}");
+    filterArgs.categoria = categoria;
+  }
+  const filter = filterParts.length > 0 ? admin.filter(filterParts.join(" && "), filterArgs) : "";
+
   const list = await admin.collection("candidate_profiles").getList(page, PAGE_SIZE, {
     sort: "-created",
+    filter,
     requestKey: null,
   });
 
@@ -31,6 +48,7 @@ export default async function AdminPostulantesPage({
       cityZone: (c.city_zone as string) || "—",
       categories: categories || "—",
       visible: c.consent_zone_visible ? "Sí" : "No",
+      suspended: Boolean(c.suspended),
       created: new Date(c.created as string).toLocaleDateString("es-AR"),
     };
   });
@@ -43,6 +61,11 @@ export default async function AdminPostulantesPage({
           {list.totalItems} en total
         </span>
       </div>
+      <AdminFilters
+        basePath="/admin/postulantes"
+        searchPlaceholder="Buscar por nombre, WhatsApp o zona..."
+        selects={[{ key: "categoria", label: "Cualquier rubro", options: CATEGORIES }]}
+      />
       <DataTable
         rows={rows}
         emptyLabel="Todavía no hay postulantes registrados."
@@ -53,9 +76,19 @@ export default async function AdminPostulantesPage({
           { key: "categories", label: "Categorías" },
           { key: "visible", label: "Visible en zona" },
           { key: "created", label: "Alta" },
+          {
+            key: "acciones",
+            label: "Acciones",
+            render: (row) => <CandidateActions id={row.id} suspended={row.suspended} />,
+          },
         ]}
       />
-      <Pagination page={list.page} totalPages={list.totalPages} basePath="/admin/postulantes" />
+      <Pagination
+        page={list.page}
+        totalPages={list.totalPages}
+        basePath="/admin/postulantes"
+        queryString={new URLSearchParams({ ...(q ? { q } : {}), ...(categoria ? { categoria } : {}) }).toString()}
+      />
     </div>
   );
 }

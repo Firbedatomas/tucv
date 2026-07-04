@@ -42,6 +42,9 @@ type Values = {
   category: string;
   category_other: string;
   address_zone: string;
+  city: string;
+  province: string;
+  country: string;
   role: string;
   main_tasks: string[];
   shift: string[];
@@ -62,6 +65,9 @@ const empty: Values = {
   category: "",
   category_other: "",
   address_zone: "",
+  city: "",
+  province: "",
+  country: "",
   role: "",
   main_tasks: [],
   shift: [],
@@ -229,6 +235,9 @@ export function JobPostForm({
         category: values.category,
         category_other: values.category === "otro" ? values.category_other.trim() : "",
         address_zone: values.address_zone.trim(),
+        city: values.city,
+        province: values.province,
+        country: values.country,
         role,
         name: role,
         main_tasks: values.main_tasks,
@@ -519,6 +528,7 @@ export function JobPostForm({
           <AddressAutocomplete
             value={values.address_zone}
             onChange={(v) => set("address_zone", v)}
+            onSelectDetails={(d) => setValues((v) => ({ ...v, city: d.city, province: d.province, country: d.country }))}
             placeholder="Av. Santa Fe 3200, Palermo"
           />
         </Field>

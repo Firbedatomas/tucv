@@ -8,6 +8,8 @@ export function buildTeamInviteEmail(data: { businessName: string; inviteUrl: st
     <p style="margin: 0 0 12px 0;">Vas a poder ver sus búsquedas activas y revisar postulantes -- marcar contactado,
     entrevista, contratado o descartado. No vas a poder editar ni crear búsquedas, ni tocar el plan o los datos del
     negocio, eso sigue siendo solo del dueño.</p>
+    <p style="margin: 0 0 12px 0;">Tu perfil personal de TuCV no se comparte con ${data.businessName}. Esta invitación
+    solo te da acceso a su equipo, no crea un negocio nuevo a tu nombre.</p>
     <p style="margin: 0;">Para aceptar, entrá con tu propia cuenta de Google.</p>
   `;
   const html = renderEmailLayout({

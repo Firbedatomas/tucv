@@ -40,6 +40,9 @@ type RecordShape = {
   last_name: string;
   whatsapp: string;
   city_zone: string;
+  city?: string;
+  province?: string;
+  country?: string;
   birth_date: string;
   gender: string;
   categories: string[];
@@ -118,6 +121,9 @@ function recordToValues(record: RecordShape): CandidateFormValues {
     lastName: record.last_name || fallbackRest.join(" ") || "",
     whatsapp: record.whatsapp,
     city_zone: record.city_zone,
+    city: record.city ?? "",
+    province: record.province ?? "",
+    country: record.country ?? "",
     birth_date: record.birth_date ? record.birth_date.slice(0, 10) : "",
     gender: record.gender,
     categories: record.categories ?? [],

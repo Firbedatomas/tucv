@@ -23,6 +23,9 @@ export function RegistroForm() {
     business_name: "",
     phone: "",
     city_zone: "",
+    city: "",
+    province: "",
+    country: "",
     website: "",
     instagram: "",
   });
@@ -101,6 +104,9 @@ export function RegistroForm() {
       formData.append("business_name", values.business_name.trim());
       formData.append("phone", values.phone.trim());
       formData.append("city_zone", values.city_zone.trim());
+      formData.append("city", values.city);
+      formData.append("province", values.province);
+      formData.append("country", values.country);
       formData.append("website", values.website.trim());
       formData.append("instagram", values.instagram.trim());
       formData.append("terms_accepted", String(termsAccepted));
@@ -163,6 +169,7 @@ export function RegistroForm() {
           <AddressAutocomplete
             value={values.city_zone}
             onChange={(v) => set("city_zone", v)}
+            onSelectDetails={(d) => setValues((v) => ({ ...v, city: d.city, province: d.province, country: d.country }))}
             placeholder="Palermo, CABA"
           />
         </Field>

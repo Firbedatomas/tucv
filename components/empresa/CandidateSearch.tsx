@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { waLink } from "@/lib/whatsapp";
-import { emptyCandidateFilters, matchesCandidateFilters } from "@/lib/candidate-filters";
+import { emptyCandidateFilters, matchesCandidateFilters, narrowByZoneCascade } from "@/lib/candidate-filters";
 import { Card } from "@/components/ui/Card";
 import { CandidateFilterBar } from "@/components/empresa/CandidateFilterBar";
 import { CandidateAvatar, CandidateCardBody, type CandidateLike } from "@/components/empresa/CandidateCardBody";
@@ -22,7 +22,15 @@ type CandidateCounts = {
   ocultos: number;
 };
 
-export function CandidateSearch({ businessId }: { businessId: string }) {
+export function CandidateSearch({
+  businessId,
+  businessCity,
+  businessProvince,
+}: {
+  businessId: string;
+  businessCity: string;
+  businessProvince: string;
+}) {
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
   const [counts, setCounts] = useState<CandidateCounts | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
@@ -145,10 +153,21 @@ export function CandidateSearch({ businessId }: { businessId: string }) {
       .catch(() => setCounts(null));
   }, []);
 
+  // Sin zona tipeada a mano, arrancamos por la ciudad del negocio; si no hay
+  // nadie ahí, ampliamos a la provincia; si tampoco, no restringe (ver
+  // narrowByZoneCascade). En cuanto la empresa escribe algo en el filtro de
+  // zona, toma el control y esto se ignora -- mismo comportamiento de
+  // siempre en ese caso.
+  const zoneCascade = useMemo(() => {
+    if (!candidates || filters.zone) return null;
+    return narrowByZoneCascade(candidates, businessCity, businessProvince);
+  }, [candidates, filters.zone, businessCity, businessProvince]);
+
   const filtered = useMemo(() => {
     if (!candidates) return [];
-    return candidates.filter((c) => matchesCandidateFilters(c, filters));
-  }, [candidates, filters]);
+    const base = zoneCascade ? zoneCascade.candidates : candidates;
+    return base.filter((c) => matchesCandidateFilters(c, filters));
+  }, [candidates, zoneCascade, filters]);
 
   if (!candidates) {
     return (
@@ -199,6 +218,18 @@ export function CandidateSearch({ businessId }: { businessId: string }) {
                 ? ` ${noSeMuestran} todavía no se muestran públicamente o tienen el perfil incompleto.`
                 : ""}
             </p>
+            {zoneCascade && zoneCascade.tier !== "country" && (
+              <p className="text-xs mt-1" style={{ color: "var(--tucv-muted)" }}>
+                {zoneCascade.tier === "city"
+                  ? `Mostrando candidatos de ${businessCity}.`
+                  : `No hay candidatos en ${businessCity || "tu ciudad"} -- mostrando toda ${businessProvince}.`}
+              </p>
+            )}
+            {zoneCascade && zoneCascade.tier === "country" && (businessCity || businessProvince) && (
+              <p className="text-xs mt-1" style={{ color: "var(--tucv-muted)" }}>
+                No hay candidatos en tu zona todavía -- mostrando de todo el país.
+              </p>
+            )}
           </div>
         );
       })()}

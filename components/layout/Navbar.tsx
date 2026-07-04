@@ -5,6 +5,7 @@ import Link from "next/link";
 import Image from "next/image";
 import { useBusinessAuth } from "@/lib/use-business-auth";
 import { usePostulanteAuth } from "@/lib/use-postulante-auth";
+import { canManageJobs, canSourceCandidates, canManageBusiness, roleLabel } from "@/lib/business-permissions";
 import { Logo } from "@/components/ui/Logo";
 
 const linkClass = "text-sm font-semibold hover:opacity-70 transition";
@@ -46,12 +47,22 @@ function IdentityDropdown({
   photoUrl,
   profileHref,
   profileLabel,
+  contextLabel,
+  personalAccount,
   onLogout,
 }: {
   name: string;
   photoUrl?: string | null;
   profileHref: string;
   profileLabel: string;
+  // Rol dentro del negocio ("Revisor", "Administrador"...) -- da contexto de
+  // "en qué estás usando TuCV ahora mismo". null para dueño/postulante/admin
+  // de sitio, donde el nombre solo ya alcanza.
+  contextLabel?: string | null;
+  // Si esta misma persona además tiene perfil de postulante, acceso directo a
+  // su cuenta personal desde el contexto de negocio (un usuario puede ser
+  // colaborador de un equipo Y postulante, son vidas separadas).
+  personalAccount?: { href: string; label: string } | null;
   onLogout: () => void;
 }) {
   const [open, setOpen] = useState(false);
@@ -97,11 +108,15 @@ function IdentityDropdown({
             {name.slice(0, 1).toUpperCase()}
           </span>
         )}
-        <span
-          className="text-sm font-semibold hidden sm:inline truncate max-w-[10rem]"
-          style={{ color: "var(--tucv-text)" }}
-        >
-          {name}
+        <span className="hidden sm:flex flex-col items-start leading-tight min-w-0">
+          <span className="text-sm font-semibold truncate max-w-[10rem]" style={{ color: "var(--tucv-text)" }}>
+            {name}
+          </span>
+          {contextLabel && (
+            <span className="text-xs font-semibold truncate max-w-[10rem]" style={{ color: "var(--tucv-muted)" }}>
+              {contextLabel}
+            </span>
+          )}
         </span>
         {/* La flechita siempre visible, también en mobile -- sin ella (antes
             solo aparecía en sm:+) el avatar no tenía ninguna señal de que
@@ -121,6 +136,18 @@ function IdentityDropdown({
             boxShadow: "var(--tucv-shadow)",
           }}
         >
+          {/* En mobile el nombre no se ve en el botón (solo el avatar), así que
+              el contexto "negocio · rol" vive acá arriba del menú. */}
+          {contextLabel && (
+            <div className="px-3 pt-1 pb-2 mb-1" style={{ borderBottom: "1.5px solid var(--tucv-border)" }}>
+              <p className="text-sm font-bold truncate" style={{ color: "var(--tucv-text)" }}>
+                {name}
+              </p>
+              <p className="text-xs font-semibold" style={{ color: "var(--tucv-muted)" }}>
+                {contextLabel}
+              </p>
+            </div>
+          )}
           <Link
             href={profileHref}
             onClick={() => setOpen(false)}
@@ -129,6 +156,16 @@ function IdentityDropdown({
           >
             {profileLabel}
           </Link>
+          {personalAccount && (
+            <Link
+              href={personalAccount.href}
+              onClick={() => setOpen(false)}
+              className="block px-3 py-2 text-sm font-semibold hover:opacity-70 transition"
+              style={{ color: "var(--tucv-text)" }}
+            >
+              {personalAccount.label}
+            </Link>
+          )}
           <Link
             href="/configuracion/notificaciones"
             onClick={() => setOpen(false)}
@@ -222,7 +259,7 @@ export function Navbar() {
       <Link href="/empresa/panel" className={linkClass} style={{ color: "var(--tucv-text)" }} onClick={() => setMenuOpen(false)}>
         Mis búsquedas
       </Link>
-      {role === "owner" && (
+      {canSourceCandidates(role) && (
         <Link href="/empresa/candidatos" className={linkClass} style={{ color: "var(--tucv-text)" }} onClick={() => setMenuOpen(false)}>
           Buscar candidatos
         </Link>
@@ -230,7 +267,7 @@ export function Navbar() {
       <Link href="/postulantes" className={linkClass} style={{ color: "var(--tucv-text)" }} onClick={() => setMenuOpen(false)}>
         Postulantes
       </Link>
-      {role === "owner" && (
+      {canManageJobs(role) && (
         <Link
           href="/empresa/busquedas/nueva"
           className="text-sm font-bold px-3 py-1.5 text-center"
@@ -262,7 +299,20 @@ export function Navbar() {
           name={business.business_name}
           photoUrl={business.logoUrl}
           profileHref="/empresa/perfil"
-          profileLabel={role === "owner" ? "Los datos de mi negocio" : "Mi cuenta"}
+          profileLabel={canManageBusiness(role) ? "Los datos de mi negocio" : "Mi cuenta"}
+          // El rol como contexto, solo para colaboradores (el dueño ES su
+          // negocio, no necesita la etiqueta).
+          contextLabel={role && role !== "owner" ? roleLabel(role) : null}
+          // Si la misma persona además es postulante, un salto directo a su
+          // vida personal sin cerrar sesión ni perder el contexto de negocio.
+          personalAccount={
+            postulanteProfile
+              ? {
+                  href: postulanteProfile.profileSlug ? `/p/${postulanteProfile.profileSlug}` : "/postulante/editar",
+                  label: "Mi cuenta personal",
+                }
+              : null
+          }
           onLogout={logout}
         />
       )

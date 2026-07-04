@@ -4,16 +4,23 @@ import { useEffect, useRef, useState } from "react";
 import { inputClass, inputStyle } from "@/components/ui/Field";
 
 type Suggestion = { placeId: string; text: string };
+export type PlaceDetails = { city: string; province: string; country: string };
 
 export function AddressAutocomplete({
   value,
   onChange,
+  onSelectDetails,
   placeholder,
   name,
   autoComplete,
 }: {
   value: string;
   onChange: (value: string) => void;
+  // Solo se llama cuando se elige una sugerencia real de Google (nunca al
+  // tipear texto libre) -- así el fallback de zona ciudad->provincia->país
+  // tiene datos estructurados cuando existen, sin forzar a nadie a elegir
+  // de la lista para poder guardar el formulario.
+  onSelectDetails?: (details: PlaceDetails) => void;
   placeholder?: string;
   name?: string;
   autoComplete?: string;
@@ -84,6 +91,15 @@ export function AddressAutocomplete({
     // elegido) y reabre el dropdown con resultados casi idénticos -- se veía
     // como si la dirección "apareciera de nuevo" sola después de elegirla.
     setTouched(false);
+    if (onSelectDetails) {
+      fetch(`/api/places-details?placeId=${encodeURIComponent(s.placeId)}&sessiontoken=${sessionToken}`)
+        .then((res) => res.json())
+        .then((details: PlaceDetails) => onSelectDetails(details))
+        .catch(() => {
+          // Sin conexión, key sin cuota, etc.: el texto libre ya se guardó
+          // igual, esto solo suma el desglose estructurado cuando se puede.
+        });
+    }
     // Nueva sesión de billing para la próxima búsqueda (Google factura
     // autocomplete por sesión, de foco a selección).
     setSessionToken(typeof crypto !== "undefined" ? crypto.randomUUID() : "");
