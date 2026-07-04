@@ -1,5 +1,10 @@
 import "server-only";
 import { pbAdmin } from "@/lib/pocketbase-admin";
+import {
+  computeCandidateBreakdown,
+  CANDIDATE_BREAKDOWN_FIELDS,
+  type CandidateBreakdownInput,
+} from "@/lib/candidate-stats";
 
 // Argentina no tiene horario de verano hace años -> UTC-3 fijo alcanza para
 // calcular "hoy" sin depender de la timezone del contenedor (que corre en
@@ -14,7 +19,14 @@ function startOfTodayArgentinaISO(): string {
 
 export type DashboardStats = {
   negocios: { total: number; hoy: number };
-  postulantes: { total: number; hoy: number };
+  postulantes: {
+    total: number;
+    hoy: number;
+    visiblesEmpresas: number;
+    perfilPublico: number;
+    incompletos: number;
+    ocultos: number;
+  };
   postulaciones: { total: number; hoy: number };
   avisosActivos: number;
   pagos: {
@@ -34,8 +46,7 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   const [
     businessesTotal,
     businessesToday,
-    candidatesTotal,
-    candidatesToday,
+    candidates,
     applicationsTotal,
     applicationsToday,
     activeJobs,
@@ -43,8 +54,10 @@ export async function getDashboardStats(): Promise<DashboardStats> {
   ] = await Promise.all([
     admin.collection("business_accounts").getList(1, 1, { requestKey: null }),
     admin.collection("business_accounts").getList(1, 1, { filter: todayFilter, requestKey: null }),
-    admin.collection("candidate_profiles").getList(1, 1, { requestKey: null }),
-    admin.collection("candidate_profiles").getList(1, 1, { filter: todayFilter, requestKey: null }),
+    admin.collection("candidate_profiles").getFullList<CandidateBreakdownInput & { created: string }>({
+      fields: CANDIDATE_BREAKDOWN_FIELDS,
+      requestKey: null,
+    }),
     admin.collection("applications").getList(1, 1, { requestKey: null }),
     admin.collection("applications").getList(1, 1, { filter: todayFilter, requestKey: null }),
     admin.collection("job_posts").getList(1, 1, {
@@ -58,6 +71,8 @@ export async function getDashboardStats(): Promise<DashboardStats> {
     }),
   ]);
 
+  const candidateBreakdown = computeCandidateBreakdown(candidates);
+  const candidatesToday = candidates.filter((c) => c.created >= todayISO).length;
   const paymentsToday = approvedPayments.filter((p) => p.created >= todayISO);
   const porTipo: Record<string, number> = {};
   for (const p of approvedPayments) {
@@ -66,7 +81,14 @@ export async function getDashboardStats(): Promise<DashboardStats> {
 
   return {
     negocios: { total: businessesTotal.totalItems, hoy: businessesToday.totalItems },
-    postulantes: { total: candidatesTotal.totalItems, hoy: candidatesToday.totalItems },
+    postulantes: {
+      total: candidateBreakdown.total,
+      hoy: candidatesToday,
+      visiblesEmpresas: candidateBreakdown.visiblesEmpresas,
+      perfilPublico: candidateBreakdown.perfilPublico,
+      incompletos: candidateBreakdown.incompletos,
+      ocultos: candidateBreakdown.ocultos,
+    },
     postulaciones: { total: applicationsTotal.totalItems, hoy: applicationsToday.totalItems },
     avisosActivos: activeJobs.totalItems,
     pagos: {

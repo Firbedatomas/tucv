@@ -169,7 +169,37 @@ onRecordUpdate((e) => {
   const publicProfileTurnedOn =
     !previous.get("consent_public_profile") && e.record.get("consent_public_profile")
 
+  // "Perfil completo" = tiene bio, al menos un rubro y al menos una
+  // disponibilidad (campos garantizados por el schema declarativo; NO uso
+  // `experience`, que lo agregan los scripts .mjs y puede no existir en todo
+  // entorno). El email profile_completed se dispara SOLO en la transición
+  // incompleto -> completo en una edición: en el alta, "registro" y "perfil
+  // completo" son el mismo instante y ya lo cubre welcome_candidate, así que
+  // mandarlo también ahí sería spam. Mismo criterio de completitud que el
+  // badge "Perfil completo" (lib/candidate-badges.ts), sin `experience`.
+  function isComplete(rec) {
+    const bio = (rec.get("bio") || "").trim()
+    const cats = rec.get("categories") || []
+    const avail = rec.get("availability") || []
+    return bio.length > 0 && cats.length > 0 && avail.length > 0
+  }
+  const becameComplete = !isComplete(previous) && isComplete(e.record)
+
   e.next()
+
+  if (becameComplete) {
+    try {
+      $http.send({
+        url: ($os.getenv("APP_INTERNAL_URL") || "http://127.0.0.1:3000") + "/api/email/trigger",
+        method: "POST",
+        body: JSON.stringify({ type: "profile_completed", recordId: e.record.id }),
+        headers: { "Content-Type": "application/json", "Authorization": "Bearer " + $os.getenv("EMAIL_TRIGGER_SECRET") },
+        timeout: 5,
+      })
+    } catch (err) {
+      // idem: nunca bloquea ni rompe la edición del perfil.
+    }
+  }
 
   if (zoneVisibleTurnedOn) {
     const logs = e.app.findCollectionByNameOrId("consent_logs")

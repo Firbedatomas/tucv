@@ -36,6 +36,21 @@ export default async function AdminResumenPage() {
         <StatCard label="Avisos activos" value={stats.avisosActivos} />
       </div>
 
+      <p className="text-xs font-semibold uppercase tracking-wide mt-8 mb-1" style={{ color: "var(--tucv-muted)" }}>
+        Postulantes por estado
+      </p>
+      <p className="text-sm mb-3" style={{ color: "var(--tucv-muted)" }}>
+        De los {stats.postulantes.total} registrados, solo los visibles para empresas aparecen en{" "}
+        <span className="font-semibold" style={{ color: "var(--tucv-text)" }}>/empresa/candidatos</span>. Son ejes
+        independientes: un perfil puede estar oculto y además incompleto.
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+        <StatCard label="Visibles para empresas" value={stats.postulantes.visiblesEmpresas} />
+        <StatCard label="Perfil público" value={stats.postulantes.perfilPublico} />
+        <StatCard label="Incompletos" value={stats.postulantes.incompletos} />
+        <StatCard label="Ocultos" value={stats.postulantes.ocultos} />
+      </div>
+
       <p className="text-xs font-semibold uppercase tracking-wide mt-8 mb-2" style={{ color: "var(--tucv-muted)" }}>
         Ingresos aprobados (total histórico)
       </p>

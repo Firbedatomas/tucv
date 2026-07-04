@@ -8,8 +8,17 @@ import { Card } from "@/components/ui/Card";
 import { CandidateFilterBar } from "@/components/empresa/CandidateFilterBar";
 import { CandidateAvatar, CandidateCardBody, type CandidateLike } from "@/components/empresa/CandidateCardBody";
 
+type CandidateCounts = {
+  total: number;
+  visiblesEmpresas: number;
+  perfilPublico: number;
+  incompletos: number;
+  ocultos: number;
+};
+
 export function CandidateSearch() {
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
+  const [counts, setCounts] = useState<CandidateCounts | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [filters, setFilters] = useState(emptyCandidateFilters);
 
@@ -19,6 +28,16 @@ export function CandidateSearch() {
       .getFullList<CandidateLike>({ filter: "consent_zone_visible = true", sort: "-created" })
       .then(setCandidates)
       .catch(() => setCandidates([]));
+  }, []);
+
+  // Desglose agregado (total registrados vs visibles) desde el server: el
+  // cliente business solo puede leer los consent_zone_visible, así que el
+  // "4 registrados en TuCV" sale de /api/candidate-counts (pbAdmin, solo conteos).
+  useEffect(() => {
+    fetch("/api/candidate-counts")
+      .then((r) => (r.ok ? r.json() : null))
+      .then((data) => setCounts(data))
+      .catch(() => setCounts(null));
   }, []);
 
   const filtered = useMemo(() => {
@@ -48,12 +67,36 @@ export function CandidateSearch() {
 
   return (
     <div>
-      <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
-        <span className="text-lg font-bold" style={{ color: "var(--tucv-text)" }}>
-          {filtered.length}
-        </span>{" "}
-        de {candidates.length} candidato{candidates.length === 1 ? "" : "s"} visible{candidates.length === 1 ? "" : "s"}
-      </p>
+      {(() => {
+        const visibles = candidates.length;
+        const filteredView = filtered.length !== visibles;
+        const noSeMuestran = counts ? Math.max(0, counts.total - counts.visiblesEmpresas) : null;
+        return (
+          <div className="mb-5">
+            <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
+              <span className="text-lg font-bold" style={{ color: "var(--tucv-text)" }}>
+                {filtered.length}
+              </span>{" "}
+              {filteredView ? `de ${visibles} ` : ""}
+              candidato{(filteredView ? visibles : filtered.length) === 1 ? "" : "s"} visible
+              {(filteredView ? visibles : filtered.length) === 1 ? "" : "s"}
+              {counts ? (
+                <>
+                  {" · "}
+                  <span style={{ color: "var(--tucv-text)" }}>{counts.total}</span> registrado
+                  {counts.total === 1 ? "" : "s"} en TuCV
+                </>
+              ) : null}
+            </p>
+            <p className="text-xs mt-1" style={{ color: "var(--tucv-muted)" }}>
+              Solo aparecen personas que eligieron ser visibles para empresas.
+              {noSeMuestran && noSeMuestran > 0
+                ? ` ${noSeMuestran} todavía no se muestran públicamente o tienen el perfil incompleto.`
+                : ""}
+            </p>
+          </div>
+        );
+      })()}
 
       <CandidateFilterBar value={filters} onChange={setFilters} />
 

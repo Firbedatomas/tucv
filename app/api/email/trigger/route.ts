@@ -5,6 +5,7 @@ import { getOrCreatePreferences } from "@/lib/email/preferences";
 import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildWelcomeCandidateEmail } from "@/lib/email/templates/welcome-candidate";
 import { buildWelcomeCompanyEmail } from "@/lib/email/templates/welcome-company";
+import { buildProfileCompletedEmail } from "@/lib/email/templates/profile-completed";
 import { buildPublicProfileEnabledEmail } from "@/lib/email/templates/public-profile-enabled";
 import { buildApplicationReceivedCandidateEmail } from "@/lib/email/templates/application-received-candidate";
 import { buildNewApplicationCompanyEmail } from "@/lib/email/templates/new-application-company";
@@ -12,7 +13,12 @@ import { buildNewApplicationCompanyEmail } from "@/lib/email/templates/new-appli
 const EMAIL_TRIGGER_SECRET = process.env.EMAIL_TRIGGER_SECRET;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
 
-type TriggerType = "welcome_candidate" | "welcome_company" | "public_profile_enabled" | "application_created";
+type TriggerType =
+  | "welcome_candidate"
+  | "welcome_company"
+  | "profile_completed"
+  | "public_profile_enabled"
+  | "application_created";
 
 function unsubscribeUrl(token: string) {
   return `${BASE_URL}/api/email/unsubscribe?token=${token}`;
@@ -82,6 +88,26 @@ export async function POST(req: Request) {
           businessName: (business.business_name as string) || "",
           panelUrl: `${BASE_URL}/empresa/panel`,
           preferencesUrl: preferencesUrl(),
+        }),
+        unsubscribeUrl: unsubscribeUrl(prefs.unsubscribeToken),
+      });
+    }
+
+    if (type === "profile_completed") {
+      const profile = await admin.collection("candidate_profiles").getOne(recordId).catch(() => null);
+      if (!profile) return NextResponse.json({ ok: true });
+      const user = await admin.collection("users").getOne(profile.user as string).catch(() => null);
+      if (!user?.email) return NextResponse.json({ ok: true });
+      const prefs = await getOrCreatePreferences(user.id);
+      await sendTransactionalEmail({
+        type: "profile_completed",
+        to: user.email as string,
+        userId: user.id,
+        rendered: buildProfileCompletedEmail({
+          name: (profile.name as string) || "",
+          profileUrl: profile.profile_slug ? `${BASE_URL}/p/${profile.profile_slug}` : `${BASE_URL}/postulante/editar`,
+          preferencesUrl: preferencesUrl(),
+          unsubscribeUrl: unsubscribeUrl(prefs.unsubscribeToken),
         }),
         unsubscribeUrl: unsubscribeUrl(prefs.unsubscribeToken),
       });
