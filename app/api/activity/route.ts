@@ -9,12 +9,18 @@ export const dynamic = "force-dynamic";
 // perfil, hacerlo público, crear búsqueda, postularse). El cliente solo manda
 // el TIPO y un id; el server deriva zona/rubro del record real, así el feed no
 // se puede envenenar con datos falsos. La zona se guarda ya anonimizada.
-const ALLOWED: Record<string, { actor: "candidate" | "company"; source: "candidate" | "job" }> = {
-  candidate_registered: { actor: "candidate", source: "candidate" },
-  profile_completed: { actor: "candidate", source: "candidate" },
-  public_enabled: { actor: "candidate", source: "candidate" },
-  application_sent: { actor: "candidate", source: "candidate" },
-  job_created: { actor: "company", source: "job" },
+const ALLOWED: Record<string, { actor: "candidate" | "company"; source: "candidate" | "job"; visibility: "public" | "internal" }> = {
+  candidate_registered: { actor: "candidate", source: "candidate", visibility: "public" },
+  profile_completed: { actor: "candidate", source: "candidate", visibility: "public" },
+  public_enabled: { actor: "candidate", source: "candidate", visibility: "public" },
+  application_sent: { actor: "candidate", source: "candidate", visibility: "public" },
+  job_created: { actor: "company", source: "job", visibility: "public" },
+  // Interacciones de ayuda/viralidad sobre un perfil. profile_shared va al
+  // feed público; las descargas y el pedido de compartir son métricas internas.
+  profile_shared: { actor: "candidate", source: "candidate", visibility: "public" },
+  help_request_shared: { actor: "candidate", source: "candidate", visibility: "internal" },
+  profile_qr_downloaded: { actor: "candidate", source: "candidate", visibility: "internal" },
+  profile_poster_downloaded: { actor: "candidate", source: "candidate", visibility: "internal" },
 };
 
 export async function POST(req: Request) {
@@ -50,7 +56,7 @@ export async function POST(req: Request) {
       type: type as ActivityType,
       actorType: spec.actor,
       zone,
-      visibility: "public",
+      visibility: spec.visibility,
       metadata: { category },
     });
     return NextResponse.json({ ok: true });

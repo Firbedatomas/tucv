@@ -7,6 +7,13 @@ const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 export const OG_IMAGE_SIZE = { width: 1200, height: 630 };
 export const SHARE_IMAGE_SIZE = { width: 1080, height: 1350 };
 
+// La imagen cambia poco (solo si el perfil cambia). Cachearla evita re-renderizar
+// con Satori en cada request -> carga mucho más rápida al compartir en X/IG y
+// en el CDN/crawlers de las redes.
+const SHARE_IMAGE_HEADERS = {
+  "Cache-Control": "public, max-age=3600, s-maxage=86400, stale-while-revalidate=604800",
+};
+
 // Mismo patrón que lib/job-share-image.tsx: compartido entre
 // opengraph-image.tsx y share-image/route.tsx para no repetir el fetch +
 // fallback + ImageResponse dos veces.
@@ -40,12 +47,12 @@ export async function renderCandidateShareImage({
           TuCV
         </div>
       ),
-      size,
+      { ...size, headers: SHARE_IMAGE_HEADERS },
     );
   }
 
   return new ImageResponse(
     <CandidateShareCard candidate={candidate} url={`${BASE_URL}/p/${slug}`} variant={variant} />,
-    size,
+    { ...size, headers: SHARE_IMAGE_HEADERS },
   );
 }

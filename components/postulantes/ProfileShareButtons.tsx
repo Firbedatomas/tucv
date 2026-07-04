@@ -7,7 +7,15 @@ import { trackEvent } from "@/lib/track";
 // perfil de postulante -- Plausible (trackEvent) en vez de /api/job-share:
 // acá no hay un contador propio por perfil que mostrar en ningún panel
 // todavía, así que no vale la pena un segundo mecanismo de conteo.
-export function ProfileShareButtons({ url, text }: { url: string; text: string }) {
+export function ProfileShareButtons({
+  url,
+  text,
+  onShare,
+}: {
+  url: string;
+  text: string;
+  onShare?: (channel: string) => void;
+}) {
   const [copied, setCopied] = useState(false);
   const [supportsFileShare, setSupportsFileShare] = useState(false);
   useEffect(() => {
@@ -17,11 +25,13 @@ export function ProfileShareButtons({ url, text }: { url: string; text: string }
 
   function shareWhatsapp() {
     trackEvent("Postulante: perfil compartido", { channel: "whatsapp", source: "perfil" });
+    onShare?.("whatsapp");
     window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
   }
 
   function shareX() {
     trackEvent("Postulante: perfil compartido", { channel: "x", source: "perfil" });
+    onShare?.("x");
     window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
   }
 
@@ -37,6 +47,7 @@ export function ProfileShareButtons({ url, text }: { url: string; text: string }
 
   async function shareInstagram() {
     trackEvent("Postulante: perfil compartido", { channel: "instagram", source: "perfil" });
+    onShare?.("instagram");
 
     if (supportsFileShare) {
       try {

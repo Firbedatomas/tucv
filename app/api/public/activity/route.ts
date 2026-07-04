@@ -87,6 +87,7 @@ export async function GET(req: Request) {
       if (type === "job_shared") text = `Compartieron una búsqueda de ${cat}`;
       else if (type === "application_sent") text = `Nueva postulación en ${cat}`;
       else if (type === "profile_completed") text = `Nuevo perfil completo de ${cat}`;
+      else if (type === "profile_shared") text = `Compartieron un perfil de ${cat}`;
       if (!text) continue;
       // La zona ya viene anonimizada desde el emisor (/api/activity, job-share).
       items.push({ id: `ev_${e.id}`, kind: type, text, zone: (e.zone as string) || "", at: e.created as string });

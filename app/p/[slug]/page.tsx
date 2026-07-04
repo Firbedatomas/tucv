@@ -8,6 +8,7 @@ import { waLink } from "@/lib/whatsapp";
 import { formatThousands } from "@/lib/format";
 import { usePostulanteAuth } from "@/lib/use-postulante-auth";
 import { trackEvent } from "@/lib/track";
+import { emitActivity } from "@/lib/emit-activity";
 import { generateCandidateFlyerDataUrl } from "@/lib/candidate-flyer";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
@@ -322,6 +323,83 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
             )}
           </div>
         </Card>
+
+        {!isOwnProfile &&
+          (() => {
+            const firstName = profile.name.split(" ")[0] || profile.name;
+            const zonePart = profile.city_zone ? ` en ${profile.city_zone}` : "";
+            const helpPresets = [
+              {
+                label: "A un amigo",
+                msg: `Che, ${firstName} está buscando laburo${zonePart}. Si sabés de algo o conocés a alguien que busca gente, pasale su perfil: ${profileUrl}`,
+              },
+              {
+                label: "A un familiar",
+                msg: `Hola, ${firstName} armó su perfil para conseguir trabajo${zonePart}. ¿Lo compartís por si alguien necesita? ${profileUrl}`,
+              },
+              {
+                label: "A un grupo del barrio",
+                msg: `Vecinos, ${firstName} está buscando trabajo${zonePart}. Si alguien necesita gente, este es su perfil: ${profileUrl}`,
+              },
+            ];
+            return (
+              <div
+                className="mt-4 rounded-[var(--tucv-radius)] p-5 sm:p-6"
+                style={{
+                  backgroundColor: "var(--tucv-accent)",
+                  border: "2px solid var(--tucv-border)",
+                  boxShadow: "var(--tucv-shadow)",
+                }}
+              >
+                <h2 className="font-bold text-lg mb-1">Ayudá a {firstName} a conseguir laburo</h2>
+                <p className="text-sm mb-3" style={{ color: "var(--tucv-text)" }}>
+                  Un minuto tuyo puede ser su próximo trabajo. Compartí su perfil con quien pueda
+                  estar buscando gente.
+                </p>
+                <ProfileShareButtons
+                  url={profileUrl}
+                  text={`${firstName} está buscando laburo${zonePart}. Mirá su perfil en TuCV: ${profileUrl}`}
+                  onShare={() => emitActivity("profile_shared", { candidateId: profile.id })}
+                />
+
+                <p className="text-sm font-semibold mt-4 mb-2">Pedí que otros lo compartan</p>
+                <div className="flex flex-wrap gap-2">
+                  {helpPresets.map((p) => (
+                    <a
+                      key={p.label}
+                      href={`https://wa.me/?text=${encodeURIComponent(p.msg)}`}
+                      target="_blank"
+                      rel="noopener noreferrer"
+                      onClick={() => {
+                        trackEvent("Postulante: pedido de compartir", { preset: p.label });
+                        emitActivity("help_request_shared", { candidateId: profile.id });
+                      }}
+                      className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
+                      style={{ backgroundColor: "var(--tucv-text)", color: "var(--tucv-bg)" }}
+                    >
+                      {p.label}
+                    </a>
+                  ))}
+                </div>
+
+                <div className="mt-4">
+                  <QRCodeView
+                    url={profileUrl}
+                    fileName={slug}
+                    flyerButtonLabel="Descargar cartel para pegar"
+                    renderFlyer={(qrDataUrl) =>
+                      generateCandidateFlyerDataUrl({
+                        displayName: profile.name,
+                        category: profile.categories[0] ? labelFor(CATEGORIES, profile.categories[0]) : "",
+                        cityZone: profile.city_zone,
+                        qrDataUrl,
+                      })
+                    }
+                  />
+                </div>
+              </div>
+            );
+          })()}
 
         <p className="text-center text-xs mt-4" style={{ color: "var(--tucv-muted)" }}>
           Perfil creado en TuCV — perfil laboral simple para trabajos de cercanía.

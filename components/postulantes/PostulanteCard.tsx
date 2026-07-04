@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CATEGORIES, EXPERIENCE, AVAILABILITY, labelFor, labelsFor } from "@/lib/constants";
 import { timeAgo } from "@/lib/time-ago";
 import { trackEvent } from "@/lib/track";
+import { emitActivity } from "@/lib/emit-activity";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { ReportProfileButton } from "@/components/postulantes/ReportProfileButton";
@@ -43,6 +44,10 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
 
   function track(channel: string) {
     trackEvent("Postulante: perfil compartido", { channel, source: "directorio" });
+    // Compartir real (no "copiar") alimenta el feed público anonimizado.
+    if (channel === "whatsapp" || channel === "x") {
+      emitActivity("profile_shared", { candidateId: candidate.id });
+    }
   }
 
   return (
