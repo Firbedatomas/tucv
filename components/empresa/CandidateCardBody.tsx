@@ -42,6 +42,7 @@ export type CandidateLike = {
   expected_salary?: string;
   photo: string;
   cv_file: string;
+  consent_contact?: boolean;
   updated?: string;
   collectionId: string;
   collectionName: string;
@@ -115,6 +116,9 @@ export function CandidateCardBody({
     has_own_transport: candidate.has_own_transport ?? "",
     immediate_availability: Boolean(candidate.immediate_availability),
   });
+  // "Acepta contacto" es propio de la vista de empresa (el directorio público
+  // no muestra WhatsApp), por eso no vive en computeCandidateBadges.
+  if (candidate.consent_contact) badges.push({ label: "Acepta contacto", tone: "positive" });
   // Congelar "ahora" al montar: Date.now() en render es impuro (regla del
   // React compiler) y para un "hace X" no hace falta que corra en vivo.
   const [now] = useState(() => Date.now());
@@ -227,7 +231,13 @@ export function CandidateCardBody({
               </div>
             </div>
           )}
-          <p style={{ color: "var(--tucv-muted)" }}>WhatsApp: {candidate.whatsapp}</p>
+          {candidate.consent_contact ? (
+            <p style={{ color: "var(--tucv-muted)" }}>WhatsApp: {candidate.whatsapp}</p>
+          ) : (
+            <p style={{ color: "var(--tucv-muted)" }}>
+              Este candidato todavía no habilitó que las empresas vean su WhatsApp.
+            </p>
+          )}
           {cvUrl && (
             <a
               href={cvUrl}

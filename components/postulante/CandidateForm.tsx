@@ -61,6 +61,7 @@ export type CandidateFormValues = {
   expected_salary: string;
   consent_save: boolean;
   consent_zone_visible: boolean;
+  consent_contact: boolean;
   consent_public_profile: boolean;
   profileSlug: string;
 };
@@ -86,6 +87,7 @@ export const emptyCandidateForm: CandidateFormValues = {
   expected_salary: "",
   consent_save: false,
   consent_zone_visible: false,
+  consent_contact: false,
   consent_public_profile: false,
   profileSlug: "",
 };
@@ -374,6 +376,7 @@ export function CandidateForm({
         formData.append("user", userId ?? "");
         formData.append("consent_save", String(values.consent_save));
         formData.append("consent_zone_visible", String(values.consent_zone_visible));
+        formData.append("consent_contact", String(values.consent_contact));
         formData.append("consent_public_profile", String(values.consent_public_profile));
         const record = await client.collection("candidate_profiles").create(formData);
         trackEvent("Postulante: registro completado");
@@ -403,6 +406,7 @@ export function CandidateForm({
         setSuccess({ id: record.id, slug: record.profile_slug, applied });
       } else {
         formData.append("consent_zone_visible", String(values.consent_zone_visible));
+        formData.append("consent_contact", String(values.consent_contact));
         formData.append("consent_public_profile", String(values.consent_public_profile));
         const record = await client.collection("candidate_profiles").update(mode.id, formData);
         trackEvent("Postulante: perfil completado");
@@ -794,6 +798,26 @@ export function CandidateForm({
           <span>
             Además, quiero que empleadores de mi zona puedan ver mi perfil aunque no me haya
             postulado a su búsqueda (opcional).
+          </span>
+        </label>
+
+        {/* Contacto directo depende de ser visible para empresas: sin lo primero,
+            no hay a quién habilitar el WhatsApp. Se deshabilita (no se oculta)
+            para que se entienda la relación entre ambos permisos. */}
+        <label
+          className="flex items-start gap-2 mb-5 text-sm ml-6"
+          style={{ opacity: values.consent_zone_visible ? 1 : 0.5 }}
+        >
+          <input
+            type="checkbox"
+            className="mt-1"
+            disabled={!values.consent_zone_visible}
+            checked={values.consent_zone_visible && values.consent_contact}
+            onChange={(e) => set("consent_contact", e.target.checked)}
+          />
+          <span>
+            Y que puedan escribirme por WhatsApp directo desde mi perfil (opcional). Si no lo
+            activás, las empresas ven tu perfil pero no tu teléfono.
           </span>
         </label>
 

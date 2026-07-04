@@ -53,6 +53,7 @@ type RecordShape = {
   immediate_availability: boolean;
   expected_salary: string;
   consent_zone_visible: boolean;
+  consent_contact: boolean;
   consent_public_profile: boolean;
   photo: string;
   cv_file: string;
@@ -131,6 +132,7 @@ function recordToValues(record: RecordShape): CandidateFormValues {
     expected_salary: record.expected_salary ?? "",
     consent_save: true,
     consent_zone_visible: record.consent_zone_visible ?? false,
+    consent_contact: record.consent_contact ?? false,
     consent_public_profile: record.consent_public_profile ?? false,
     profileSlug: record.profile_slug ?? "",
   };

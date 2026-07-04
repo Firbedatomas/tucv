@@ -20,6 +20,7 @@ export function CandidateSearch() {
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
   const [counts, setCounts] = useState<CandidateCounts | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
+  const [revealedContactId, setRevealedContactId] = useState<string | null>(null);
   const [filters, setFilters] = useState(emptyCandidateFilters);
 
   useEffect(() => {
@@ -126,15 +127,35 @@ export function CandidateSearch() {
                       >
                         {expanded ? "Ocultar perfil" : "Ver perfil"}
                       </button>
-                      <a
-                        href={waLink(c.whatsapp, `Hola ${c.name}, te contacto desde TuCV.`)}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
-                        style={{ backgroundColor: "#128C4A", color: "#fff" }}
-                      >
-                        WhatsApp
-                      </a>
+                      {c.consent_contact ? (
+                        revealedContactId === c.id ? (
+                          <a
+                            href={waLink(c.whatsapp, `Hola ${c.name}, te contacto desde TuCV.`)}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
+                            style={{ backgroundColor: "#128C4A", color: "#fff" }}
+                          >
+                            Escribir por WhatsApp
+                          </a>
+                        ) : (
+                          // El WhatsApp no se muestra de una: primero "Contactar".
+                          // El candidato ya aceptó (consent_contact) -> revelarlo
+                          // acá es un paso deliberado, no una base de teléfonos.
+                          <button
+                            type="button"
+                            onClick={() => setRevealedContactId(c.id)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
+                            style={{ backgroundColor: "var(--tucv-primary)", color: "#fff" }}
+                          >
+                            Contactar
+                          </button>
+                        )
+                      ) : (
+                        <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
+                          Todavía no habilitó contacto directo
+                        </span>
+                      )}
                     </div>
                   </div>
                 </div>
