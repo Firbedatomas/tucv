@@ -1,10 +1,13 @@
 "use client";
 
+import { useState } from "react";
 import Image from "next/image";
 import { pb } from "@/lib/pocketbase";
 import { CATEGORIES, EXPERIENCE, AVAILABILITY, STUDY_LEVELS, STUDY_STATUS, labelFor, labelsFor } from "@/lib/constants";
 import { calculateAge } from "@/lib/age";
 import { formatThousands } from "@/lib/format";
+import { computeCandidateBadges, BADGE_TONE_STYLE } from "@/lib/candidate-badges";
+import { timeAgo } from "@/lib/time-ago";
 
 type ReferenceEntry = { name: string; relation: string; phone: string };
 type StudyEntry = { level: string; status?: string; institution?: string };
@@ -29,6 +32,7 @@ export type CandidateLike = {
   category_other: string;
   category_experience: CategoryExperienceEntry[] | null;
   availability: string[];
+  experience?: string;
   references: (ReferenceEntry | string)[] | null;
   references_text: string;
   studies?: (StudyEntry | string)[] | null;
@@ -38,6 +42,7 @@ export type CandidateLike = {
   expected_salary?: string;
   photo: string;
   cv_file: string;
+  updated?: string;
   collectionId: string;
   collectionName: string;
 };
@@ -99,6 +104,21 @@ export function CandidateCardBody({
   const expMap = Object.fromEntries((candidate.category_experience ?? []).map((e) => [e.category, e]));
   const references = candidateReferences(candidate);
   const cvUrl = candidate.cv_file ? pb().files.getURL(candidate, candidate.cv_file) : null;
+  // Mismos badges que el directorio público (/p/[slug], PostulanteCard) para no
+  // desincronizar el criterio de "qué señales de confianza mostrar". Antes acá
+  // se reimplementaban a mano solo "movilidad" y "puede empezar ya".
+  const badges = computeCandidateBadges({
+    categories: candidate.categories ?? [],
+    experience: candidate.experience ?? "",
+    availability: candidate.availability ?? [],
+    bio: candidate.bio ?? "",
+    has_own_transport: candidate.has_own_transport ?? "",
+    immediate_availability: Boolean(candidate.immediate_availability),
+  });
+  // Congelar "ahora" al montar: Date.now() en render es impuro (regla del
+  // React compiler) y para un "hace X" no hace falta que corra en vivo.
+  const [now] = useState(() => Date.now());
+  const updatedLabel = candidate.updated ? timeAgo(candidate.updated, now) : null;
 
   return (
     <>
@@ -151,25 +171,24 @@ export function CandidateCardBody({
         Disponible: <span style={{ color: "var(--tucv-text)" }}>{labelsFor(AVAILABILITY, candidate.availability).join(", ")}</span>
       </p>
 
-      {(candidate.has_own_transport === "si" || candidate.immediate_availability) && (
+      {badges.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-1.5">
-          {candidate.has_own_transport === "si" && (
+          {badges.map((b) => (
             <span
+              key={b.label}
               className="text-xs px-2 py-0.5 rounded-[var(--tucv-radius)]"
-              style={{ backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)" }}
+              style={BADGE_TONE_STYLE[b.tone]}
             >
-              Con movilidad propia
+              {b.label}
             </span>
-          )}
-          {candidate.immediate_availability && (
-            <span
-              className="text-xs px-2 py-0.5 rounded-[var(--tucv-radius)]"
-              style={{ backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)" }}
-            >
-              Puede empezar ya
-            </span>
-          )}
+          ))}
         </div>
+      )}
+
+      {updatedLabel && (
+        <p className="text-xs mt-1.5" style={{ color: "var(--tucv-muted)" }}>
+          Perfil actualizado: {updatedLabel.toLowerCase()}
+        </p>
       )}
 
       {references.length > 0 && (
