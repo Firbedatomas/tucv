@@ -12,6 +12,8 @@ import { type StudyLevelValue } from "@/components/postulante/StudyLevelEntry";
 import { type ReferenceValue } from "@/components/postulante/ReferenceListInput";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
+import { DataRightsCard } from "@/components/ui/DataRightsCard";
+import { useRouter } from "next/navigation";
 
 type RichCategoryExperience = {
   category: string;
@@ -135,6 +137,7 @@ function recordToValues(record: RecordShape): CandidateFormValues {
 }
 
 function EditarContent() {
+  const router = useRouter();
   const { isAuthenticated, userId } = usePostulanteAuth({ requireRole: false });
 
   const [state, setState] = useState<
@@ -179,15 +182,27 @@ function EditarContent() {
   const existingPhotoUrl = record.photo ? client.files.getURL(record, record.photo) : undefined;
 
   return (
-    <CandidateForm
-      mode={{
-        kind: "edit",
-        id: record.id,
-        existingPhotoUrl,
-        existingCvName: record.cv_file || undefined,
-      }}
-      initialValues={recordToValues(record)}
-    />
+    <>
+      <CandidateForm
+        mode={{
+          kind: "edit",
+          id: record.id,
+          existingPhotoUrl,
+          existingCvName: record.cv_file || undefined,
+        }}
+        initialValues={recordToValues(record)}
+      />
+      <DataRightsCard
+        data={record}
+        fileNamePrefix="mi-perfil"
+        deleteLabel="Eliminar mi perfil"
+        deleteConfirmText="Esto borra tu perfil laboral de TuCV para siempre -- tus postulaciones enviadas y tu link público dejan de funcionar. No se puede deshacer."
+        onDelete={async () => {
+          await pb().collection("candidate_profiles").delete(record.id);
+          router.push("/");
+        }}
+      />
+    </>
   );
 }
 

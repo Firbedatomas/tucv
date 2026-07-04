@@ -27,35 +27,39 @@ export async function POST(req: Request, { params }: { params: Promise<{ token: 
     return NextResponse.json({ error: "unauthorized" }, { status: 401 });
   }
 
-  const admin = await pbAdmin();
+  try {
+    const admin = await pbAdmin();
 
-  const invite = await admin
-    .collection("business_invites")
-    .getFirstListItem(admin.filter("token = {:token}", { token }))
-    .catch(() => null);
-  if (!invite) return NextResponse.json({ error: "not_found" }, { status: 404 });
-  if (invite.status !== "pending" || new Date(invite.expires as string).getTime() < Date.now()) {
-    return NextResponse.json({ error: "expired_or_used" }, { status: 410 });
+    const invite = await admin
+      .collection("business_invites")
+      .getFirstListItem(admin.filter("token = {:token}", { token }))
+      .catch(() => null);
+    if (!invite) return NextResponse.json({ error: "not_found" }, { status: 404 });
+    if (invite.status !== "pending" || new Date(invite.expires as string).getTime() < Date.now()) {
+      return NextResponse.json({ error: "expired_or_used" }, { status: 410 });
+    }
+
+    if ((invite.email as string).toLowerCase() !== userEmail.toLowerCase()) {
+      return NextResponse.json({ error: "email_mismatch", invitedEmail: invite.email }, { status: 403 });
+    }
+
+    // Invariante V1: un usuario tiene como máximo una relación con un
+    // negocio (dueño de uno, o miembro de otro) -- ver lib/business-access.ts.
+    // Chequeo acá antes de crear nada; los hooks de pb_hooks/main.pb.js
+    // repiten esta misma validación server-side como defensa en profundidad.
+    const [alreadyOwner, alreadyMember] = await Promise.all([
+      admin.collection("business_accounts").getFirstListItem(`user="${userId}"`).catch(() => null),
+      admin.collection("business_members").getFirstListItem(`user="${userId}"`).catch(() => null),
+    ]);
+    if (alreadyOwner || alreadyMember) {
+      return NextResponse.json({ error: "already_has_business" }, { status: 409 });
+    }
+
+    await admin.collection("business_members").create({ business: invite.business, user: userId });
+    await admin.collection("business_invites").update(invite.id, { status: "accepted" });
+
+    return NextResponse.json({ ok: true });
+  } catch {
+    return NextResponse.json({ error: "No pudimos aceptar la invitación. Probá de nuevo." }, { status: 500 });
   }
-
-  if ((invite.email as string).toLowerCase() !== userEmail.toLowerCase()) {
-    return NextResponse.json({ error: "email_mismatch", invitedEmail: invite.email }, { status: 403 });
-  }
-
-  // Invariante V1: un usuario tiene como máximo una relación con un negocio
-  // (dueño de uno, o miembro de otro) -- ver lib/business-access.ts. Chequeo
-  // acá antes de crear nada; los hooks de pb_hooks/main.pb.js repiten esta
-  // misma validación server-side como defensa en profundidad.
-  const [alreadyOwner, alreadyMember] = await Promise.all([
-    admin.collection("business_accounts").getFirstListItem(`user="${userId}"`).catch(() => null),
-    admin.collection("business_members").getFirstListItem(`user="${userId}"`).catch(() => null),
-  ]);
-  if (alreadyOwner || alreadyMember) {
-    return NextResponse.json({ error: "already_has_business" }, { status: 409 });
-  }
-
-  await admin.collection("business_members").create({ business: invite.business, user: userId });
-  await admin.collection("business_invites").update(invite.id, { status: "accepted" });
-
-  return NextResponse.json({ ok: true });
 }

@@ -9,6 +9,7 @@ import { PlanUpgradeCard } from "@/components/empresa/PlanUpgradeCard";
 import { TeamSection } from "@/components/empresa/TeamSection";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
+import { DataRightsCard } from "@/components/ui/DataRightsCard";
 
 function PagoBanner() {
   const params = useSearchParams();
@@ -73,6 +74,7 @@ function LeaveTeamCard({ businessName, membershipId }: { businessName: string; m
 }
 
 export default function PerfilEmpresaPage() {
+  const router = useRouter();
   const { isValid, business, role, membershipId } = useBusinessAuth();
 
   if (!isValid || !business) return null;
@@ -100,6 +102,16 @@ export default function PerfilEmpresaPage() {
         <PlanUpgradeCard business={business} />
         <TeamSection business={business} />
         <EditBusinessForm business={business} />
+        <DataRightsCard
+          data={business}
+          fileNamePrefix="mi-negocio"
+          deleteLabel="Eliminar mi cuenta de negocio"
+          deleteConfirmText="Esto borra tu negocio de TuCV para siempre -- tus búsquedas publicadas, postulaciones recibidas y el equipo invitado dejan de existir. Tu historial de pagos se conserva por motivos contables. No se puede deshacer."
+          onDelete={async () => {
+            await pb().collection("business_accounts").delete(business.id);
+            router.push("/");
+          }}
+        />
       </div>
     </main>
   );
