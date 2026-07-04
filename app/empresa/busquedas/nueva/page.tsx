@@ -3,6 +3,7 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useBusinessAuth } from "@/lib/use-business-auth";
+import { canManageJobs } from "@/lib/business-permissions";
 import { JobPostForm } from "@/components/empresa/JobPostForm";
 import { JobPostSellingPoints } from "@/components/empresa/JobPostSellingPoints";
 
@@ -10,14 +11,15 @@ export default function NuevaBusquedaPage() {
   const router = useRouter();
   const { isValid, business, role } = useBusinessAuth();
 
-  // Crear/editar búsquedas es exclusivo del dueño -- un colaborador (viewer)
-  // que llegue directo a esta URL no puede hacer nada útil acá (la regla de
-  // PocketBase igual rechazaría el create), mejor mandarlo de vuelta.
+  // Crear/editar búsquedas es exclusivo de quien puede gestionar búsquedas
+  // (hoy solo el dueño; ver canManageJobs). Un colaborador que llegue directo
+  // a esta URL no puede hacer nada útil acá (la regla de PocketBase igual
+  // rechazaría el create), mejor mandarlo de vuelta.
   useEffect(() => {
-    if (isValid && role && role !== "owner") router.replace("/empresa/panel");
+    if (isValid && role && !canManageJobs(role)) router.replace("/empresa/panel");
   }, [isValid, role, router]);
 
-  if (!isValid || !business || role !== "owner") return null;
+  if (!isValid || !business || !canManageJobs(role)) return null;
 
   return (
     <main className="flex-1 px-4 py-10 sm:py-14">

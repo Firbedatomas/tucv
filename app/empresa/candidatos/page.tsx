@@ -3,20 +3,21 @@
 import { useEffect } from "react";
 import { useRouter } from "next/navigation";
 import { useBusinessAuth } from "@/lib/use-business-auth";
+import { canSourceCandidates } from "@/lib/business-permissions";
 import { CandidateSearch } from "@/components/empresa/CandidateSearch";
 
 export default function CandidatosPage() {
   const router = useRouter();
   const { isValid, business, role } = useBusinessAuth();
 
-  // Búsqueda proactiva de candidatos es un uso a nivel negocio (no está en
-  // el alcance de "revisar búsquedas y postulantes" de un colaborador
-  // invitado) -- ver TeamSection.tsx / lib/business-access.ts.
+  // Búsqueda proactiva de candidatos es un uso a nivel negocio, para dueño y
+  // admin -- no entra en el alcance de "revisar postulantes" de un reviewer
+  // (ver lib/business-permissions.ts).
   useEffect(() => {
-    if (isValid && role && role !== "owner") router.replace("/empresa/panel");
+    if (isValid && role && !canSourceCandidates(role)) router.replace("/empresa/panel");
   }, [isValid, role, router]);
 
-  if (!isValid || !business || role !== "owner") return null;
+  if (!isValid || !business || !canSourceCandidates(role)) return null;
 
   return (
     <main className="flex-1 px-4 py-10 sm:py-14">

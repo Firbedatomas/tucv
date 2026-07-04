@@ -2,6 +2,7 @@
 
 import { use } from "react";
 import { useBusinessAuth } from "@/lib/use-business-auth";
+import { canManageJobs } from "@/lib/business-permissions";
 import { ApplicantsPanel } from "@/components/empresa/ApplicantsPanel";
 import { LinkButton } from "@/components/ui/Button";
 
@@ -17,7 +18,7 @@ export default function BusquedaPanelPage({ params }: { params: Promise<{ id: st
         <LinkButton href="/empresa/panel" variant="ghost" className="!px-0 !py-0 mb-4 text-sm">
           ← Volver a tus búsquedas
         </LinkButton>
-        <ApplicantsPanel jobPostId={id} readOnly={role !== "owner"} />
+        <ApplicantsPanel jobPostId={id} readOnly={!canManageJobs(role)} />
       </div>
     </main>
   );

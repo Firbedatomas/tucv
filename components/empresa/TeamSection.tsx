@@ -3,13 +3,15 @@
 import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import type { BusinessRecord } from "@/lib/use-business-auth";
+import type { BusinessRole } from "@/lib/business-access";
+import { roleLabel } from "@/lib/business-permissions";
 import { maxTeamMembers } from "@/lib/plan-limits";
 import { Field, inputClass, inputStyle } from "@/components/ui/Field";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
 
-type Member = { id: string; email: string; created: string };
-type Invite = { id: string; email: string; status: string; expires: string; created: string };
+type Member = { id: string; email: string; role: string; created: string };
+type Invite = { id: string; email: string; role: string; status: string; expires: string; created: string };
 
 const STATUS_LABEL: Record<string, string> = {
   pending: "Pendiente",
@@ -17,17 +19,16 @@ const STATUS_LABEL: Record<string, string> = {
   revoked: "Revocada",
 };
 
-// Invitar a alguien de tu equipo (dueño únicamente) -- ver
-// no está en Pro ni Gratis, es la diferencia real del plan Equipo. Un
-// colaborador invitado puede ver búsquedas y postulantes, y marcar el
-// estado de un postulante, pero no puede tocar esto (ver ApplicantsPanel/
-// JobPostCard con role="viewer").
+// Invitar a alguien de tu equipo (dueño o admin) -- disponible solo en el plan
+// Equipo. Un reviewer ve búsquedas y postulantes y marca su estado; un admin
+// además invita y busca candidatos (ver lib/business-permissions.ts).
 export function TeamSection({ business }: { business: BusinessRecord }) {
   const limit = maxTeamMembers(business.plan);
   const [members, setMembers] = useState<Member[]>([]);
   const [invites, setInvites] = useState<Invite[]>([]);
   const [loading, setLoading] = useState(true);
   const [email, setEmail] = useState("");
+  const [inviteRole, setInviteRole] = useState<"reviewer" | "admin">("reviewer");
   const [inviting, setInviting] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [notice, setNotice] = useState<string | null>(null);
@@ -75,7 +76,7 @@ export function TeamSection({ business }: { business: BusinessRecord }) {
       const res = await fetch("/api/business-invites", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token, email }),
+        body: JSON.stringify({ token, email, role: inviteRole }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No pudimos enviar la invitación.");
@@ -138,6 +139,19 @@ export function TeamSection({ business }: { business: BusinessRecord }) {
               </Button>
             </div>
           </Field>
+          <div className="mt-2">
+            <Field label="Rol">
+              <select
+                className={inputClass}
+                style={inputStyle}
+                value={inviteRole}
+                onChange={(e) => setInviteRole(e.target.value as "reviewer" | "admin")}
+              >
+                <option value="reviewer">Revisor — ve y marca postulantes</option>
+                <option value="admin">Administrador — además invita y busca candidatos</option>
+              </select>
+            </Field>
+          </div>
         </form>
       ) : (
         <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
@@ -166,7 +180,9 @@ export function TeamSection({ business }: { business: BusinessRecord }) {
         <ul className="text-sm space-y-2 mb-3">
           {members.map((m) => (
             <li key={m.id} className="flex items-center justify-between gap-2">
-              <span>{m.email}</span>
+              <span>
+                {m.email} <span style={{ color: "var(--tucv-muted)" }}>· {roleLabel(m.role as BusinessRole)}</span>
+              </span>
               <button
                 type="button"
                 onClick={() => removeMember(m.id)}
@@ -185,7 +201,10 @@ export function TeamSection({ business }: { business: BusinessRecord }) {
           {invites.map((i) => (
             <li key={i.id} className="flex items-center justify-between gap-2">
               <span>
-                {i.email} <span style={{ color: "var(--tucv-muted)" }}>· {STATUS_LABEL[i.status] ?? i.status}</span>
+                {i.email}{" "}
+                <span style={{ color: "var(--tucv-muted)" }}>
+                  · {roleLabel(i.role as BusinessRole)} · {STATUS_LABEL[i.status] ?? i.status}
+                </span>
               </span>
               {i.status === "pending" && (
                 <button
