@@ -17,6 +17,9 @@ import { ProfileShareButtons } from "@/components/postulantes/ProfileShareButton
 import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
 import { ReferencesManager } from "@/components/postulantes/ReferencesManager";
 import { ReferencesSummary } from "@/components/postulantes/ReferencesSummary";
+import { RecommendationsManager } from "@/components/postulantes/RecommendationsManager";
+import { RecommendationsSummary } from "@/components/postulantes/RecommendationsSummary";
+import { RecommendButton } from "@/components/postulantes/RecommendButton";
 
 type RichCategoryExperience = {
   category: string;
@@ -161,6 +164,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
               </div>
             </Card>
             <ReferencesManager />
+            <RecommendationsManager />
           </>
         )}
         <Card>
@@ -304,6 +308,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           )}
 
           <ReferencesSummary slug={slug} />
+          <RecommendationsSummary slug={slug} />
+          <RecommendButton candidateId={profile.id} isOwnProfile={isOwnProfile} />
 
           <div className="flex flex-wrap gap-3 mt-2">
             <a
