@@ -29,6 +29,9 @@ export const emptyCandidateFilters: CandidateFilters = {
 type FilterableCandidate = {
   categories?: string[];
   city_zone?: string;
+  city?: string;
+  province?: string;
+  country?: string;
   experience?: string;
   category_experience?: { category: string; experience: string }[] | null;
   availability?: string[];
@@ -71,4 +74,31 @@ export function matchesCandidateFilters(candidate: FilterableCandidate, filters:
   if (filters.hasOwnTransport && candidate.has_own_transport !== "si") return false;
   if (filters.immediateAvailability && !candidate.immediate_availability) return false;
   return true;
+}
+
+export type ZoneTier = "city" | "province" | "country";
+
+// Default de zona antes de que la empresa toque el filtro a mano: primero
+// candidatos de su misma ciudad; si no hay ninguno, de su misma provincia;
+// si tampoco, no restringe (país completo) -- nunca una lista vacía por un
+// default de zona demasiado angosto. Solo aplica cuando city/province vienen
+// de un lugar real elegido en el autocomplete (ver AddressAutocomplete,
+// onSelectDetails) -- si el negocio tipeó la zona a mano, cae directo a
+// "country" (sin restricción), que es el comportamiento actual sin cambios.
+export function narrowByZoneCascade<T extends FilterableCandidate>(
+  candidates: T[],
+  businessCity: string,
+  businessProvince: string,
+): { candidates: T[]; tier: ZoneTier } {
+  if (businessCity) {
+    const inCity = candidates.filter((c) => c.city && c.city.toLowerCase() === businessCity.toLowerCase());
+    if (inCity.length > 0) return { candidates: inCity, tier: "city" };
+  }
+  if (businessProvince) {
+    const inProvince = candidates.filter(
+      (c) => c.province && c.province.toLowerCase() === businessProvince.toLowerCase(),
+    );
+    if (inProvince.length > 0) return { candidates: inProvince, tier: "province" };
+  }
+  return { candidates, tier: "country" };
 }

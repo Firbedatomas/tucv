@@ -18,6 +18,9 @@ export function EditBusinessForm({ business }: { business: BusinessRecord }) {
     business_name: business.business_name,
     phone: business.phone,
     city_zone: business.city_zone,
+    city: business.city,
+    province: business.province,
+    country: business.country,
     website: business.website,
     instagram: business.instagram,
     bio: business.bio,
@@ -74,6 +77,9 @@ export function EditBusinessForm({ business }: { business: BusinessRecord }) {
       formData.append("business_name", values.business_name.trim());
       formData.append("phone", values.phone.trim());
       formData.append("city_zone", values.city_zone.trim());
+      formData.append("city", values.city);
+      formData.append("province", values.province);
+      formData.append("country", values.country);
       formData.append("website", values.website.trim());
       formData.append("instagram", values.instagram.trim());
       formData.append("bio", values.bio.trim());
@@ -134,7 +140,14 @@ export function EditBusinessForm({ business }: { business: BusinessRecord }) {
           />
         </Field>
         <Field label="Zona" required error={errors.city_zone}>
-          <AddressAutocomplete value={values.city_zone} onChange={(v) => set("city_zone", v)} />
+          <AddressAutocomplete
+            value={values.city_zone}
+            onChange={(v) => set("city_zone", v)}
+            onSelectDetails={(d) => {
+              setValues((v) => ({ ...v, city: d.city, province: d.province, country: d.country }));
+              setSaved(false);
+            }}
+          />
         </Field>
         <Field label="Sitio web (opcional)" hint="Se muestra en el link público de tus búsquedas.">
           <input

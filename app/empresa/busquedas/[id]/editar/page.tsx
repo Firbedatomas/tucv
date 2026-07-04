@@ -18,6 +18,9 @@ type JobRecord = {
   category: string;
   category_other: string;
   address_zone: string;
+  city?: string;
+  province?: string;
+  country?: string;
   role: string;
   main_tasks: string[] | null;
   shift: string[];
@@ -124,6 +127,9 @@ export default function EditarBusquedaPage({ params }: { params: Promise<{ id: s
               category: state.job.category,
               category_other: state.job.category_other ?? "",
               address_zone: state.job.address_zone,
+              city: state.job.city ?? "",
+              province: state.job.province ?? "",
+              country: state.job.country ?? "",
               role: state.job.role,
               main_tasks: state.job.main_tasks ?? [],
               shift: state.job.shift ?? [],

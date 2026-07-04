@@ -26,6 +26,8 @@ export type CandidateLike = {
   name: string;
   whatsapp: string;
   city_zone: string;
+  city?: string;
+  province?: string;
   birth_date: string;
   age_manual: number;
   categories: string[];

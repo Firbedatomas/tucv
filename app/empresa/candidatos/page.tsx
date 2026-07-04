@@ -26,7 +26,7 @@ export default function CandidatosPage() {
           Perfiles de tu zona que eligieron ser visibles para negocios, aunque no se hayan
           postulado a ninguna de tus búsquedas.
         </p>
-        <CandidateSearch />
+        <CandidateSearch businessCity={business.city} businessProvince={business.province} />
       </div>
     </main>
   );

@@ -37,8 +37,19 @@ export function TeamSection({ business }: { business: BusinessRecord }) {
     fetch("/api/business-invites", { headers: { Authorization: `Bearer ${token}` } })
       .then((r) => r.json())
       .then((data) => {
-        setMembers(data.members ?? []);
-        setInvites((data.invites ?? []).filter((i: Invite) => i.status !== "revoked"));
+        const memberList: Member[] = data.members ?? [];
+        const memberEmails = new Set(memberList.map((m) => m.email.toLowerCase()));
+        setMembers(memberList);
+        // Una persona que ya aceptó aparece como fila de `members` -- esa es
+        // la fuente de verdad del acceso real. No la repetimos como una
+        // invitación "Aceptada" (eso era el duplicado que se veía en el
+        // panel). Solo listamos invitaciones que siguen pendientes, y ni
+        // esas si el email ya es miembro (fila colgada por algún borde).
+        setInvites(
+          (data.invites ?? []).filter(
+            (i: Invite) => i.status === "pending" && !memberEmails.has(i.email.toLowerCase()),
+          ),
+        );
       })
       .catch(() => {})
       .finally(() => setLoading(false));

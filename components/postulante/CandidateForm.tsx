@@ -46,6 +46,13 @@ export type CandidateFormValues = {
   lastName: string;
   whatsapp: string;
   city_zone: string;
+  // Desglose estructurado de city_zone, solo para el fallback de zona
+  // (ciudad -> provincia -> país) -- nunca se muestran, se llenan solos al
+  // elegir una sugerencia real del autocomplete (ver AddressAutocomplete,
+  // onSelectDetails). Quedan vacíos si la persona tipeó la zona a mano.
+  city: string;
+  province: string;
+  country: string;
   birth_date: string;
   gender: string;
   categories: string[];
@@ -72,6 +79,9 @@ export const emptyCandidateForm: CandidateFormValues = {
   lastName: "",
   whatsapp: "",
   city_zone: "",
+  city: "",
+  province: "",
+  country: "",
   birth_date: "",
   gender: "",
   categories: [],
@@ -300,6 +310,9 @@ export function CandidateForm({
       formData.append("last_name", values.lastName.trim());
       formData.append("whatsapp", values.whatsapp.trim());
       formData.append("city_zone", values.city_zone.trim());
+      formData.append("city", values.city);
+      formData.append("province", values.province);
+      formData.append("country", values.country);
       formData.append("birth_date", values.birth_date);
       formData.append("gender", values.gender);
       values.categories.forEach((c) => formData.append("categories", c));
@@ -554,6 +567,7 @@ export function CandidateForm({
             autoComplete="address-level2"
             value={values.city_zone}
             onChange={(v) => set("city_zone", v)}
+            onSelectDetails={(d) => setValues((v) => ({ ...v, city: d.city, province: d.province, country: d.country }))}
             placeholder="Palermo, CABA"
           />
         </Field>

@@ -6,6 +6,9 @@ export type BusinessRecord = {
   business_name: string;
   phone: string;
   city_zone: string;
+  city: string;
+  province: string;
+  country: string;
   website: string;
   instagram: string;
   bio: string;
@@ -33,6 +36,9 @@ function mapBusinessRecord(record: any, client: PocketBase): BusinessRecord {
     business_name: record.business_name,
     phone: record.phone,
     city_zone: record.city_zone,
+    city: record.city ?? "",
+    province: record.province ?? "",
+    country: record.country ?? "",
     website: record.website ?? "",
     instagram: record.instagram ?? "",
     bio: record.bio ?? "",

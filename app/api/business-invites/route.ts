@@ -47,11 +47,30 @@ export async function POST(req: Request) {
   try {
     const admin = await pbAdmin();
     const [members, pendingInvites] = await Promise.all([
-      admin.collection("business_members").getFullList({ filter: admin.filter("business = {:id}", { id: business.id }) }),
+      admin.collection("business_members").getFullList({
+        filter: admin.filter("business = {:id}", { id: business.id }),
+        expand: "user",
+      }),
       admin.collection("business_invites").getFullList({
         filter: admin.filter("business = {:id} && status = {:status}", { id: business.id, status: "pending" }),
       }),
     ]);
+
+    // Invitaciones idempotentes: una sola relación por persona. Si ya es
+    // miembro activo o ya tiene una invitación pendiente, NO creamos otra
+    // fila -- así el dueño no termina viendo el mismo email duplicado en el
+    // panel (ver TeamSection). El caso "ya aceptó" se cubre con members
+    // porque al aceptar se crea la fila en business_members.
+    const alreadyMember = members.some(
+      (m) => ((m.expand?.user as { email?: string } | undefined)?.email ?? "").toLowerCase() === email,
+    );
+    if (alreadyMember) {
+      return NextResponse.json({ error: "Esa persona ya es parte de tu equipo." }, { status: 409 });
+    }
+    if (pendingInvites.some((i) => (i.email as string).toLowerCase() === email)) {
+      return NextResponse.json({ error: "Ya le enviaste una invitación y sigue pendiente." }, { status: 409 });
+    }
+
     if (members.length + pendingInvites.length >= limit) {
       return NextResponse.json(
         { error: `Ya usaste tus ${limit} cupos de equipo para este plan.` },

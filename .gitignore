@@ -24,6 +24,9 @@
 .DS_Store
 *.pem
 
+# Claude Code local tooling state (worktrees de agentes aislados, etc.)
+.claude/
+
 # debug
 npm-debug.log*
 yarn-debug.log*
