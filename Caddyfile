@@ -1,0 +1,18 @@
+# ===========================================================================
+# Caddy - reverse proxy + HTTPS automatico para TuCV (stack standalone)
+# Reemplazá el email por el tuyo (para los avisos de Let's Encrypt).
+# ===========================================================================
+
+{
+	email firbedatomasf@gmail.com
+}
+
+tucv.ar, www.tucv.ar {
+	reverse_proxy app:3000
+	encode gzip zstd
+}
+
+pb.tucv.ar {
+	reverse_proxy pocketbase:8090
+	encode gzip zstd
+}

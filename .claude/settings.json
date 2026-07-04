@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(./scripts/deploy.sh)",
+      "Bash(scripts/deploy.sh)",
+      "Bash(docker compose -f docker-compose.hetzner.yml build app)",
+      "Bash(docker compose -f docker-compose.hetzner.yml up -d --no-deps app)"
+    ]
+  }
+}

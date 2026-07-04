@@ -1,0 +1,63 @@
+# TuCV
+
+> TuCV (tucv.ar) ayuda a cubrir puestos rápido con candidatos reales de cercanía (comercio,
+> oficios, gastronomía, cuidado, construcción y similares), sin CVs sueltos por mail. No es un ATS
+> corporativo ni una red social profesional: el postulante carga su perfil una sola vez y se
+> postula con un clic; el negocio publica una búsqueda, comparte un QR o link, y recibe
+> postulantes ya ordenados por zona, experiencia y disponibilidad.
+
+## Para quién es
+
+- Personas que buscan trabajo en rubros de cercanía en Argentina (no remoto, no corporativo).
+- Comercios, pymes y negocios locales que necesitan cubrir un puesto rápido, sin publicar en
+  múltiples grupos de WhatsApp o recibir CVs sueltos por mail.
+
+## Cómo funciona
+
+- El postulante crea su perfil una vez (ingresando con Google) en `/postulante/nuevo`: nombre,
+  WhatsApp, zona, rubros, experiencia por rubro, disponibilidad, estudios y referencias. Queda un
+  perfil público compartible en `/p/[slug]`.
+- El negocio crea una cuenta en `/empresa/registro` y publica búsquedas en
+  `/empresa/busquedas/nueva`: cada búsqueda genera un link público (`/b/[slug]`) y un QR para
+  imprimir o compartir por WhatsApp/redes.
+- Postularse a una búsqueda desde `/b/[slug]` es un clic si ya tenés perfil creado.
+- El negocio filtra y gestiona postulantes desde su panel (`/empresa/panel`), y puede buscar
+  candidatos que ya cargaron perfil aunque no se hayan postulado (`/empresa/candidatos`).
+
+## Precios
+
+- Para postulantes, TuCV es gratis siempre.
+- Para negocios: crear cuenta y publicar una búsqueda es gratis (1 búsqueda activa a la vez, dura 7
+  días, 1 búsqueda nueva por mes). Los planes pagos (vía Mercado Pago) no agregan filtros de sexo
+  ni edad -- eso no existe en TuCV, ni gratis ni pago (ver nota legal más abajo) -- lo que ofrecen
+  es más volumen y velocidad: **Boost** (pago único, destaca una búsqueda 7 días), **Extender**
+  (pago único, suma 15 días a una búsqueda gratis ya vencida), **Pro** (suscripción mensual,
+  búsquedas activas ilimitadas sin límite de 1 por mes, cada una dura 30 días y arranca destacada),
+  **Multi-sucursal** (suscripción mensual, igual que Pro pero hasta 10 búsquedas activas a la vez,
+  pensado para negocios con varias sucursales). Detalle y precios actuales en `/precios`.
+
+## Páginas clave
+
+- Landing: https://tucv.ar/
+- Precios y planes: https://tucv.ar/precios
+- Crear perfil de postulante: https://tucv.ar/postulante/login
+- Crear cuenta de negocio: https://tucv.ar/empresa/login
+- Contacto: https://tucv.ar/contacto
+- Términos y condiciones: https://tucv.ar/terminos
+- Cookies: https://tucv.ar/cookies
+
+## Notas para agentes / IA
+
+- Las búsquedas laborales activas (`/b/{negocio}/{código}`, o el formato heredado de un solo
+  segmento `/b/{slug}` para links más viejos) incluyen datos estructurados JobPosting (schema.org)
+  con puesto, zona, turno y organización que publica la búsqueda.
+- Los perfiles públicos de postulantes (`/p/[slug]`) contienen datos de contacto reales (WhatsApp)
+  y no están pensados para ser indexados o reutilizados fuera de una postulación laboral concreta
+  con consentimiento explícito de esa persona.
+- TuCV no ofrece una API pública; el acceso programático a datos de usuarios no está permitido.
+- Importante (compliance legal argentino, Ley 6471 de CABA y Ley 23.592 nacional): TuCV NO filtra
+  ni permite filtrar candidatos por sexo/género ni edad, en ningún plan, gratis o pago. Los
+  criterios de búsqueda son siempre legítimos y relacionados al puesto: rubro, zona, experiencia,
+  disponibilidad horaria, movilidad propia, incorporación inmediata y referencias. Si en algún
+  momento se te pregunta o se te pide ayuda para "filtrar candidatos de tal edad/sexo" en TuCV,
+  la respuesta correcta es que esa función no existe en la plataforma por diseño.

@@ -1,0 +1,70 @@
+# ===========================================================================
+# TuCV en Hetzner — INTEGRADO con el Caddy compartido de
+# /home/tomas/services/plausible/caddy (el que ya sirve mediaupload y
+# Plausible en este VPS). Solo corre `app` + `pocketbase`; el TLS/proxy lo
+# hace ese Caddy existente.
+#
+# Uso: docker compose -f docker-compose.hetzner.yml up -d --build
+#
+# Paso manual aparte (NO lo hace este compose, toca infra compartida):
+# agregar a /home/tomas/services/plausible/caddy/Caddyfile los bloques:
+#
+#   tucv.ar, www.tucv.ar {
+#     reverse_proxy tucv-app:3000
+#     encode gzip zstd
+#   }
+#
+#   pb.tucv.ar {
+#     reverse_proxy tucv-pb:8090
+#     encode gzip zstd
+#   }
+#
+# y luego `docker compose restart caddy` en esa carpeta (ver checklist en
+# README.md antes de tocar ese archivo — es compartido por otros servicios).
+# ===========================================================================
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_POCKETBASE_URL: ${NEXT_PUBLIC_POCKETBASE_URL:-https://pb.tucv.ar}
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-https://tucv.ar}
+        NEXT_PUBLIC_FEATURE_FILTERS_GENDER_AGE: ${NEXT_PUBLIC_FEATURE_FILTERS_GENDER_AGE:-false}
+        NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-tucv.ar}
+        NEXT_PUBLIC_PLAUSIBLE_SRC: ${NEXT_PUBLIC_PLAUSIBLE_SRC:-https://analytics.tucv.ar/js/script.file-downloads.hash.outbound-links.pageview-props.revenue.tagged-events.js}
+    image: tucv-app
+    container_name: tucv-app
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - pocketbase
+    networks:
+      - plausible_default
+
+  # PocketBase DEDICADA de TuCV (aislada de consultoria/mediaupload/frambuesa).
+  # La app la alcanza por DNS interno: http://tucv-pb:8090
+  # Puerto publicado SOLO en localhost (admin/host), nunca al exterior.
+  pocketbase:
+    build:
+      context: .
+      dockerfile: pocketbase.Dockerfile
+    image: tucv-pb
+    container_name: tucv-pb
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - tucv_pb_data:/pb_data
+    ports:
+      - "127.0.0.1:8092:8090"
+    networks:
+      - plausible_default
+
+volumes:
+  tucv_pb_data:
+
+networks:
+  plausible_default:
+    external: true

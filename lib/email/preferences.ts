@@ -1,0 +1,71 @@
+import "server-only";
+import { pbAdmin } from "@/lib/pocketbase-admin";
+
+export type NotificationPreferences = {
+  id: string;
+  user: string;
+  applicationsFrequency: "instant" | "daily" | "never";
+  companyDigestFrequency: "daily" | "weekly" | "never";
+  profileViewsFrequency: "weekly" | "never";
+  profileTips: boolean;
+  marketing: boolean;
+  quietHoursStart: number | null;
+  quietHoursEnd: number | null;
+  unsubscribeToken: string;
+};
+
+function mapRecord(record: Record<string, unknown>): NotificationPreferences {
+  return {
+    id: record.id as string,
+    user: record.user as string,
+    applicationsFrequency: (record.applications_frequency as NotificationPreferences["applicationsFrequency"]) || "instant",
+    companyDigestFrequency: (record.company_digest_frequency as NotificationPreferences["companyDigestFrequency"]) || "daily",
+    profileViewsFrequency: (record.profile_views_frequency as NotificationPreferences["profileViewsFrequency"]) || "weekly",
+    profileTips: record.profile_tips !== false,
+    marketing: record.marketing === true,
+    quietHoursStart: typeof record.quiet_hours_start === "number" ? record.quiet_hours_start : null,
+    quietHoursEnd: typeof record.quiet_hours_end === "number" ? record.quiet_hours_end : null,
+    unsubscribeToken: record.unsubscribe_token as string,
+  };
+}
+
+/**
+ * Crea la fila de preferencias con defaults la primera vez que se necesita
+ * (normalmente ya existe -- ver el hook onRecordAfterCreateSuccess("users")
+ * en pb_hooks/main.pb.js -- pero esto cubre usuarios creados antes de que
+ * ese hook existiera).
+ */
+export async function getOrCreatePreferences(userId: string): Promise<NotificationPreferences> {
+  const admin = await pbAdmin();
+  const existing = await admin
+    .collection("notification_preferences")
+    .getFirstListItem(admin.filter("user = {:user}", { user: userId }))
+    .catch(() => null);
+  if (existing) return mapRecord(existing as unknown as Record<string, unknown>);
+
+  const created = await admin.collection("notification_preferences").create({
+    user: userId,
+    applications_frequency: "instant",
+    company_digest_frequency: "daily",
+    profile_views_frequency: "weekly",
+    profile_tips: true,
+    marketing: false,
+  });
+  return mapRecord(created as unknown as Record<string, unknown>);
+}
+
+export async function getPreferencesByUnsubscribeToken(token: string): Promise<NotificationPreferences | null> {
+  const admin = await pbAdmin();
+  const record = await admin
+    .collection("notification_preferences")
+    .getFirstListItem(admin.filter("unsubscribe_token = {:token}", { token }))
+    .catch(() => null);
+  return record ? mapRecord(record as unknown as Record<string, unknown>) : null;
+}
+
+// Nota: horario silencioso (quiet_hours_start/end) queda guardado en el
+// modelo pero todavía NO se aplica al envío -- respetarlo de verdad
+// significa NO perder el email (reprogramarlo para después de las 8am), lo
+// que necesita una cola con reintento (ver Fase 3: digests + cron). Aplicar
+// el corte ahora sin esa cola sería simplemente descartar el email en
+// silencio, peor que ignorarlo por ahora.

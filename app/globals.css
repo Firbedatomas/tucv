@@ -1,0 +1,23 @@
+@import "tailwindcss";
+
+:root {
+  --background: #ffffff;
+  --foreground: #171717;
+}
+
+@theme inline {
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+}
+
+body {
+  background: var(--background);
+  color: var(--foreground);
+}
+
+/* RichTextEditor (Mensaje visible en crear búsqueda) -- placeholder de un
+   contentEditable vacío, no hay atributo `placeholder` nativo para esto. */
+.rich-text-editable:empty:before {
+  content: attr(data-placeholder);
+  color: var(--tucv-muted);
+}

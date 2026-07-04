@@ -1,0 +1,72 @@
+# ===========================================================================
+# TuCV - stack standalone (para probar en un VPS aislado o full-local).
+# app        : Next.js standalone (node server.js) en :3000 (interno)
+# pocketbase : PocketBase dedicada en :8090 (interno), publicada en :8092
+#              del host además de proxiada por Caddy en pb.tucv.ar
+# caddy      : reverse proxy + HTTPS automatico (Let's Encrypt) para
+#              tucv.ar (app) y pb.tucv.ar (pocketbase)
+#
+# Para el deploy real en el mismo VPS que los demás servicios de
+# /home/tomas/services, usar docker-compose.hetzner.yml en su lugar (se une
+# al Caddy compartido en vez de levantar uno propio).
+#
+# NEXT_PUBLIC_* se hornean en el build de la imagen `app` (ver Dockerfile),
+# por eso van como `args` acá y no solo en el `.env` de runtime.
+# ===========================================================================
+
+services:
+  app:
+    build:
+      context: .
+      args:
+        NEXT_PUBLIC_POCKETBASE_URL: ${NEXT_PUBLIC_POCKETBASE_URL:-https://pb.tucv.ar}
+        NEXT_PUBLIC_BASE_URL: ${NEXT_PUBLIC_BASE_URL:-https://tucv.ar}
+        NEXT_PUBLIC_FEATURE_FILTERS_GENDER_AGE: ${NEXT_PUBLIC_FEATURE_FILTERS_GENDER_AGE:-false}
+        NEXT_PUBLIC_PLAUSIBLE_DOMAIN: ${NEXT_PUBLIC_PLAUSIBLE_DOMAIN:-tucv.ar}
+        NEXT_PUBLIC_PLAUSIBLE_SRC: ${NEXT_PUBLIC_PLAUSIBLE_SRC:-https://analytics.tucv.ar/js/script.file-downloads.hash.outbound-links.pageview-props.revenue.tagged-events.js}
+    restart: unless-stopped
+    env_file:
+      - .env
+    depends_on:
+      - pocketbase
+    expose:
+      - "3000"
+    networks:
+      - web
+
+  pocketbase:
+    build:
+      context: .
+      dockerfile: pocketbase.Dockerfile
+    restart: unless-stopped
+    env_file:
+      - .env
+    volumes:
+      - tucv_pb_data:/pb_data
+    ports:
+      - "127.0.0.1:8092:8090"
+    networks:
+      - web
+
+  caddy:
+    image: caddy:2
+    restart: unless-stopped
+    depends_on:
+      - app
+    ports:
+      - "80:80"
+      - "443:443"
+    volumes:
+      - ./Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    networks:
+      - web
+
+volumes:
+  tucv_pb_data:
+  caddy_data:
+  caddy_config:
+
+networks:
+  web:
