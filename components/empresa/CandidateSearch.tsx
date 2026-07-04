@@ -7,6 +7,11 @@ import { emptyCandidateFilters, matchesCandidateFilters } from "@/lib/candidate-
 import { Card } from "@/components/ui/Card";
 import { CandidateFilterBar } from "@/components/empresa/CandidateFilterBar";
 import { CandidateAvatar, CandidateCardBody, type CandidateLike } from "@/components/empresa/CandidateCardBody";
+import {
+  SavedCandidateControls,
+  type SavedRecord,
+  type SavedStatus,
+} from "@/components/empresa/SavedCandidateControls";
 
 type CandidateCounts = {
   total: number;
@@ -16,12 +21,14 @@ type CandidateCounts = {
   ocultos: number;
 };
 
-export function CandidateSearch() {
+export function CandidateSearch({ businessId }: { businessId: string }) {
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
   const [counts, setCounts] = useState<CandidateCounts | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   const [revealedContactId, setRevealedContactId] = useState<string | null>(null);
   const [filters, setFilters] = useState(emptyCandidateFilters);
+  // Mini-CRM: candidatos guardados por este negocio, indexados por candidate id.
+  const [saved, setSaved] = useState<Map<string, SavedRecord>>(new Map());
 
   useEffect(() => {
     pb()
@@ -30,6 +37,66 @@ export function CandidateSearch() {
       .then(setCandidates)
       .catch(() => setCandidates([]));
   }, []);
+
+  useEffect(() => {
+    pb()
+      .collection("saved_candidates")
+      .getFullList<{ id: string; candidate: string; status: SavedStatus; note: string }>({
+        filter: `business = "${businessId}"`,
+        requestKey: null,
+      })
+      .then((rows) => {
+        setSaved(new Map(rows.map((r) => [r.candidate, { id: r.id, status: r.status || "guardado", note: r.note || "" }])));
+      })
+      .catch(() => setSaved(new Map()));
+  }, [businessId]);
+
+  function upsertSaved(candidateId: string, record: SavedRecord | null) {
+    setSaved((prev) => {
+      const next = new Map(prev);
+      if (record) next.set(candidateId, record);
+      else next.delete(candidateId);
+      return next;
+    });
+  }
+
+  async function saveCandidate(candidateId: string) {
+    try {
+      const rec = await pb()
+        .collection("saved_candidates")
+        .create<{ id: string; status: SavedStatus; note: string }>({
+          business: businessId,
+          candidate: candidateId,
+          status: "guardado",
+        });
+      upsertSaved(candidateId, { id: rec.id, status: rec.status || "guardado", note: rec.note || "" });
+    } catch {
+      // Si ya existe (índice único) o falla la red, no rompemos la vista.
+    }
+  }
+
+  async function patchSaved(candidateId: string, patch: Partial<Pick<SavedRecord, "status" | "note">>) {
+    const current = saved.get(candidateId);
+    if (!current) return;
+    // Optimista: reflejamos el cambio y lo revertimos si el server falla.
+    upsertSaved(candidateId, { ...current, ...patch });
+    try {
+      await pb().collection("saved_candidates").update(current.id, patch);
+    } catch {
+      upsertSaved(candidateId, current);
+    }
+  }
+
+  async function removeSaved(candidateId: string) {
+    const current = saved.get(candidateId);
+    if (!current) return;
+    upsertSaved(candidateId, null);
+    try {
+      await pb().collection("saved_candidates").delete(current.id);
+    } catch {
+      upsertSaved(candidateId, current);
+    }
+  }
 
   // Desglose agregado (total registrados vs visibles) desde el server: el
   // cliente business solo puede leer los consent_zone_visible, así que el
@@ -156,6 +223,14 @@ export function CandidateSearch() {
                           Todavía no habilitó contacto directo
                         </span>
                       )}
+                      <SavedCandidateControls
+                        saved={saved.get(c.id) ?? null}
+                        expanded={expanded}
+                        onSave={() => saveCandidate(c.id)}
+                        onStatus={(status) => patchSaved(c.id, { status })}
+                        onNote={(note) => patchSaved(c.id, { note })}
+                        onRemove={() => removeSaved(c.id)}
+                      />
                     </div>
                   </div>
                 </div>
