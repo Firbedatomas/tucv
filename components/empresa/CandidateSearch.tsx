@@ -42,6 +42,8 @@ export function CandidateSearch({
   // (candidate id -> etiqueta de la búsqueda) para reflejar el estado.
   const [jobs, setJobs] = useState<InviteJob[]>([]);
   const [invited, setInvited] = useState<Map<string, string>>(new Map());
+  // Estado de solicitud de contacto por candidato: pending / accepted / rejected.
+  const [contactStatus, setContactStatus] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     pb()
@@ -76,6 +78,37 @@ export function CandidateSearch({
       .then((rows) => setJobs(rows.map((j) => ({ id: j.id, label: j.role || j.name || "Búsqueda" }))))
       .catch(() => setJobs([]));
   }, [businessId]);
+
+  useEffect(() => {
+    pb()
+      .collection("contact_requests")
+      .getFullList<{ candidate: string; status: string }>({ requestKey: null })
+      .then((rows) => setContactStatus(new Map(rows.map((r) => [r.candidate, r.status]))))
+      .catch(() => setContactStatus(new Map()));
+  }, []);
+
+  async function requestContact(candidateId: string) {
+    setContactStatus((prev) => new Map(prev).set(candidateId, "pending"));
+    try {
+      const res = await fetch("/api/contact-requests", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pb().authStore.token, candidateId }),
+      });
+      if (!res.ok) setContactStatus((prev) => new Map(prev).set(candidateId, ""));
+    } catch {
+      setContactStatus((prev) => new Map(prev).set(candidateId, ""));
+    }
+  }
+
+  function logReveal(candidateId: string) {
+    // Auditoría del acceso al WhatsApp (contact_revealed), best-effort.
+    fetch("/api/contact-requests/reveal", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: pb().authStore.token, candidateId }),
+    }).catch(() => {});
+  }
 
   async function inviteCandidate(candidateId: string, jobPostId: string, message: string) {
     const job = jobs.find((j) => j.id === jobPostId);
@@ -262,35 +295,62 @@ export function CandidateSearch({
                       >
                         {expanded ? "Ocultar perfil" : "Ver perfil"}
                       </button>
-                      {c.consent_contact ? (
-                        revealedContactId === c.id ? (
-                          <a
-                            href={waLink(c.whatsapp, `Hola ${c.name}, te contacto desde TuCV.`)}
-                            target="_blank"
-                            rel="noopener noreferrer"
-                            className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
-                            style={{ backgroundColor: "#128C4A", color: "#fff" }}
-                          >
-                            Escribir por WhatsApp
-                          </a>
-                        ) : (
-                          // El WhatsApp no se muestra de una: primero "Contactar".
-                          // El candidato ya aceptó (consent_contact) -> revelarlo
-                          // acá es un paso deliberado, no una base de teléfonos.
+                      {(() => {
+                        const cstatus = contactStatus.get(c.id);
+                        // Se puede revelar WhatsApp si el candidato tiene contacto
+                        // directo, o si aceptó una solicitud puntual de esta empresa.
+                        const canReveal = c.consent_contact || cstatus === "accepted";
+                        if (canReveal) {
+                          return revealedContactId === c.id ? (
+                            <a
+                              href={waLink(c.whatsapp, `Hola ${c.name}, te contacto desde TuCV.`)}
+                              target="_blank"
+                              rel="noopener noreferrer"
+                              className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
+                              style={{ backgroundColor: "#128C4A", color: "#fff" }}
+                            >
+                              Escribir por WhatsApp
+                            </a>
+                          ) : (
+                            <button
+                              type="button"
+                              onClick={() => {
+                                setRevealedContactId(c.id);
+                                if (c.consent_contact) logReveal(c.id);
+                              }}
+                              className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
+                              style={{ backgroundColor: "var(--tucv-primary)", color: "#fff" }}
+                            >
+                              Contactar
+                            </button>
+                          );
+                        }
+                        if (cstatus === "pending") {
+                          return (
+                            <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
+                              Solicitud de contacto enviada
+                            </span>
+                          );
+                        }
+                        if (cstatus === "rejected") {
+                          return (
+                            <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
+                              No aceptó el contacto
+                            </span>
+                          );
+                        }
+                        // El candidato no habilitó contacto directo: se puede pedir.
+                        return (
                           <button
                             type="button"
-                            onClick={() => setRevealedContactId(c.id)}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
-                            style={{ backgroundColor: "var(--tucv-primary)", color: "#fff" }}
+                            onClick={() => requestContact(c.id)}
+                            className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border"
+                            style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-text)" }}
                           >
-                            Contactar
+                            Solicitar contacto
                           </button>
-                        )
-                      ) : (
-                        <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
-                          Todavía no habilitó contacto directo
-                        </span>
-                      )}
+                        );
+                      })()}
                       <SavedCandidateControls
                         saved={saved.get(c.id) ?? null}
                         expanded={expanded}

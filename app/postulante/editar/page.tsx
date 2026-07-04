@@ -14,6 +14,7 @@ import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { DataRightsCard } from "@/components/ui/DataRightsCard";
 import { InvitationsInbox } from "@/components/postulante/InvitationsInbox";
+import { ContactRequestsInbox } from "@/components/postulante/ContactRequestsInbox";
 import { useRouter } from "next/navigation";
 
 type RichCategoryExperience = {
@@ -192,6 +193,7 @@ function EditarContent() {
 
   return (
     <>
+      <ContactRequestsInbox candidateId={record.id} />
       <InvitationsInbox candidateId={record.id} />
       <CandidateForm
         mode={{

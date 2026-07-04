@@ -12,6 +12,7 @@ export type EmailType =
   | "company_weekly_job_digest"
   | "candidate_weekly_profile_views"
   | "candidate_invitation"
+  | "contact_request"
   | "team_invite";
 
 export type EmailStatus =
