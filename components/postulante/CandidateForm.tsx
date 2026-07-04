@@ -98,7 +98,9 @@ export const emptyCandidateForm: CandidateFormValues = {
   consent_save: false,
   consent_zone_visible: false,
   consent_contact: false,
-  consent_public_profile: false,
+  // Pre-tildado a propósito (perfil público = máxima visibilidad). El card
+  // público nunca expone datos sensibles; se puede desactivar en el momento.
+  consent_public_profile: true,
   profileSlug: "",
 };
 
@@ -835,20 +837,47 @@ export function CandidateForm({
           </span>
         </label>
 
-        <label className="flex items-start gap-2 mb-5 text-sm">
-          <input
-            type="checkbox"
-            className="mt-1"
-            checked={values.consent_public_profile}
-            onChange={(e) => set("consent_public_profile", e.target.checked)}
-          />
-          <span>
-            Quiero hacer público mi perfil en{" "}
-            <strong>&quot;Gente lista para laburar cerca tuyo&quot;</strong>, visible para cualquiera
-            sin necesidad de cuenta (opcional). Nunca mostramos tu WhatsApp, DNI, email ni fecha de
-            nacimiento ahí -- podés desactivarlo cuando quieras.
+        {/* Perfil público: la opción de mayor visibilidad, destacada (tema
+            "Impacto") porque es la que más chances de contacto da -- el perfil
+            aparece también en el directorio abierto, no solo en la búsqueda
+            privada de empresas. Pre-tildado por decisión de producto; el card
+            público nunca expone WhatsApp/DNI/email/fecha de nacimiento. */}
+        <div
+          className="mb-5 p-4 rounded-[var(--tucv-radius)]"
+          style={{
+            backgroundColor: "var(--tucv-accent)",
+            border: "2px solid var(--tucv-border)",
+            boxShadow: "3px 3px 0 var(--tucv-border)",
+          }}
+        >
+          <span
+            className="inline-block text-[10px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-[var(--tucv-radius)] mb-2"
+            style={{ backgroundColor: "var(--tucv-text)", color: "var(--tucv-bg)" }}
+          >
+            Recomendado
           </span>
-        </label>
+          <label className="flex items-start gap-2.5 cursor-pointer">
+            <input
+              type="checkbox"
+              className="mt-1 w-4 h-4 shrink-0"
+              checked={values.consent_public_profile}
+              onChange={(e) => set("consent_public_profile", e.target.checked)}
+            />
+            <span className="text-sm" style={{ color: "var(--tucv-text)" }}>
+              <span className="font-bold block mb-0.5 text-base">
+                Hacé público tu perfil — es el que más te encuentran.
+              </span>
+              Aparecés en <strong>&quot;Gente lista para laburar cerca tuyo&quot;</strong>, el
+              directorio abierto que ve cualquiera sin cuenta, además de las búsquedas de las
+              empresas.{" "}
+              <span className="font-semibold">Más lugares donde aparecés, más contactos.</span>
+              <span className="block mt-1.5 text-xs" style={{ color: "var(--tucv-text)", opacity: 0.7 }}>
+                Nunca mostramos tu WhatsApp, DNI, email ni fecha de nacimiento. Lo desactivás cuando
+                quieras.
+              </span>
+            </span>
+          </label>
+        </div>
 
         {submitError && (
           <p className="text-sm mb-3 font-medium" style={{ color: "#DC2626" }}>
