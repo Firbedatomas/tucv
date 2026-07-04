@@ -1,12 +1,14 @@
-import { getDashboardStats } from "@/lib/admin/stats";
+import { getDashboardStats, getBusinessMetrics } from "@/lib/admin/stats";
 import { StatCard } from "@/components/admin/StatCard";
+import { CategoryBreakdown } from "@/components/admin/CategoryBreakdown";
+import { Card } from "@/components/ui/Card";
 
 function formatARS(amount: number): string {
   return amount.toLocaleString("es-AR", { style: "currency", currency: "ARS", maximumFractionDigits: 0 });
 }
 
 export default async function AdminResumenPage() {
-  const stats = await getDashboardStats();
+  const [stats, metrics] = await Promise.all([getDashboardStats(), getBusinessMetrics()]);
 
   return (
     <div>
@@ -59,6 +61,41 @@ export default async function AdminResumenPage() {
         {Object.entries(stats.pagos.porTipo).map(([type, amount]) => (
           <StatCard key={type} label={type} value={formatARS(amount)} />
         ))}
+      </div>
+
+      <p className="text-xs font-semibold uppercase tracking-wide mt-8 mb-1" style={{ color: "var(--tucv-muted)" }}>
+        Negocio
+      </p>
+      <p className="text-sm mb-3" style={{ color: "var(--tucv-muted)" }}>
+        Conversión = negocios en un plan pago (Pro o Equipo) sobre el total registrado.
+      </p>
+      <div className="grid grid-cols-2 sm:grid-cols-4 gap-4 mb-4">
+        <StatCard label="Conversión free → pago" value={`${metrics.conversionRate.toFixed(1)}%`} />
+        {metrics.planCounts.map((p) => (
+          <StatCard key={p.label} label={`Plan ${p.label}`} value={p.value} />
+        ))}
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+        <Card>
+          <h2 className="font-semibold mb-3">Ingresos por plan (histórico)</h2>
+          <CategoryBreakdown rows={metrics.revenueByPlan} formatValue={formatARS} />
+        </Card>
+        <Card>
+          <h2 className="font-semibold mb-3">Postulantes por rubro</h2>
+          <CategoryBreakdown rows={metrics.candidatesByCategory} />
+        </Card>
+      </div>
+
+      <div className="grid sm:grid-cols-2 gap-4">
+        <Card>
+          <h2 className="font-semibold mb-3">Búsquedas activas por rubro</h2>
+          <CategoryBreakdown rows={metrics.activeJobsByCategory} />
+        </Card>
+        <Card>
+          <h2 className="font-semibold mb-3">Búsquedas activas por zona</h2>
+          <CategoryBreakdown rows={metrics.activeJobsByCity} />
+        </Card>
       </div>
     </div>
   );
