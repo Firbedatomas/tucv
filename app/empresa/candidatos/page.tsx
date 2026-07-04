@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { useBusinessAuth } from "@/lib/use-business-auth";
 import { canSourceCandidates } from "@/lib/business-permissions";
 import { CandidateSearch } from "@/components/empresa/CandidateSearch";
+import { LiveActivity } from "@/components/landing/LiveActivity";
 
 export default function CandidatosPage() {
   const router = useRouter();
@@ -27,11 +28,14 @@ export default function CandidatosPage() {
           Perfiles de tu zona que eligieron ser visibles para negocios, aunque no se hayan
           postulado a ninguna de tus búsquedas.
         </p>
-        <CandidateSearch
-          businessId={business.id}
-          businessCity={business.city}
-          businessProvince={business.province}
-        />
+        <LiveActivity city={business.city} title="Movimiento en tu zona" />
+        <div className="mt-6">
+          <CandidateSearch
+            businessId={business.id}
+            businessCity={business.city}
+            businessProvince={business.province}
+          />
+        </div>
       </div>
     </main>
   );

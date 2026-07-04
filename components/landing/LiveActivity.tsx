@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { pb } from "@/lib/pocketbase";
 import { timeAgo } from "@/lib/time-ago";
 
 type Counters = {
@@ -17,14 +18,15 @@ const POLL_MS = 60000;
 // "TuCV late ahora": contadores REALES + feed anonimizado de movimiento. Los
 // números salen tal cual de la base (mejor real que inflado). El feed se
 // refresca por polling; no decimos "en vivo" salvo que haya movimiento real.
-export function LiveActivity() {
+export function LiveActivity({ city = "", title = "TuCV late ahora" }: { city?: string; title?: string }) {
   const [data, setData] = useState<Payload | null>(null);
   const [now, setNow] = useState(0);
 
   useEffect(() => {
     let cancelled = false;
+    const url = city ? `/api/public/activity?city=${encodeURIComponent(city)}` : "/api/public/activity";
     const load = () =>
-      fetch("/api/public/activity")
+      fetch(url)
         .then((r) => (r.ok ? r.json() : null))
         .then((d: Payload | null) => {
           if (!cancelled && d) {
@@ -34,12 +36,20 @@ export function LiveActivity() {
         })
         .catch(() => {});
     load();
+    // Realtime: los mismos listRule públicos que ya habilitan el feed de
+    // búsquedas permiten a un cliente anónimo suscribirse. Refrescamos ante
+    // cualquier evento/búsqueda/perfil nuevo, con polling de respaldo.
+    const subs: Array<Promise<() => void>> = [
+      pb().collection("activity_events").subscribe("*", () => load()),
+      pb().collection("job_posts").subscribe("*", () => load()),
+    ];
     const t = setInterval(load, POLL_MS);
     return () => {
       cancelled = true;
       clearInterval(t);
+      subs.forEach((p) => p.then((unsub) => unsub()).catch(() => {}));
     };
-  }, []);
+  }, [city]);
 
   if (!data) return null;
   const { counters, feed } = data;
@@ -69,7 +79,7 @@ export function LiveActivity() {
               style={{ backgroundColor: "#128C4A", boxShadow: "0 0 0 3px rgba(18,140,74,0.2)" }}
             />
           )}
-          <h2 className="text-xl sm:text-2xl font-bold">TuCV late ahora</h2>
+          <h2 className="text-xl sm:text-2xl font-bold">{title}</h2>
         </div>
 
         <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-6">

@@ -4,7 +4,7 @@ import { useState } from "react";
 
 // Estados del mini-CRM: guardar un candidato del directorio y seguirlo por el
 // pipeline. Orden = avance real del proceso, por eso el select los muestra así.
-export const SAVED_STATUSES = ["guardado", "contactado", "entrevistado", "descartado"] as const;
+export const SAVED_STATUSES = ["guardado", "contactado", "entrevistado", "descartado", "contratado"] as const;
 export type SavedStatus = (typeof SAVED_STATUSES)[number];
 
 const STATUS_LABEL: Record<SavedStatus, string> = {
@@ -12,6 +12,7 @@ const STATUS_LABEL: Record<SavedStatus, string> = {
   contactado: "Contactado",
   entrevistado: "Entrevistado",
   descartado: "Descartado",
+  contratado: "Contratado",
 };
 
 export type SavedRecord = { id: string; status: SavedStatus; note: string };
