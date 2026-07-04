@@ -19,9 +19,18 @@ async function queryPlausible(body: Record<string, unknown>): Promise<QueryResul
       body: JSON.stringify({ site_id: PLAUSIBLE_SITE_ID, ...body }),
       cache: "no-store",
     });
-    if (!res.ok) return null;
+    if (!res.ok) {
+      // Antes esto devolvía null sin dejar rastro -- /admin/embudo y
+      // /admin/visitas mostraban el mismo mensaje genérico ("no pudimos
+      // consultar Plausible") sin importar si la causa era una key vencida,
+      // el site_id mal, o la Stats API v2 caída, y no había forma de
+      // distinguir desde los logs del server cuál de esas era.
+      console.error(`[plausible] ${res.status} ${res.statusText} — ${await res.text().catch(() => "")}`);
+      return null;
+    }
     return (await res.json()) as QueryResult;
-  } catch {
+  } catch (err) {
+    console.error("[plausible] fetch failed:", err instanceof Error ? err.message : err);
     return null;
   }
 }
@@ -52,6 +61,28 @@ export async function getVisitsTimeseries(
     visitors: r.metrics[0] ?? 0,
     pageviews: r.metrics[1] ?? 0,
   }));
+}
+
+export type BreakdownRow = { name: string; visitors: number };
+
+// De dónde vienen los visitantes -- "visit:source" es el canal que
+// Plausible ya deduce solo (Google, Direct, redes, etc, agrupando UTMs y
+// referrers); "visit:device"/"visit:country" dan el resto del perfil básico
+// de quién visita. Devuelve el top-N ordenado por visitantes, no todo el
+// listado (una cola larga de un solo visitante cada uno no aporta nada acá).
+export async function getBreakdown(
+  dimension: "visit:source" | "visit:device" | "visit:country" | "visit:utm_campaign",
+  dateRange: string | [string, string] = "30d",
+  limit = 10
+): Promise<BreakdownRow[] | null> {
+  const data = await queryPlausible({
+    metrics: ["visitors"],
+    dimensions: [dimension],
+    date_range: dateRange,
+    pagination: { limit },
+  });
+  if (!data) return null;
+  return data.results.map((r) => ({ name: r.dimensions[0] || "(sin dato)", visitors: r.metrics[0] ?? 0 }));
 }
 
 export type GoalCounts = Record<string, { visitors: number; events: number }>;

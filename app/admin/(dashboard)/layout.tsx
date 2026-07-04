@@ -16,9 +16,12 @@ export default async function AdminDashboardLayout({ children }: { children: Rea
   if (!email) redirect("/admin/login");
 
   return (
-    <div className="flex min-h-screen">
+    <div className="flex flex-col sm:flex-row min-h-screen">
       <AdminNav />
-      <main className="flex-1 p-6 sm:p-8">{children}</main>
+      {/* min-w-0 -- sin esto, un <table> ancho adentro empuja el ancho de
+          este flex item más allá del viewport en vez de dejar que el
+          overflow-x-auto de DataTable haga su scroll horizontal. */}
+      <main className="flex-1 min-w-0 p-4 sm:p-8">{children}</main>
     </div>
   );
 }

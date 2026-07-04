@@ -46,7 +46,7 @@ export default async function AdminCorreoThreadPage({
 
       <div className="space-y-4 mb-6">
         {messages.map((m) => (
-          <Card key={m.id} className={m.direction === "out" ? "ml-8" : "mr-8"}>
+          <Card key={m.id} className={m.direction === "out" ? "sm:ml-8" : "sm:mr-8"}>
             <div className="flex items-center justify-between mb-2 text-xs" style={{ color: "var(--tucv-muted)" }}>
               <span className="font-medium" style={{ color: "var(--tucv-text)" }}>
                 {m.direction === "out" ? "Vos" : thread.counterparty_name || thread.counterparty_email}

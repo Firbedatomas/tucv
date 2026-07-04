@@ -1,14 +1,21 @@
-import { getVisitStats, getVisitsTimeseries, isPlausibleConfigured } from "@/lib/admin/plausible";
+import { getVisitStats, getVisitsTimeseries, getBreakdown, isPlausibleConfigured } from "@/lib/admin/plausible";
 import { StatCard } from "@/components/admin/StatCard";
 import { VisitsChart } from "@/components/admin/VisitsChart";
+import { BreakdownList } from "@/components/admin/BreakdownList";
 import { Card } from "@/components/ui/Card";
 import { getTheme } from "@/lib/theme/tokens";
 
 export default async function AdminVisitasPage() {
   const configured = isPlausibleConfigured();
-  const [stats, series] = configured
-    ? await Promise.all([getVisitStats("30d"), getVisitsTimeseries("30d")])
-    : [null, null];
+  const [stats, series, sources, devices, countries] = configured
+    ? await Promise.all([
+        getVisitStats("30d"),
+        getVisitsTimeseries("30d"),
+        getBreakdown("visit:source", "30d"),
+        getBreakdown("visit:device", "30d"),
+        getBreakdown("visit:country", "30d"),
+      ])
+    : [null, null, null, null, null];
   const theme = getTheme("impacto");
 
   return (
@@ -43,7 +50,7 @@ export default async function AdminVisitasPage() {
               value={stats.bounceRate !== null ? `${Math.round(stats.bounceRate)}%` : "—"}
             />
           </div>
-          <Card>
+          <Card className="mb-6">
             <VisitsChart
               data={series}
               primaryColor={theme.colors.primary}
@@ -51,6 +58,27 @@ export default async function AdminVisitasPage() {
               borderColor={theme.colors.border}
             />
           </Card>
+
+          <div className="grid sm:grid-cols-3 gap-4">
+            <Card>
+              <h2 className="font-semibold mb-3">De dónde vienen</h2>
+              {sources ? <BreakdownList rows={sources} /> : (
+                <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>No pudimos consultar esto.</p>
+              )}
+            </Card>
+            <Card>
+              <h2 className="font-semibold mb-3">Dispositivo</h2>
+              {devices ? <BreakdownList rows={devices} /> : (
+                <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>No pudimos consultar esto.</p>
+              )}
+            </Card>
+            <Card>
+              <h2 className="font-semibold mb-3">País</h2>
+              {countries ? <BreakdownList rows={countries} /> : (
+                <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>No pudimos consultar esto.</p>
+              )}
+            </Card>
+          </div>
         </>
       )}
     </div>

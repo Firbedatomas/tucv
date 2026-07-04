@@ -44,11 +44,15 @@ export default async function AdminEmbudoPage() {
         <div className="space-y-6">
           <Card>
             <h2 className="font-semibold mb-4">Negocios</h2>
+            <p className="text-xs mb-3" style={{ color: "var(--tucv-muted)" }}>
+              De la visita a pagar un plan -- todo el recorrido de un negocio, un solo embudo.
+            </p>
             <FunnelBar
               steps={[
                 { label: "Visitas", value: visits.visitors },
                 { label: "Registro completado", value: goals["Empresa: registro completado"].visitors },
                 { label: "Publicó un aviso", value: goals["Empresa: aviso publicado"].visitors },
+                { label: "Pagó un plan", value: goals["Pago aprobado"].visitors },
               ]}
             />
           </Card>
@@ -61,10 +65,6 @@ export default async function AdminEmbudoPage() {
                 { label: "Envió una postulación", value: goals["Postulante: postulacion enviada"].visitors },
               ]}
             />
-          </Card>
-          <Card>
-            <h2 className="font-semibold mb-4">Pagos</h2>
-            <FunnelBar steps={[{ label: "Pagos aprobados", value: goals["Pago aprobado"].visitors }]} />
           </Card>
         </div>
       )}
