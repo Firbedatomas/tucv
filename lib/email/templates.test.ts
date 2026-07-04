@@ -8,6 +8,7 @@ import { buildNewApplicationCompanyEmail } from "@/lib/email/templates/new-appli
 import { buildJobExpiringEmail } from "@/lib/email/templates/job-expiring";
 import { buildJobDeactivatedSummaryEmail } from "@/lib/email/templates/job-deactivated-summary";
 import { buildCompanyDailyJobDigestEmail } from "@/lib/email/templates/company-daily-job-digest";
+import { buildCompanyWeeklyJobDigestEmail } from "@/lib/email/templates/company-weekly-job-digest";
 import { buildCandidateWeeklyProfileViewsEmail } from "@/lib/email/templates/candidate-weekly-profile-views";
 import { buildProfileStartedEmail } from "@/lib/email/templates/profile-started";
 import type { RenderedEmail } from "@/lib/email/types";
@@ -132,6 +133,32 @@ describe("email templates", () => {
     });
     expectValidEmail(email);
     expect(email.html).toContain("3");
+  });
+
+  it("company_weekly_job_digest renders even with zero applicants and no active jobs", () => {
+    expectValidEmail(
+      buildCompanyWeeklyJobDigestEmail({
+        businessName: "",
+        newApplicantsCount: 0,
+        activeJobsCount: 0,
+        panelUrl: "https://tucv.ar/empresa/panel",
+        preferencesUrl: "https://tucv.ar/configuracion/notificaciones",
+        unsubscribeUrl: "https://tucv.ar/api/email/unsubscribe?token=abc",
+      }),
+    );
+  });
+
+  it("company_weekly_job_digest includes the applicant count with data", () => {
+    const email = buildCompanyWeeklyJobDigestEmail({
+      businessName: "Almacén Don José",
+      newApplicantsCount: 12,
+      activeJobsCount: 2,
+      panelUrl: "https://tucv.ar/empresa/panel",
+      preferencesUrl: "https://tucv.ar/configuracion/notificaciones",
+      unsubscribeUrl: "https://tucv.ar/api/email/unsubscribe?token=abc",
+    });
+    expectValidEmail(email);
+    expect(email.html).toContain("12");
   });
 
   it("candidate_weekly_profile_views renders even with zero views", () => {

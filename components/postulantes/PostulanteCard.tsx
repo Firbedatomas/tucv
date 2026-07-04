@@ -8,6 +8,7 @@ import { trackEvent } from "@/lib/track";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { ReportProfileButton } from "@/components/postulantes/ReportProfileButton";
+import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
 import type { PublicCandidateListItem } from "@/lib/public-candidates-list";
 
 // Igual patrón que PostedAgo en components/landing/JobCard.tsx: el "activo
@@ -102,9 +103,9 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
         </p>
       )}
 
+      <ProfileBadges candidate={candidate} />
+
       <p className="text-xs" style={{ color: "var(--tucv-muted)" }}>
-        {candidate.immediate_availability ? "Disponibilidad inmediata · " : ""}
-        {candidate.has_own_transport === "si" ? "Movilidad propia · " : ""}
         Activo <ActiveAgo updated={candidate.updated} />
       </p>
 

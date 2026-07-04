@@ -23,9 +23,13 @@ const GATES: Partial<Record<EmailType, (prefs: NotificationPreferences) => boole
   // existiendo, solo cambia CUÁNDO se avisa por mail.
   application_received_candidate: (prefs) => prefs.applicationsFrequency === "instant",
   new_application_company: (prefs) => prefs.applicationsFrequency === "instant",
-  // Solo existe la variante diaria hoy -- si eligió "weekly" no hay a qué
-  // digest semanal caerle todavía, así que por ahora equivale a "never".
-  company_daily_job_digest: (prefs) => prefs.companyDigestFrequency === "daily",
+  // El digest diario de empresa cubre dos preferencias: la explícita
+  // ("Impacto diario" = companyDigestFrequency) y la implícita de quien
+  // puso "Postulaciones: resumen diario" (applicationsFrequency=daily, que
+  // apagó el instantáneo justamente para verlo batcheado acá).
+  company_daily_job_digest: (prefs) =>
+    prefs.companyDigestFrequency === "daily" || prefs.applicationsFrequency === "daily",
+  company_weekly_job_digest: (prefs) => prefs.companyDigestFrequency === "weekly",
   candidate_weekly_profile_views: (prefs) => prefs.profileViewsFrequency !== "never",
 };
 

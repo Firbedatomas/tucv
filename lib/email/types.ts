@@ -9,6 +9,7 @@ export type EmailType =
   | "job_expiring"
   | "job_deactivated_summary"
   | "company_daily_job_digest"
+  | "company_weekly_job_digest"
   | "candidate_weekly_profile_views"
   | "team_invite";
 

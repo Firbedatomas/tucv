@@ -13,6 +13,7 @@ import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { QRCodeView } from "@/components/qr/QRCodeView";
 import { ProfileShareButtons } from "@/components/postulantes/ProfileShareButtons";
+import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
 
 type RichCategoryExperience = {
   category: string;
@@ -188,6 +189,26 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
             </div>
           </div>
 
+          <ProfileBadges
+            className="mb-5"
+            candidate={{
+              categories: profile.categories,
+              // El perfil rico guarda experiencia por rubro (category_experience),
+              // no un campo `experience` plano -- lo derivamos: alcanza con que
+              // CUALQUIER rubro tenga experiencia cargada (distinta de "sin
+              // experiencia") para el badge "Con experiencia".
+              experience: (profile.category_experience ?? []).some(
+                (e) => e.experience && e.experience !== "sin_experiencia",
+              )
+                ? "si"
+                : "sin_experiencia",
+              availability: profile.availability,
+              bio: profile.bio,
+              has_own_transport: profile.has_own_transport,
+              immediate_availability: profile.immediate_availability,
+            }}
+          />
+
           {profile.bio && (
             <p className="text-sm mb-5" style={{ color: "var(--tucv-text)" }}>
               {profile.bio}
@@ -229,30 +250,10 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--tucv-muted)" }}>
             Disponibilidad
           </p>
-          <p className={profile.has_own_transport === "si" || profile.immediate_availability ? "text-sm mb-2" : "text-sm mb-5"}>
-            {labelsFor(AVAILABILITY, profile.availability).join(", ")}
-          </p>
-
-          {(profile.has_own_transport === "si" || profile.immediate_availability) && (
-            <div className="flex flex-wrap gap-1.5 mb-5">
-              {profile.has_own_transport === "si" && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-[var(--tucv-radius)]"
-                  style={{ backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)" }}
-                >
-                  Con movilidad propia
-                </span>
-              )}
-              {profile.immediate_availability && (
-                <span
-                  className="text-xs px-2 py-0.5 rounded-[var(--tucv-radius)]"
-                  style={{ backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)" }}
-                >
-                  Puede empezar ya
-                </span>
-              )}
-            </div>
-          )}
+          {/* "Puede empezar ya" y "Movilidad propia" ya se muestran como
+              badges arriba (ProfileBadges) -- acá va solo el detalle de
+              turnos, sin repetir esos dos. */}
+          <p className="text-sm mb-5">{labelsFor(AVAILABILITY, profile.availability).join(", ")}</p>
 
           {profile.expected_salary && (
             <p className="text-sm mb-5">

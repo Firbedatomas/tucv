@@ -113,12 +113,12 @@ export default function NotificacionesPage() {
               onChange={(e) => save({ ...prefs, applicationsFrequency: e.target.value as Prefs["applicationsFrequency"] })}
             >
               <option value="instant">Al instante</option>
-              <option value="daily">Resumen diario (para empresas, en &quot;Impacto diario&quot; de abajo; postulantes: por ahora no llega ningún aviso)</option>
+              <option value="daily">Resumen diario (empresas: llega en el &quot;Impacto diario&quot; de abajo)</option>
               <option value="never">Nunca</option>
             </select>
           </Field>
 
-          <Field label="Impacto diario (empresas)" hint="Resumen de nuevos postulantes en tus búsquedas activas.">
+          <Field label="Resumen de actividad (empresas)" hint="Resumen de nuevos postulantes en tus búsquedas activas.">
             <select
               className={inputClass}
               style={inputStyle}
@@ -126,7 +126,7 @@ export default function NotificacionesPage() {
               onChange={(e) => save({ ...prefs, companyDigestFrequency: e.target.value as Prefs["companyDigestFrequency"] })}
             >
               <option value="daily">Diario</option>
-              <option value="weekly">Semanal (por ahora equivale a nunca -- solo existe la versión diaria)</option>
+              <option value="weekly">Semanal</option>
               <option value="never">Nunca</option>
             </select>
           </Field>
