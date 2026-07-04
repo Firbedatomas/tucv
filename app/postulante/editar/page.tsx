@@ -13,6 +13,7 @@ import { type ReferenceValue } from "@/components/postulante/ReferenceListInput"
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { DataRightsCard } from "@/components/ui/DataRightsCard";
+import { InvitationsInbox } from "@/components/postulante/InvitationsInbox";
 import { useRouter } from "next/navigation";
 
 type RichCategoryExperience = {
@@ -185,6 +186,7 @@ function EditarContent() {
 
   return (
     <>
+      <InvitationsInbox candidateId={record.id} />
       <CandidateForm
         mode={{
           kind: "edit",

@@ -12,6 +12,7 @@ import {
   type SavedRecord,
   type SavedStatus,
 } from "@/components/empresa/SavedCandidateControls";
+import { InviteCandidateControls, type InviteJob } from "@/components/empresa/InviteCandidateControls";
 
 type CandidateCounts = {
   total: number;
@@ -29,6 +30,10 @@ export function CandidateSearch({ businessId }: { businessId: string }) {
   const [filters, setFilters] = useState(emptyCandidateFilters);
   // Mini-CRM: candidatos guardados por este negocio, indexados por candidate id.
   const [saved, setSaved] = useState<Map<string, SavedRecord>>(new Map());
+  // Búsquedas activas del negocio (para invitar) y candidatos ya invitados
+  // (candidate id -> etiqueta de la búsqueda) para reflejar el estado.
+  const [jobs, setJobs] = useState<InviteJob[]>([]);
+  const [invited, setInvited] = useState<Map<string, string>>(new Map());
 
   useEffect(() => {
     pb()
@@ -50,6 +55,38 @@ export function CandidateSearch({ businessId }: { businessId: string }) {
       })
       .catch(() => setSaved(new Map()));
   }, [businessId]);
+
+  useEffect(() => {
+    const now = new Date().toISOString();
+    pb()
+      .collection("job_posts")
+      .getFullList<{ id: string; role: string; name: string }>({
+        filter: `business = "${businessId}" && active = true && expires_at > "${now}"`,
+        fields: "id,role,name",
+        requestKey: null,
+      })
+      .then((rows) => setJobs(rows.map((j) => ({ id: j.id, label: j.role || j.name || "Búsqueda" }))))
+      .catch(() => setJobs([]));
+  }, [businessId]);
+
+  async function inviteCandidate(candidateId: string, jobPostId: string, message: string) {
+    const job = jobs.find((j) => j.id === jobPostId);
+    try {
+      const res = await fetch("/api/candidate-invitations", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pb().authStore.token, candidateId, jobPostId, message }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok) {
+        setInvited((prev) => new Map(prev).set(candidateId, job?.label ?? "tu búsqueda"));
+        return { ok: true };
+      }
+      return { ok: false, error: (data as { error?: string }).error };
+    } catch {
+      return { ok: false, error: "No se pudo invitar. Reintentá." };
+    }
+  }
 
   function upsertSaved(candidateId: string, record: SavedRecord | null) {
     setSaved((prev) => {
@@ -230,6 +267,11 @@ export function CandidateSearch({ businessId }: { businessId: string }) {
                         onStatus={(status) => patchSaved(c.id, { status })}
                         onNote={(note) => patchSaved(c.id, { note })}
                         onRemove={() => removeSaved(c.id)}
+                      />
+                      <InviteCandidateControls
+                        jobs={jobs}
+                        invitedLabel={invited.get(c.id) ?? null}
+                        onInvite={(jobPostId, message) => inviteCandidate(c.id, jobPostId, message)}
                       />
                     </div>
                   </div>
