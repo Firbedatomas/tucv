@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { pb } from "@/lib/pocketbase";
 import { emptyCandidateFilters, matchesCandidateFilters, type CandidateFilters } from "@/lib/candidate-filters";
 import { CATEGORIES, labelFor } from "@/lib/constants";
 import { LinkButton } from "@/components/ui/Button";
@@ -8,7 +9,9 @@ import { PostulantesFilterBar } from "@/components/postulantes/PostulantesFilter
 import { PostulanteCard } from "@/components/postulantes/PostulanteCard";
 import type { PublicCandidateListItem, PublicCandidatesStats } from "@/lib/public-candidates-list";
 
-const POLL_MS = 20000;
+// Red de contención por si el push SSE llega a fallar en silencio (red que
+// corta conexiones de larga duración) -- el push es el mecanismo principal.
+const FALLBACK_POLL_MS = 60000;
 
 type ApiResponse = { items: PublicCandidateListItem[]; stats: PublicCandidatesStats };
 
@@ -16,12 +19,12 @@ export function PostulantesDirectory() {
   const [data, setData] = useState<ApiResponse | null>(null);
   const [error, setError] = useState(false);
   const [filters, setFilters] = useState<CandidateFilters>(emptyCandidateFilters);
-  // candidate_profiles.listRule exige auth siempre (a propósito, ver
-  // pb_migrations/1783100000_updated_candidate_profiles.js) -- a diferencia
-  // de job_posts, un cliente anónimo NUNCA puede suscribirse en tiempo real
-  // acá (el evento nunca pasaría el rule-check). Por eso este feed es solo
-  // polling -- "vivo" en el sentido de refrescarse solo cada 20s, no push
-  // instantáneo. Ver /api/public-candidates (server-side, superusuario).
+  // Ahora SÍ hay push en tiempo real: el espejo public_candidate_cards es
+  // público (a diferencia de candidate_profiles, cuyo listRule exige auth),
+  // así que un cliente anónimo puede suscribirse -- PocketBase autoriza el
+  // evento con el listRule del espejo. Mismo patrón que LiveJobsFeed: fetch
+  // inicial + refetch en cada evento + poll de respaldo, con un contador
+  // para descartar respuestas que llegan fuera de orden.
   const requestSeq = useRef(0);
 
   useEffect(() => {
@@ -44,10 +47,28 @@ export function PostulantesDirectory() {
         });
     }
     refresh();
-    const interval = setInterval(refresh, POLL_MS);
+    const interval = setInterval(refresh, FALLBACK_POLL_MS);
+
+    let unsubscribe: (() => void) | undefined;
+    pb()
+      .collection("public_candidate_cards")
+      .subscribe("*", () => refresh())
+      .then((unsub) => {
+        if (cancelled) {
+          unsub();
+          return;
+        }
+        unsubscribe = unsub;
+      })
+      .catch(() => {
+        // Sin push (ej. red que bloquea SSE) el polling de arriba sigue
+        // andando igual -- no es motivo para romper la página.
+      });
+
     return () => {
       cancelled = true;
       clearInterval(interval);
+      unsubscribe?.();
     };
   }, []);
 

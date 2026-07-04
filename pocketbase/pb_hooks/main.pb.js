@@ -256,6 +256,98 @@ onRecordAfterUpdateSuccess((e) => {
   e.next()
 }, "candidate_profiles")
 
+// Sincroniza el espejo público public_candidate_cards (ver la migración
+// 1783270002_created_public_candidate_cards.js sobre por qué existe). Si
+// consent_public_profile está prendido, hace upsert de la card con SOLO los
+// campos seguros ya derivados (display_name = "Juan P.", nunca whatsapp/
+// fecha de nacimiento/CV); si está apagado, borra la card si existía. La
+// lógica va DUPLICADA en create y update a propósito -- el JSVM de
+// PocketBase evalúa cada callback aislado y no resuelve funciones a nivel de
+// archivo entre hooks (mismo motivo, y mismo patrón, que category_suggestions
+// arriba). El borrado del perfil no necesita hook: la relación `candidate`
+// de la card tiene cascadeDelete.
+onRecordAfterCreateSuccess((e) => {
+  const cards = e.app.findCollectionByNameOrId("public_candidate_cards")
+  let existing
+  try {
+    existing = e.app.findFirstRecordByFilter("public_candidate_cards", "candidate = {:id}", { id: e.record.id })
+  } catch {
+    existing = null
+  }
+  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug")
+  if (!isPublic) {
+    if (existing) e.app.delete(existing)
+    e.next()
+    return
+  }
+  const fullName = (e.record.get("name") || "").trim()
+  const parts = fullName.split(/\s+/).filter(function (p) { return p.length > 0 })
+  let displayName = "Postulante"
+  if (parts.length === 1) displayName = parts[0]
+  else if (parts.length >= 2) displayName = parts[0] + " " + parts[1].charAt(0).toUpperCase() + "."
+  const pbBase = $os.getenv("NEXT_PUBLIC_POCKETBASE_URL") || "http://127.0.0.1:8092"
+  const photo = e.record.get("photo")
+  const photoUrl = photo ? pbBase + "/api/files/" + e.record.collection().id + "/" + e.record.id + "/" + photo : ""
+  const card = existing || new Record(cards)
+  card.set("candidate", e.record.id)
+  card.set("slug", e.record.get("profile_slug"))
+  card.set("display_name", displayName)
+  card.set("city_zone", e.record.get("city_zone") || "")
+  card.set("categories", e.record.get("categories") || [])
+  card.set("category_other", e.record.get("category_other") || "")
+  card.set("experience", e.record.get("experience") || "")
+  card.set("availability", e.record.get("availability") || [])
+  card.set("has_own_transport", e.record.get("has_own_transport") || "")
+  card.set("immediate_availability", !!e.record.get("immediate_availability"))
+  card.set("bio", e.record.get("bio") || "")
+  card.set("photo_url", photoUrl)
+  card.set("source_created", e.record.get("created"))
+  card.set("source_updated", e.record.get("updated"))
+  e.app.save(card)
+  e.next()
+}, "candidate_profiles")
+
+onRecordAfterUpdateSuccess((e) => {
+  const cards = e.app.findCollectionByNameOrId("public_candidate_cards")
+  let existing
+  try {
+    existing = e.app.findFirstRecordByFilter("public_candidate_cards", "candidate = {:id}", { id: e.record.id })
+  } catch {
+    existing = null
+  }
+  const isPublic = !!e.record.get("consent_public_profile") && !!e.record.get("profile_slug")
+  if (!isPublic) {
+    if (existing) e.app.delete(existing)
+    e.next()
+    return
+  }
+  const fullName = (e.record.get("name") || "").trim()
+  const parts = fullName.split(/\s+/).filter(function (p) { return p.length > 0 })
+  let displayName = "Postulante"
+  if (parts.length === 1) displayName = parts[0]
+  else if (parts.length >= 2) displayName = parts[0] + " " + parts[1].charAt(0).toUpperCase() + "."
+  const pbBase = $os.getenv("NEXT_PUBLIC_POCKETBASE_URL") || "http://127.0.0.1:8092"
+  const photo = e.record.get("photo")
+  const photoUrl = photo ? pbBase + "/api/files/" + e.record.collection().id + "/" + e.record.id + "/" + photo : ""
+  const card = existing || new Record(cards)
+  card.set("candidate", e.record.id)
+  card.set("slug", e.record.get("profile_slug"))
+  card.set("display_name", displayName)
+  card.set("city_zone", e.record.get("city_zone") || "")
+  card.set("categories", e.record.get("categories") || [])
+  card.set("category_other", e.record.get("category_other") || "")
+  card.set("experience", e.record.get("experience") || "")
+  card.set("availability", e.record.get("availability") || [])
+  card.set("has_own_transport", e.record.get("has_own_transport") || "")
+  card.set("immediate_availability", !!e.record.get("immediate_availability"))
+  card.set("bio", e.record.get("bio") || "")
+  card.set("photo_url", photoUrl)
+  card.set("source_created", e.record.get("created"))
+  card.set("source_updated", e.record.get("updated"))
+  e.app.save(card)
+  e.next()
+}, "candidate_profiles")
+
 // Protege `plan` (free/pro) de business_accounts: una empresa autenticada
 // puede editar su propio registro (nombre, teléfono, zona), pero NO puede
 // auto-otorgarse el plan pago -- eso lo cambia solo un superusuario (por

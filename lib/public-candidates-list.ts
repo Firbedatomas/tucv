@@ -47,11 +47,15 @@ export type PublicCandidatesStats = {
   topCategory: string | null;
 };
 
-function mapSafeFields(c: Record<string, unknown>): PublicCandidateListItem {
+// Mapea una fila del ESPEJO public_candidate_cards (no candidate_profiles):
+// esos campos ya son los seguros y ya vienen derivados (display_name,
+// photo_url como string), calculados por el hook de sincronización en
+// pb_hooks/main.pb.js. Ver la migración 1783270002.
+function mapCard(c: Record<string, unknown>): PublicCandidateListItem {
   return {
     id: c.id as string,
-    slug: c.profile_slug as string,
-    displayName: displayName((c.name as string) || ""),
+    slug: c.slug as string,
+    displayName: (c.display_name as string) || "Postulante",
     city_zone: (c.city_zone as string) || "",
     categories: (c.categories as string[]) || [],
     category_other: (c.category_other as string) || "",
@@ -60,20 +64,17 @@ function mapSafeFields(c: Record<string, unknown>): PublicCandidateListItem {
     has_own_transport: (c.has_own_transport as string) || "",
     immediate_availability: Boolean(c.immediate_availability),
     bio: (c.bio as string) || "",
-    photoUrl: c.photo ? publicFileUrl(c.collectionId as string, c.id as string, c.photo as string) : null,
-    updated: c.updated as string,
+    photoUrl: (c.photo_url as string) || null,
+    updated: (c.source_updated as string) || (c.updated as string),
   };
 }
 
-const SAFE_FIELDS =
-  "id,collectionId,profile_slug,name,city_zone,categories,category_other,experience,availability,has_own_transport,immediate_availability,bio,photo,created,updated";
-
-// Mismo criterio que listPublicJobs (lib/public-jobs-list.ts): corre
-// SIEMPRE server-side con el superusuario -- candidate_profiles.listRule
-// exige auth siempre (ni siquiera con consent_public_profile=true deja
-// listar anónimo, a propósito: así el campo "protegido" real -- whatsapp,
-// fecha de nacimiento, cv -- nunca queda a un select/expand de distancia
-// de un cliente sin filtrar). Tope duro sin rate limit, misma razón que ahí.
+// El listado del directorio lee del espejo public_candidate_cards, que es
+// público (a diferencia de candidate_profiles, cuyo listRule exige auth). El
+// espejo solo tiene campos seguros, así que ni un select/expand mal puesto
+// puede filtrar whatsapp/fecha de nacimiento/CV. Corre server-side igual
+// para armar los contadores en un solo lugar. Tope duro sin rate limit,
+// misma razón que listPublicJobs.
 const PUBLIC_CANDIDATES_LIMIT = 200;
 
 export async function listPublicCandidates(): Promise<{
@@ -81,19 +82,17 @@ export async function listPublicCandidates(): Promise<{
   stats: PublicCandidatesStats;
 }> {
   const client = await pbAdmin();
-  const { items, totalItems } = await client.collection("candidate_profiles").getList(1, PUBLIC_CANDIDATES_LIMIT, {
-    filter: "consent_public_profile = true",
-    sort: "-updated",
+  const { items, totalItems } = await client.collection("public_candidate_cards").getList(1, PUBLIC_CANDIDATES_LIMIT, {
+    sort: "-source_updated",
     requestKey: null,
-    fields: SAFE_FIELDS,
   });
 
-  const mapped: PublicCandidateListItem[] = items.filter((c) => c.profile_slug).map(mapSafeFields);
+  const mapped: PublicCandidateListItem[] = items.filter((c) => c.slug).map((c) => mapCard(c as unknown as Record<string, unknown>));
 
   const now = Date.now();
   const DAY = 24 * 60 * 60 * 1000;
-  const newToday = items.filter((c) => now - new Date(c.created as string).getTime() < DAY).length;
-  const activeToday = items.filter((c) => now - new Date(c.updated as string).getTime() < DAY).length;
+  const newToday = items.filter((c) => c.source_created && now - new Date(c.source_created as string).getTime() < DAY).length;
+  const activeToday = items.filter((c) => c.source_updated && now - new Date(c.source_updated as string).getTime() < DAY).length;
 
   const categoryCounts = new Map<string, number>();
   for (const c of items) {
@@ -125,11 +124,29 @@ export async function listPublicCandidates(): Promise<{
 // muestran en la propia página (deliberada, 1 a 1) porque una imagen OG
 // queda cacheada/indexada por rastreadores de redes sociales, mucho más
 // expuesta que la página en sí.
+const CANDIDATE_SAFE_FIELDS =
+  "id,collectionId,profile_slug,name,city_zone,categories,category_other,experience,availability,has_own_transport,immediate_availability,bio,photo,created,updated";
+
 export async function getPublicCandidateCard(slug: string): Promise<PublicCandidateListItem | null> {
   const client = await pbAdmin();
-  const record = await client
+  const c = await client
     .collection("candidate_profiles")
-    .getFirstListItem(client.filter("profile_slug = {:slug}", { slug }), { fields: SAFE_FIELDS })
+    .getFirstListItem(client.filter("profile_slug = {:slug}", { slug }), { fields: CANDIDATE_SAFE_FIELDS })
     .catch(() => null);
-  return record ? mapSafeFields(record as unknown as Record<string, unknown>) : null;
+  if (!c) return null;
+  return {
+    id: c.id,
+    slug: c.profile_slug as string,
+    displayName: displayName((c.name as string) || ""),
+    city_zone: (c.city_zone as string) || "",
+    categories: (c.categories as string[]) || [],
+    category_other: (c.category_other as string) || "",
+    experience: (c.experience as string) || "",
+    availability: (c.availability as string[]) || [],
+    has_own_transport: (c.has_own_transport as string) || "",
+    immediate_availability: Boolean(c.immediate_availability),
+    bio: (c.bio as string) || "",
+    photoUrl: c.photo ? publicFileUrl(c.collectionId as string, c.id, c.photo as string) : null,
+    updated: c.updated as string,
+  };
 }
