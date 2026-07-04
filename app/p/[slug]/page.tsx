@@ -15,6 +15,8 @@ import { LinkButton } from "@/components/ui/Button";
 import { QRCodeView } from "@/components/qr/QRCodeView";
 import { ProfileShareButtons } from "@/components/postulantes/ProfileShareButtons";
 import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
+import { ReferencesManager } from "@/components/postulantes/ReferencesManager";
+import { ReferencesSummary } from "@/components/postulantes/ReferencesSummary";
 
 type RichCategoryExperience = {
   category: string;
@@ -158,6 +160,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                 />
               </div>
             </Card>
+            <ReferencesManager />
           </>
         )}
         <Card>
@@ -299,6 +302,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
               </div>
             </>
           )}
+
+          <ReferencesSummary slug={slug} />
 
           <div className="flex flex-wrap gap-3 mt-2">
             <a
