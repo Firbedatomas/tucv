@@ -4,6 +4,7 @@ import { Suspense } from "react";
 import { useRouter, useSearchParams } from "next/navigation";
 import { pb } from "@/lib/pocketbase";
 import { useBusinessAuth } from "@/lib/use-business-auth";
+import { canManageBusiness, canInviteTeam } from "@/lib/business-permissions";
 import { EditBusinessForm } from "@/components/empresa/EditBusinessForm";
 import { PlanUpgradeCard } from "@/components/empresa/PlanUpgradeCard";
 import { TeamSection } from "@/components/empresa/TeamSection";
@@ -79,11 +80,15 @@ export default function PerfilEmpresaPage() {
 
   if (!isValid || !business) return null;
 
-  if (role === "viewer") {
+  // Colaborador (admin o reviewer): no gestiona los datos del negocio ni el
+  // plan. Ve la tarjeta para salir del equipo y, si es admin, también el
+  // panel de equipo para invitar/gestionar colaboradores.
+  if (!canManageBusiness(role)) {
     return (
       <main className="flex-1 px-4 py-10 sm:py-14">
-        <div className="max-w-lg mx-auto">
+        <div className="max-w-lg mx-auto space-y-6">
           <LeaveTeamCard businessName={business.business_name} membershipId={membershipId} />
+          {canInviteTeam(role) && <TeamSection business={business} />}
         </div>
       </main>
     );

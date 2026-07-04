@@ -85,12 +85,32 @@ export function InviteAcceptCard({ token }: { token: string }) {
   return (
     <Card>
       <h1 className="text-xl font-bold mb-2">
-        Te invitaron a sumarte a <span style={{ color: "var(--tucv-primary)" }}>{lookup.businessName}</span>
+        Te invitaron al equipo de <span style={{ color: "var(--tucv-primary)" }}>{lookup.businessName}</span>
       </h1>
-      <p className="text-sm mb-6" style={{ color: "var(--tucv-muted)" }}>
-        Vas a poder ver sus búsquedas activas y revisar postulantes. No vas a poder editar búsquedas ni tocar el plan
-        o los datos del negocio.
+      <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
+        Esto no crea un negocio nuevo. Tu perfil personal de TuCV sigue siendo privado y separado —{" "}
+        {lookup.businessName} no lo ve.
       </p>
+      <ul className="text-sm mb-6 space-y-1.5">
+        <li>
+          <span aria-hidden style={{ color: "var(--tucv-primary)" }}>
+            ✓
+          </span>{" "}
+          Ver búsquedas activas y postulantes
+        </li>
+        <li>
+          <span aria-hidden style={{ color: "var(--tucv-primary)" }}>
+            ✓
+          </span>{" "}
+          Cambiar el estado de un postulante (contactado, entrevista, etc.)
+        </li>
+        <li style={{ color: "var(--tucv-muted)" }}>
+          <span aria-hidden>✕</span> Editar o crear búsquedas
+        </li>
+        <li style={{ color: "var(--tucv-muted)" }}>
+          <span aria-hidden>✕</span> Cambiar el plan o los datos del negocio
+        </li>
+      </ul>
       <GoogleButton
         onClick={handleAccept}
         disabled={submitting}

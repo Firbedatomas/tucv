@@ -14,12 +14,15 @@ export type BusinessRecord = {
   created: string;
 };
 
-export type BusinessRole = "owner" | "viewer";
+// owner = dueño del negocio (fila en business_accounts). admin / reviewer =
+// colaboradores invitados (fila en business_members, campo `role`). Las
+// capacidades de cada rol viven en lib/business-permissions.ts.
+export type BusinessRole = "owner" | "admin" | "reviewer";
 
 export type BusinessAccess = {
   business: BusinessRecord;
   role: BusinessRole;
-  // Solo tiene sentido para role "viewer" -- id de la fila en
+  // Solo tiene sentido para colaboradores -- id de la fila en
   // business_members, para poder "salir del equipo" (delete de la propia
   // membresía) sin tener que volver a buscarla.
   membershipId: string | null;
@@ -66,7 +69,11 @@ export async function resolveBusinessAccess(client: PocketBase, userId: string):
     });
     const businessRecord = membership.expand?.business;
     if (!businessRecord) return null;
-    return { business: mapBusinessRecord(businessRecord, client), role: "viewer", membershipId: membership.id };
+    // Membresías viejas (creadas antes del campo `role`) o cualquier valor
+    // inesperado caen a "reviewer", el permiso más acotado -- nunca admin por
+    // defecto.
+    const role: BusinessRole = membership.role === "admin" ? "admin" : "reviewer";
+    return { business: mapBusinessRecord(businessRecord, client), role, membershipId: membership.id };
   } catch {
     return null;
   }

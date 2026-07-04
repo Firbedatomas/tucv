@@ -4,6 +4,7 @@ import { use, useEffect, useState } from "react";
 import { useRouter } from "next/navigation";
 import { pb } from "@/lib/pocketbase";
 import { useBusinessAuth } from "@/lib/use-business-auth";
+import { canManageJobs } from "@/lib/business-permissions";
 import { JobPostForm, type JobPostFormMode } from "@/components/empresa/JobPostForm";
 import type { ScreeningQuestion } from "@/lib/constants";
 import { LinkButton } from "@/components/ui/Button";
@@ -42,7 +43,7 @@ export default function EditarBusquedaPage({ params }: { params: Promise<{ id: s
   >({ status: "loading" });
 
   useEffect(() => {
-    if (isValid && role && role !== "owner") router.replace("/empresa/panel");
+    if (isValid && role && !canManageJobs(role)) router.replace("/empresa/panel");
   }, [isValid, role, router]);
 
   useEffect(() => {
@@ -60,7 +61,7 @@ export default function EditarBusquedaPage({ params }: { params: Promise<{ id: s
       .catch(() => setState({ status: "not-found" }));
   }, [id, business]);
 
-  if (!isValid || role !== "owner") return null;
+  if (!isValid || !canManageJobs(role)) return null;
 
   return (
     <main className="flex-1 px-4 py-10 sm:py-14">

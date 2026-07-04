@@ -1,6 +1,7 @@
 "use client";
 
 import { useBusinessAuth } from "@/lib/use-business-auth";
+import { canManageJobs, canSourceCandidates } from "@/lib/business-permissions";
 import { JobPostList } from "@/components/empresa/JobPostList";
 import { LinkButton } from "@/components/ui/Button";
 
@@ -36,12 +37,14 @@ export default function PanelEmpresaPage() {
               Postulantes ordenados, sin CVs sueltos por mail.
             </p>
           </div>
-          {role === "owner" && (
+          {(canManageJobs(role) || canSourceCandidates(role)) && (
             <div className="flex gap-3">
-              <LinkButton href="/empresa/busquedas/nueva">Crear búsqueda</LinkButton>
-              <LinkButton href="/empresa/candidatos" variant="secondary">
-                Buscar candidatos
-              </LinkButton>
+              {canManageJobs(role) && <LinkButton href="/empresa/busquedas/nueva">Crear búsqueda</LinkButton>}
+              {canSourceCandidates(role) && (
+                <LinkButton href="/empresa/candidatos" variant="secondary">
+                  Buscar candidatos
+                </LinkButton>
+              )}
             </div>
           )}
         </div>
@@ -49,7 +52,7 @@ export default function PanelEmpresaPage() {
           businessId={business?.id ?? null}
           businessPlan={business?.plan ?? "free"}
           businessName={business?.business_name}
-          readOnly={role !== "owner"}
+          readOnly={!canManageJobs(role)}
         />
       </div>
     </main>
