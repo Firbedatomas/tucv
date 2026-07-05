@@ -17,6 +17,16 @@ import {
 import { InviteCandidateControls, type InviteJob } from "@/components/empresa/InviteCandidateControls";
 import { ContactRequestControls } from "@/components/empresa/ContactRequestControls";
 
+// Estado compacto por candidato en el panel. saved_candidates tiene prioridad
+// sobre "visto" (nunca se pisan; viven en tablas distintas).
+const SAVED_STATE_LABEL: Record<string, string> = {
+  guardado: "Guardado",
+  contactado: "Contactado",
+  entrevistado: "Entrevistado",
+  descartado: "Descartado",
+  contratado: "Contratado",
+};
+
 // Fase 3C: opciones de orden para el recruiter. Sin búsqueda activa seleccionada
 // el default es "recientes"; la promoción por compatibilidad con búsquedas
 // activas se aplica DESPUÉS (en el useMemo), así que nunca la pisa.
@@ -98,6 +108,9 @@ export function CandidateSearch({
   const [sortBy, setSortBy] = useState("recientes");
   // Mini-CRM: candidatos guardados por este negocio, indexados por candidate id.
   const [saved, setSaved] = useState<Map<string, SavedRecord>>(new Map());
+  // Estado "visto" (candidate_review_status, colección aparte): candidateId ->
+  // id del registro. Independiente de saved_candidates: nunca lo pisa.
+  const [reviewed, setReviewed] = useState<Map<string, string>>(new Map());
   // Búsquedas activas del negocio (para invitar) y candidatos ya invitados
   // (candidate id -> etiqueta de la búsqueda) para reflejar el estado.
   const [jobs, setJobs] = useState<InviteJob[]>([]);
@@ -134,6 +147,36 @@ export function CandidateSearch({
       })
       .catch(() => setSaved(new Map()));
   }, [businessId]);
+
+  useEffect(() => {
+    pb()
+      .collection("candidate_review_status")
+      .getFullList<{ id: string; candidate_profile: string }>({ filter: `business_account = "${businessId}"`, requestKey: null })
+      .then((rows) => setReviewed(new Map(rows.map((r) => [r.candidate_profile, r.id]))))
+      .catch(() => setReviewed(new Map()));
+  }, [businessId]);
+
+  // Marca "visto" (idempotente: no duplica; el unique index es el respaldo del
+  // server). Se dispara al abrir el perfil o con el botón -- NUNCA solo por
+  // aparecer en el listado. No toca saved_candidates.
+  async function markViewed(candidateId: string) {
+    if (reviewed.has(candidateId)) return;
+    setReviewed((prev) => new Map(prev).set(candidateId, "pending"));
+    try {
+      const rec = await pb()
+        .collection("candidate_review_status")
+        .create({ business_account: businessId, candidate_profile: candidateId, status: "viewed" });
+      setReviewed((prev) => new Map(prev).set(candidateId, rec.id));
+    } catch {
+      // Ya existía (unique) u otro error: lo dejamos marcado optimistamente si ya
+      // estaba, o lo sacamos si nunca se creó.
+      setReviewed((prev) => {
+        const m = new Map(prev);
+        if (m.get(candidateId) === "pending") m.delete(candidateId);
+        return m;
+      });
+    }
+  }
 
   useEffect(() => {
     const now = new Date().toISOString();
@@ -465,6 +508,26 @@ export function CandidateSearch({
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {filtered.map((c) => {
             const expanded = expandedId === c.id;
+            // Estado compacto: saved_candidates tiene prioridad; luego "visto"; si
+            // no, "Nuevo". Nunca se pisan (viven en tablas separadas).
+            const savedRec = saved.get(c.id);
+            const isReviewed = reviewed.has(c.id);
+            const stateLabel = savedRec ? SAVED_STATE_LABEL[savedRec.status] ?? "Guardado" : isReviewed ? "Visto" : "Nuevo";
+            const isNew = !savedRec && !isReviewed;
+            const stateBadge = (
+              <span
+                className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-[var(--tucv-radius)] shrink-0"
+                style={
+                  isNew
+                    ? { backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)", border: "1.5px solid var(--tucv-border)" }
+                    : savedRec
+                      ? { backgroundColor: "var(--tucv-text)", color: "var(--tucv-bg)" }
+                      : { backgroundColor: "var(--tucv-bg)", color: "var(--tucv-muted)", border: "1.5px solid var(--tucv-border)" }
+                }
+              >
+                {stateLabel}
+              </span>
+            );
             return (
               <Card key={c.id} className={expanded ? "lg:col-span-2" : undefined}>
                 <div className="flex gap-4">
@@ -475,6 +538,7 @@ export function CandidateSearch({
                       expanded={expanded}
                       revealedWhatsapp={revealedWhatsapp.get(c.id)}
                       matchReasons={computeMatchReasons(c, filters)}
+                      topRightBadge={stateBadge}
                       extraBadges={
                         matchesActiveJob(c) ? [{ label: "Coincide con tu búsqueda", tone: "highlight" }] : undefined
                       }
@@ -483,12 +547,27 @@ export function CandidateSearch({
                     <div className="flex flex-wrap gap-2 mt-3">
                       <button
                         type="button"
-                        onClick={() => setExpandedId(expanded ? null : c.id)}
+                        onClick={() => {
+                          const opening = !expanded;
+                          setExpandedId(opening ? c.id : null);
+                          // Marcar visto al ABRIR el perfil (no al cerrarlo ni por listarse).
+                          if (opening) markViewed(c.id);
+                        }}
                         className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border"
                         style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-text)" }}
                       >
                         {expanded ? "Ocultar perfil" : "Ver perfil"}
                       </button>
+                      {isNew && (
+                        <button
+                          type="button"
+                          onClick={() => markViewed(c.id)}
+                          className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border"
+                          style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-muted)" }}
+                        >
+                          Marcar visto
+                        </button>
+                      )}
                       {(() => {
                         const cstatus = contactStatus.get(c.id);
                         // Se puede revelar WhatsApp si el candidato tiene contacto
