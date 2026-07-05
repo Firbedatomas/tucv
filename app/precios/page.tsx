@@ -34,6 +34,10 @@ const BOOST_FEATURES = [
 const PRO_FEATURES = [
   "Búsquedas activas ilimitadas al mismo tiempo, sin límite de 1 por mes",
   "Cada búsqueda dura 30 días (no 7) y arranca destacada, sin pagar boost aparte",
+  "Más contactos e invitaciones por día",
+  "Alertas de candidatos compatibles con tus búsquedas",
+  "Mini-CRM completo: guardá candidatos con notas y estados",
+  "Prioridad en tu zona y rubro",
   "Todo lo del plan Gratis",
 ];
 
@@ -43,6 +47,7 @@ const MULTI_LOCAL_FEATURES = [
   "Invitá hasta 10 miembros de tu equipo a revisar búsquedas y postulantes",
   "Base propia de candidatos y reporte por búsqueda",
   "Soporte prioritario",
+  "Todo lo del plan Pro",
 ];
 
 export default function PreciosPage() {
@@ -77,7 +82,7 @@ export default function PreciosPage() {
             </p>
             <h2 className="text-xl font-bold mb-1">$0</h2>
             <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
-              Para publicar una búsqueda simple y recibir postulantes ordenados.
+              Probá TuCV con una búsqueda simple y recibí postulantes ordenados.
             </p>
             <ul className="text-sm space-y-2 mb-5">
               {FREE_FEATURES.map((f) => (
@@ -129,7 +134,7 @@ export default function PreciosPage() {
             </div>
             <h2 className="text-xl font-bold mb-1">${fmt(PLAN_PRO_PRICE_ARS)} / mes</h2>
             <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
-              Para negocios que contratan seguido.
+              Para cubrir puestos más rápido y contratar seguido.
             </p>
             <ul className="text-sm space-y-2 mb-5">
               {PRO_FEATURES.map((f) => (
@@ -153,7 +158,7 @@ export default function PreciosPage() {
           <Card className="sm:flex sm:items-center sm:justify-between sm:gap-6">
             <div className="mb-4 sm:mb-0">
               <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--tucv-muted)" }}>
-                Para negocios que contratan seguido y a alto volumen
+                Para franquicias, sucursales o equipos que contratan seguido
               </p>
               <h2 className="text-lg font-bold mb-1">
                 Plan Equipo — ${fmt(MULTI_LOCAL_PRICE_ARS)} / mes

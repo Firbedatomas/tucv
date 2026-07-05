@@ -16,7 +16,10 @@ const PLAN_LABEL: Record<BusinessRecord["plan"], string> = {
 
 const PRO_FEATURES = [
   "Búsquedas activas ilimitadas al mismo tiempo",
-  "Cada búsqueda nueva arranca destacada 7 días, sin pagar boost aparte",
+  "Cada búsqueda dura 30 días y arranca destacada, sin pagar boost aparte",
+  "Más contactos e invitaciones por día",
+  "Alertas de candidatos compatibles y prioridad en tu zona",
+  "Mini-CRM completo: guardá candidatos con notas y estados",
 ];
 
 const MULTI_LOCAL_FEATURES = [
@@ -24,6 +27,7 @@ const MULTI_LOCAL_FEATURES = [
   "Cada búsqueda nueva arranca destacada, sin pagar boost aparte",
   "Invitá hasta 10 miembros de tu equipo a revisar búsquedas y postulantes",
   "Soporte prioritario",
+  "Todo lo del plan Pro",
 ];
 
 function FeatureList({ items }: { items: string[] }) {
