@@ -34,6 +34,7 @@ export default function CandidatosPage() {
             businessId={business.id}
             businessCity={business.city}
             businessProvince={business.province}
+            plan={business.plan}
           />
         </div>
       </div>

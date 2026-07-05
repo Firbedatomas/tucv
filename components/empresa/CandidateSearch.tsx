@@ -19,11 +19,28 @@ export function CandidateSearch({
   businessId,
   businessCity,
   businessProvince,
+  plan,
 }: {
   businessId: string;
   businessCity: string;
   businessProvince: string;
+  // Plan del negocio -- habilita la alerta Pro de candidatos compatibles nuevos.
+  plan?: string;
 }) {
+  const isProPlan = plan === "pro" || plan === "multi_local";
+  // "Visto por última vez" para la alerta de compatibles nuevos: timestamp en
+  // localStorage por negocio. Se lee una sola vez al montar (el valor de la
+  // visita ANTERIOR) y abajo un efecto lo pisa con "ahora" para la próxima.
+  const [lastSeen] = useState<number>(() => {
+    if (typeof window === "undefined") return 0;
+    const v = window.localStorage.getItem(`tucv_cand_seen_${businessId}`);
+    return v ? Number(v) : 0;
+  });
+  useEffect(() => {
+    if (typeof window !== "undefined") {
+      window.localStorage.setItem(`tucv_cand_seen_${businessId}`, String(Date.now()));
+    }
+  }, [businessId]);
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // WhatsApp revelado por candidato (traído del server tras autorizar).
@@ -234,6 +251,19 @@ export function CandidateSearch({
 
   const compatCount = jobCategories.size > 0 ? filtered.filter(matchesActiveJob).length : 0;
 
+  // Alerta Pro: cuántos candidatos compatibles con tus búsquedas activas se
+  // actualizaron/aparecieron desde tu última visita. Solo plan pago; en la
+  // primera visita (lastSeen 0) no alertamos para no "gritar" sin referencia.
+  const newCompatCount = useMemo(() => {
+    if (!isProPlan || !candidates || lastSeen === 0 || jobCategories.size === 0) return 0;
+    return candidates.filter(
+      (c) =>
+        (c.categories ?? []).some((cat) => jobCategories.has(cat)) &&
+        c.updated != null &&
+        new Date(c.updated).getTime() > lastSeen,
+    ).length;
+  }, [isProPlan, candidates, lastSeen, jobCategories]);
+
   if (!candidates) {
     return (
       <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
@@ -256,6 +286,28 @@ export function CandidateSearch({
 
   return (
     <div>
+      {newCompatCount > 0 && (
+        <div
+          className="mb-4 p-4 rounded-[var(--tucv-radius)] flex flex-wrap items-center gap-x-2 gap-y-1"
+          style={{ backgroundColor: "var(--tucv-accent)", border: "2px solid var(--tucv-border)", boxShadow: "var(--tucv-shadow)" }}
+        >
+          <span
+            className="text-[11px] font-bold uppercase tracking-wide px-2 py-1 rounded-[calc(var(--tucv-radius)/1.5)]"
+            style={{ backgroundColor: "var(--tucv-text)", color: "var(--tucv-bg)" }}
+          >
+            Alerta Pro
+          </span>
+          <span className="font-bold" style={{ color: "var(--tucv-text)" }}>
+            {newCompatCount === 1
+              ? "1 candidato compatible nuevo"
+              : `${newCompatCount} candidatos compatibles nuevos`}{" "}
+            desde tu última visita
+          </span>
+          <span className="text-sm w-full sm:w-auto" style={{ color: "rgba(21,21,21,0.7)" }}>
+            Coinciden con el rubro de tus búsquedas activas — están primero en la lista.
+          </span>
+        </div>
+      )}
       {(() => {
         const visibles = candidates.length;
         const filteredView = filtered.length !== visibles;

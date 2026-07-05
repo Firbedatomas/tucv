@@ -5,6 +5,7 @@ import { sendTransactionalEmail } from "@/lib/email/send";
 import { buildJobExpiringEmail } from "@/lib/email/templates/job-expiring";
 import { buildJobDeactivatedSummaryEmail } from "@/lib/email/templates/job-deactivated-summary";
 import { buildCompanyDailyJobDigestEmail } from "@/lib/email/templates/company-daily-job-digest";
+import { buildCandidateMatchDigestEmail } from "@/lib/email/templates/candidate-match-digest";
 import { buildProfileStartedEmail } from "@/lib/email/templates/profile-started";
 
 const CRON_SECRET = process.env.CRON_SECRET;
@@ -29,7 +30,7 @@ export async function POST(req: Request) {
 
   const admin = await pbAdmin();
   const now = new Date();
-  const summary = { jobExpiring: 0, jobDeactivated: 0, companyDigests: 0, profileStarted: 0 };
+  const summary = { jobExpiring: 0, jobDeactivated: 0, companyDigests: 0, candidateDigests: 0, profileStarted: 0 };
 
   // 1. Búsquedas por vencer (dentro de los próximos 2 días, todavía activas
   // y no avisadas ya para este ciclo -- ver expiring_notified/pb_hooks).
@@ -193,6 +194,71 @@ export async function POST(req: Request) {
       unsubscribeUrl: unsubscribeUrl(prefs.unsubscribeToken),
     });
     summary.profileStarted += 1;
+  }
+
+  // 5. Alerta Pro de candidatos compatibles nuevos. Por cada negocio Pro/Equipo
+  // con búsquedas activas, contamos candidatos VISIBLES cuyo rubro coincide con
+  // el de alguna de sus búsquedas y que tuvieron novedad (updated) desde el
+  // último aviso; si hay, mandamos el digest. Primera corrida (sin
+  // last_candidate_alert_at) NO alerta: solo fija el punto de partida para no
+  // "gritar" con todo el backlog. El opt-out lo maneja el GATE del tipo
+  // candidate_match_digest (misma preferencia que el digest diario). N+1 sobre
+  // negocios Pro -- son pocos, aceptable al volumen de un mercado local.
+  const proBusinesses = await admin.collection("business_accounts").getFullList({
+    filter: admin.filter('plan = "pro" || plan = "multi_local"'),
+    requestKey: null,
+  });
+  for (const business of proBusinesses) {
+    const activeJobs = await admin.collection("job_posts").getFullList({
+      filter: admin.filter("business = {:b} && active = true && expires_at > {:now}", {
+        b: business.id,
+        now: now.toISOString(),
+      }),
+      fields: "category",
+      requestKey: null,
+    });
+    const cats = [...new Set(activeJobs.map((j) => j.category as string).filter(Boolean))];
+    if (cats.length === 0) continue; // sin búsquedas activas: nada que alertar
+
+    const lastAlertRaw = business.last_candidate_alert_at as string | undefined;
+    if (lastAlertRaw) {
+      // categories es multi-select: "coincide" si contiene alguno de los rubros
+      // de las búsquedas activas. Params nombrados para no interpolar valores.
+      const catFilters = cats.map((_, i) => `categories ~ {:c${i}}`).join(" || ");
+      const params: Record<string, string> = { since: lastAlertRaw };
+      cats.forEach((c, i) => {
+        params[`c${i}`] = c;
+      });
+      const { totalItems } = await admin.collection("candidate_profiles").getList(1, 1, {
+        filter: admin.filter(`consent_zone_visible = true && updated > {:since} && (${catFilters})`, params),
+        requestKey: null,
+      });
+      if (totalItems > 0) {
+        const user = await admin.collection("users").getOne(business.user as string).catch(() => null);
+        if (user?.email) {
+          const prefs = await getOrCreatePreferences(user.id);
+          await sendTransactionalEmail({
+            type: "candidate_match_digest",
+            to: user.email as string,
+            userId: user.id,
+            rendered: buildCandidateMatchDigestEmail({
+              businessName: (business.business_name as string) || "",
+              count: totalItems,
+              candidatesUrl: `${BASE_URL}/empresa/candidatos`,
+              preferencesUrl: preferencesUrl(),
+              unsubscribeUrl: unsubscribeUrl(prefs.unsubscribeToken),
+            }),
+            unsubscribeUrl: unsubscribeUrl(prefs.unsubscribeToken),
+          });
+          summary.candidateDigests += 1;
+        }
+      }
+    }
+    // Avanzamos el punto de corte siempre (haya o no alerta) para que la próxima
+    // corrida mire solo lo nuevo desde ahora.
+    await admin.collection("business_accounts").update(business.id, {
+      last_candidate_alert_at: now.toISOString(),
+    });
   }
 
   return NextResponse.json({ ok: true, summary });

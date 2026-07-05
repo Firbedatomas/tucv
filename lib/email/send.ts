@@ -28,6 +28,11 @@ const GATES: Partial<Record<EmailType, (prefs: NotificationPreferences) => boole
     prefs.companyDigestFrequency === "daily" || prefs.applicationsFrequency === "daily",
   company_weekly_job_digest: (prefs) => prefs.companyDigestFrequency === "weekly",
   candidate_weekly_profile_views: (prefs) => prefs.profileViewsFrequency !== "never",
+  // Alerta Pro de candidatos compatibles nuevos: corre en el cron diario, así
+  // que respeta la misma preferencia que el digest diario de empresa (quien lo
+  // apagó no recibe este tampoco).
+  candidate_match_digest: (prefs) =>
+    prefs.companyDigestFrequency === "daily" || prefs.applicationsFrequency === "daily",
 };
 
 export type SendResult = {
