@@ -21,6 +21,11 @@ export type CandidateFilters = {
   // Última actividad del perfil: timestamp en ms; 0 = sin filtro. El caller
   // calcula el corte (Date.now() - ventana) en un event handler, nunca en render.
   lastActivitySince: number;
+  // Fase 3C (recruiter): tarea de experiencia (match por texto contra
+  // experience_tasks/roles) y "trabaja actualmente". Opcionales -> los callers
+  // que no los usan no se afectan (default "" / false = sin efecto).
+  task?: string;
+  hasCurrentJob?: boolean;
   // Programas laborales: a diferencia de todos los demás, este NO excluye. Es
   // un toggle que PROMUEVE a los compatibles arriba (la reordenación vive en
   // ApplicantsPanel, no acá) -- por eso matchesCandidateFilters lo ignora a
@@ -38,6 +43,8 @@ export const emptyCandidateFilters: CandidateFilters = {
   hasOwnTransport: false,
   immediateAvailability: false,
   lastActivitySince: 0,
+  task: "",
+  hasCurrentJob: false,
   programsCompatible: false,
 };
 
@@ -61,7 +68,21 @@ type FilterableCandidate = {
   experience_roles?: string[]; // puestos (job_title) de sus experiencias
   experience_tasks?: string[]; // tareas de sus experiencias
   total_experience_months?: number;
+  has_current_job?: boolean;
 };
+
+// Match por TAREA/puesto (Fase 3C): busca el texto (case-insensitive, sin
+// acentos) en las tareas Y los puestos de las experiencias. Así "caja" trae a
+// quien tiene la tarea "Manejo de caja" o el puesto "Cajero".
+function normalize(s: string): string {
+  return s.toLowerCase().normalize("NFD").replace(/[̀-ͯ]/g, "");
+}
+function candidateMatchesTask(candidate: FilterableCandidate, task: string): boolean {
+  const needle = normalize(task.trim());
+  if (!needle) return true;
+  const hay = [...(candidate.experience_tasks ?? []), ...(candidate.experience_roles ?? [])];
+  return hay.some((t) => normalize(t).includes(needle));
+}
 
 // Un candidato cuenta para un rubro si lo tiene como rubro DESEADO (categories)
 // O tiene EXPERIENCIA en ese rubro (experience_categories). Así "empresa busca
@@ -136,6 +157,8 @@ export function matchesCandidateFilters(candidate: FilterableCandidate, filters:
   if (filters.hasReferences && !candidateHasReferences(candidate)) return false;
   if (filters.hasOwnTransport && candidate.has_own_transport !== "si") return false;
   if (filters.immediateAvailability && !candidate.immediate_availability) return false;
+  if (filters.task && !candidateMatchesTask(candidate, filters.task)) return false;
+  if (filters.hasCurrentJob && !candidate.has_current_job) return false;
   // Última actividad: si hay corte activo, el perfil pasa solo si su `updated`
   // es igual o posterior. Un candidato sin `updated` (o con fecha inválida) NO
   // pasa cuando el filtro está activo: no podemos garantizar que estuvo activo

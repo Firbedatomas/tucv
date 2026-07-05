@@ -3,7 +3,9 @@
 import { useEffect, useMemo, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { waLink } from "@/lib/whatsapp";
-import { emptyCandidateFilters, matchesCandidateFilters, narrowByZoneCascade } from "@/lib/candidate-filters";
+import { emptyCandidateFilters, matchesCandidateFilters, narrowByZoneCascade, type CandidateFilters } from "@/lib/candidate-filters";
+import { CATEGORIES, labelFor } from "@/lib/constants";
+import { experienceYearsLabel } from "@/lib/experience-display";
 import { Card } from "@/components/ui/Card";
 import { CandidateFilterBar } from "@/components/empresa/CandidateFilterBar";
 import { CandidateAvatar, CandidateCardBody, type CandidateLike } from "@/components/empresa/CandidateCardBody";
@@ -14,6 +16,53 @@ import {
 } from "@/components/empresa/SavedCandidateControls";
 import { InviteCandidateControls, type InviteJob } from "@/components/empresa/InviteCandidateControls";
 import { ContactRequestControls } from "@/components/empresa/ContactRequestControls";
+
+// Fase 3C: opciones de orden para el recruiter. Sin búsqueda activa seleccionada
+// el default es "recientes"; la promoción por compatibilidad con búsquedas
+// activas se aplica DESPUÉS (en el useMemo), así que nunca la pisa.
+const SORT_OPTIONS: { value: string; label: string }[] = [
+  { value: "recientes", label: "Más recientes" },
+  { value: "experiencia", label: "Más experiencia" },
+  { value: "inmediata", label: "Puede empezar ya" },
+  { value: "movilidad", label: "Con movilidad" },
+  { value: "actual", label: "Trabaja actualmente" },
+];
+
+function sortCandidates(list: CandidateLike[], sortBy: string): CandidateLike[] {
+  const arr = [...list];
+  switch (sortBy) {
+    case "experiencia":
+      arr.sort((a, b) => (b.total_experience_months ?? 0) - (a.total_experience_months ?? 0));
+      break;
+    case "inmediata":
+      arr.sort((a, b) => Number(!!b.immediate_availability) - Number(!!a.immediate_availability));
+      break;
+    case "movilidad":
+      arr.sort((a, b) => Number(b.has_own_transport === "si") - Number(a.has_own_transport === "si"));
+      break;
+    case "actual":
+      arr.sort((a, b) => Number(!!b.has_current_job) - Number(!!a.has_current_job));
+      break;
+    default: // recientes
+      arr.sort((a, b) => new Date(b.updated ?? 0).getTime() - new Date(a.updated ?? 0).getTime());
+  }
+  return arr;
+}
+
+// Por qué aparece este candidato dado los filtros activos (matching visual).
+function computeMatchReasons(c: CandidateLike, filters: CandidateFilters): string[] {
+  const reasons: string[] = [];
+  if (filters.category) {
+    if ((c.experience_categories ?? []).includes(filters.category)) reasons.push(`Trabajó en ${labelFor(CATEGORIES, filters.category)}`);
+    else if ((c.categories ?? []).includes(filters.category)) reasons.push(`Quiere ${labelFor(CATEGORIES, filters.category)}`);
+  }
+  if (filters.task) reasons.push(`Coincide por tarea: ${filters.task}`);
+  if (filters.immediateAvailability && c.immediate_availability) reasons.push("Puede empezar ya");
+  if (filters.hasOwnTransport && c.has_own_transport === "si") reasons.push("Con movilidad");
+  if (filters.hasCurrentJob && c.has_current_job) reasons.push("Trabaja actualmente");
+  if (filters.experience && (c.total_experience_months ?? 0) > 0) reasons.push(experienceYearsLabel(c.total_experience_months));
+  return reasons.filter(Boolean).slice(0, 4);
+}
 
 export function CandidateSearch({
   businessId,
@@ -46,6 +95,7 @@ export function CandidateSearch({
   // WhatsApp revelado por candidato (traído del server tras autorizar).
   const [revealedWhatsapp, setRevealedWhatsapp] = useState<Map<string, string>>(new Map());
   const [filters, setFilters] = useState(emptyCandidateFilters);
+  const [sortBy, setSortBy] = useState("recientes");
   // Mini-CRM: candidatos guardados por este negocio, indexados por candidate id.
   const [saved, setSaved] = useState<Map<string, SavedRecord>>(new Map());
   // Búsquedas activas del negocio (para invitar) y candidatos ya invitados
@@ -237,17 +287,20 @@ export function CandidateSearch({
   const filtered = useMemo(() => {
     if (!candidates) return [];
     const base = zoneCascade ? zoneCascade.candidates : candidates;
-    const matched = base.filter((c) => matchesCandidateFilters(c, filters));
+    const matched = sortCandidates(
+      base.filter((c) => matchesCandidateFilters(c, filters)),
+      sortBy,
+    );
     if (jobCategories.size === 0) return matched;
     // Promover (NUNCA excluir) los que coinciden con el rubro de alguna búsqueda
-    // activa. Partición estable: conserva el orden original dentro de cada grupo.
+    // activa. Partición estable: conserva el orden (ya ordenado) dentro de cada grupo.
     const compat: CandidateLike[] = [];
     const rest: CandidateLike[] = [];
     for (const c of matched) {
       ((c.categories ?? []).some((cat) => jobCategories.has(cat)) ? compat : rest).push(c);
     }
     return [...compat, ...rest];
-  }, [candidates, zoneCascade, filters, jobCategories]);
+  }, [candidates, zoneCascade, filters, jobCategories, sortBy]);
 
   const compatCount = jobCategories.size > 0 ? filtered.filter(matchesActiveJob).length : 0;
 
@@ -381,6 +434,25 @@ export function CandidateSearch({
         );
       })()}
 
+      <div className="flex items-center gap-2 mb-3">
+        <label className="text-sm font-semibold shrink-0" htmlFor="cand-sort">
+          Ordenar:
+        </label>
+        <select
+          id="cand-sort"
+          value={sortBy}
+          onChange={(e) => setSortBy(e.target.value)}
+          className="rounded-[var(--tucv-radius)] px-3 py-2 text-sm flex-1 min-w-0"
+          style={{ border: "2px solid var(--tucv-border)", backgroundColor: "var(--tucv-surface)", color: "var(--tucv-text)" }}
+        >
+          {SORT_OPTIONS.map((o) => (
+            <option key={o.value} value={o.value}>
+              {o.label}
+            </option>
+          ))}
+        </select>
+      </div>
+
       <CandidateFilterBar value={filters} onChange={setFilters} />
 
       {filtered.length === 0 ? (
@@ -402,6 +474,7 @@ export function CandidateSearch({
                       candidate={c}
                       expanded={expanded}
                       revealedWhatsapp={revealedWhatsapp.get(c.id)}
+                      matchReasons={computeMatchReasons(c, filters)}
                       extraBadges={
                         matchesActiveJob(c) ? [{ label: "Coincide con tu búsqueda", tone: "highlight" }] : undefined
                       }

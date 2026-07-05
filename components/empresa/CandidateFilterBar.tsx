@@ -26,6 +26,8 @@ export function CandidateFilterBar({
   // a mapearlo a "qué ventana es" exigiría Date.now() en render (impuro). Si el
   // padre resetea el filtro a 0, mostramos "Cualquiera" sin importar el estado.
   const [activityWindowMs, setActivityWindowMs] = useState(0);
+  // Fase 3C: colapsable en mobile para no comer pantalla (en sm+ siempre visible).
+  const [collapsed, setCollapsed] = useState(false);
 
   function set<K extends keyof CandidateFilters>(key: K, v: CandidateFilters[K]) {
     onChange({ ...value, [key]: v });
@@ -33,6 +35,15 @@ export function CandidateFilterBar({
 
   return (
     <Card className="mb-4">
+      <button
+        type="button"
+        onClick={() => setCollapsed((c) => !c)}
+        className="flex items-center justify-between w-full text-sm font-bold sm:hidden mb-3"
+      >
+        <span>Filtros</span>
+        <span style={{ color: "var(--tucv-muted)" }}>{collapsed ? "Mostrar ▾" : "Ocultar ▴"}</span>
+      </button>
+      <div className={collapsed ? "hidden sm:block" : ""}>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <select
           className={inputClass}
@@ -80,6 +91,13 @@ export function CandidateFilterBar({
             </option>
           ))}
         </select>
+        <input
+          className={inputClass}
+          style={inputStyle}
+          placeholder="Tarea o puesto (ej. caja)"
+          value={value.task ?? ""}
+          onChange={(e) => set("task", e.target.value)}
+        />
         <select
           className={inputClass}
           style={inputStyle}
@@ -124,6 +142,14 @@ export function CandidateFilterBar({
           />
           Disponibilidad inmediata
         </label>
+        <label className="flex items-center gap-2 text-sm">
+          <input
+            type="checkbox"
+            checked={value.hasCurrentJob ?? false}
+            onChange={(e) => set("hasCurrentJob", e.target.checked)}
+          />
+          Trabaja actualmente
+        </label>
         {showProgramsFilter && (
           <label className="flex items-center gap-2 text-sm">
             <input
@@ -134,6 +160,7 @@ export function CandidateFilterBar({
             Priorizar compatibles con programa
           </label>
         )}
+      </div>
       </div>
     </Card>
   );

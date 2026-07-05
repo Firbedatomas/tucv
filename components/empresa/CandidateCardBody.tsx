@@ -4,6 +4,7 @@ import { useState } from "react";
 import Image from "next/image";
 import { pb } from "@/lib/pocketbase";
 import { CATEGORIES, EXPERIENCE, AVAILABILITY, STUDY_LEVELS, STUDY_STATUS, labelFor, labelsFor } from "@/lib/constants";
+import { experienceYearsLabel } from "@/lib/experience-display";
 import { calculateAge } from "@/lib/age";
 import { formatThousands } from "@/lib/format";
 import { computeCandidateBadges, BADGE_TONE_STYLE, type CandidateBadge } from "@/lib/candidate-badges";
@@ -63,6 +64,31 @@ export type CandidateLike = {
   programs_enrolled?: string[] | null;
   consent_contact?: boolean;
   updated?: string;
+  // Modelo laboral relacional (Fase 3C, de la proyección /api/empresa/candidates).
+  // Opcionales: sin estos campos la card cae al display viejo (fallback).
+  total_experience_months?: number;
+  work_experience_count?: number;
+  dominant_categories?: string[];
+  dominant_tasks?: string[];
+  latest_job_title?: string;
+  has_current_job?: boolean;
+  experience_categories?: string[];
+  experience_roles?: string[];
+  experience_tasks?: string[];
+  work_experiences?: EmpresaWorkExp[];
+};
+
+export type EmpresaWorkExp = {
+  job_title: string;
+  category: string;
+  company_name: string;
+  city: string;
+  start_year: number | null;
+  start_month: number | null;
+  end_year: number | null;
+  end_month: number | null;
+  currently_working: boolean;
+  description: string;
 };
 
 function formatStudy(entry: StudyEntry | string): string {
@@ -115,6 +141,7 @@ export function CandidateCardBody({
   topRightBadge,
   revealedWhatsapp,
   extraBadges,
+  matchReasons,
 }: {
   candidate: CandidateLike;
   expanded: boolean;
@@ -125,9 +152,18 @@ export function CandidateCardBody({
   // computeCandidateBadges, que es agnóstico de búsqueda y se comparte con
   // vistas públicas. Van primero: son los más accionables en este contexto.
   extraBadges?: CandidateBadge[];
+  // Fase 3C: por qué este candidato aparece dado los filtros activos (ej.
+  // "Coincide por tarea: Caja"). Se calcula en CandidateSearch.
+  matchReasons?: string[];
 }) {
   const age = candidate.age ?? calculateAge(candidate.birth_date, candidate.age_manual);
   const expMap = Object.fromEntries((candidate.category_experience ?? []).map((e) => [e.category, e]));
+  // Fase 3C: resumen recruiter desde el cache relacional. hasNewExp gobierna el
+  // fallback: con experiencias nuevas mostramos el resumen y ocultamos el detalle
+  // viejo por rubro; sin ellas, todo cae al display viejo.
+  const hasNewExp = (candidate.work_experience_count ?? 0) > 0 || (candidate.work_experiences?.length ?? 0) > 0;
+  const yrsLabel = experienceYearsLabel(candidate.total_experience_months);
+  const domTasks = (candidate.dominant_tasks ?? []).slice(0, 4);
   const references = candidateReferences(candidate);
   const cvUrl = candidate.cvUrl ?? (candidate.cv_file ? pb().files.getURL(candidate, candidate.cv_file) : null);
   // Postulantes (ApplicantsPanel) traen whatsapp legítimo; la búsqueda proactiva
@@ -170,6 +206,45 @@ export function CandidateCardBody({
         {candidate.city_zone}
       </p>
 
+      {/* Fase 3C: resumen recruiter para lectura rápida (años, experiencias,
+          último puesto, tareas dominantes) + por qué aparece (matchReasons). */}
+      {(hasNewExp || (matchReasons?.length ?? 0) > 0) && (
+        <div className="mt-1.5 space-y-1">
+          {(() => {
+            const parts: string[] = [];
+            if (yrsLabel) parts.push(yrsLabel);
+            const cnt = candidate.work_experience_count ?? 0;
+            if (cnt > 0) parts.push(`${cnt} ${cnt === 1 ? "experiencia" : "experiencias"}`);
+            return parts.length ? <p className="text-sm font-semibold">{parts.join(" · ")}</p> : null;
+          })()}
+          {candidate.latest_job_title ? (
+            <p className="text-sm break-words">
+              <span style={{ color: "var(--tucv-muted)" }}>Último puesto: </span>
+              <span className="font-semibold">{candidate.latest_job_title}</span>
+              {candidate.has_current_job ? <span style={{ color: "#128C4A" }}> · trabaja actualmente</span> : null}
+            </p>
+          ) : null}
+          {domTasks.length > 0 && (
+            <p className="text-sm break-words" style={{ color: "var(--tucv-muted)" }}>
+              {domTasks.join(" · ")}
+            </p>
+          )}
+          {matchReasons && matchReasons.length > 0 && (
+            <div className="flex flex-wrap gap-1.5 pt-0.5">
+              {matchReasons.map((r) => (
+                <span
+                  key={r}
+                  className="text-xs px-2 py-0.5 rounded-[var(--tucv-radius)] font-semibold"
+                  style={{ backgroundColor: "#DCFCE7", color: "#128C4A", border: "1.5px solid #128C4A" }}
+                >
+                  {r}
+                </span>
+              ))}
+            </div>
+          )}
+        </div>
+      )}
+
       <div className="flex flex-wrap gap-1.5 mt-1.5">
         {candidate.categories.map((c) => {
           const label = c === "otro" ? candidate.category_other || "Otro" : labelFor(CATEGORIES, c);
@@ -181,7 +256,7 @@ export function CandidateCardBody({
               style={{ backgroundColor: "var(--tucv-bg)", color: "var(--tucv-text)", border: "1.5px solid var(--tucv-border)" }}
             >
               {label}
-              {exp && (
+              {!hasNewExp && exp && (
                 <span style={{ color: "var(--tucv-muted)" }}>
                   {" "}
                   · {labelFor(EXPERIENCE, exp.experience)}
@@ -189,7 +264,7 @@ export function CandidateCardBody({
                   {exp.start_year ? ` (${exp.start_year}–${exp.is_current ? "actualidad" : exp.end_year ?? ""})` : ""}
                 </span>
               )}
-              {exp?.company_id && (
+              {!hasNewExp && exp?.company_id && (
                 <span style={{ color: "#128C4A" }} title={`Trabajó en ${exp.company} — empresa verificada en TuCV`}>
                   {" "}
                   ✓
