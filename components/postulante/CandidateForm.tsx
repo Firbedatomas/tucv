@@ -99,9 +99,12 @@ export const emptyCandidateForm: CandidateFormValues = {
   consent_save: false,
   consent_zone_visible: false,
   consent_contact: false,
-  // Pre-tildado a propósito (perfil público = máxima visibilidad). El card
-  // público nunca expone datos sensibles; se puede desactivar en el momento.
-  consent_public_profile: true,
+  // NUNCA pre-tildado: hacer público un perfil es tratamiento/publicación de
+  // datos personales y exige consentimiento explícito e informado (Ley 25.326
+  // / criterios AAIP). La card lo RECOMIENDA (badge "Recomendado") pero la
+  // persona tiene que tildarlo a mano. "Recomendado durante onboarding, pero
+  // activado solo con consentimiento explícito."
+  consent_public_profile: false,
   profileSlug: "",
 };
 
@@ -844,8 +847,9 @@ export function CandidateForm({
         {/* Perfil público: la opción de mayor visibilidad, destacada (tema
             "Impacto") porque es la que más chances de contacto da -- el perfil
             aparece también en el directorio abierto, no solo en la búsqueda
-            privada de empresas. Pre-tildado por decisión de producto; el card
-            público nunca expone WhatsApp/DNI/email/fecha de nacimiento. */}
+            privada de empresas. RECOMENDADA pero NUNCA pre-tildada: publicar
+            datos personales exige consentimiento explícito (Ley 25.326 / AAIP).
+            El card público nunca expone WhatsApp/DNI/email/fecha de nacimiento. */}
         <div
           className="mb-5 p-4 rounded-[var(--tucv-radius)]"
           style={{
