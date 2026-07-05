@@ -8,6 +8,10 @@
 // referencias) ya está cubierto abajo.
 export type CandidateFilters = {
   category: string;
+  // Grupo de rubros (chip rápido tipo "Gastronomía" = cocina/moza-o/barista...).
+  // Opcional y aditivo: si está seteado, el candidato pasa si tiene ALGUNO de
+  // esos rubros. No afecta a los callers que no lo usan (undefined = sin efecto).
+  categoryAny?: string[];
   zone: string;
   experience: string;
   availability: string;
@@ -77,6 +81,13 @@ function candidateHasReferences(candidate: FilterableCandidate): boolean {
 
 export function matchesCandidateFilters(candidate: FilterableCandidate, filters: CandidateFilters): boolean {
   if (filters.category && !candidate.categories?.includes(filters.category)) return false;
+  if (
+    filters.categoryAny &&
+    filters.categoryAny.length > 0 &&
+    !filters.categoryAny.some((c) => candidate.categories?.includes(c))
+  ) {
+    return false;
+  }
   if (filters.zone && !candidate.city_zone?.toLowerCase().includes(filters.zone.toLowerCase())) {
     return false;
   }

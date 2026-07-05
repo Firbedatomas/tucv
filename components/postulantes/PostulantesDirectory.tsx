@@ -6,6 +6,7 @@ import { emptyCandidateFilters, matchesCandidateFilters, type CandidateFilters }
 import { CATEGORIES, labelFor } from "@/lib/constants";
 import { LinkButton } from "@/components/ui/Button";
 import { PostulantesFilterBar } from "@/components/postulantes/PostulantesFilterBar";
+import { QuickChips } from "@/components/postulantes/QuickChips";
 import { PostulanteCard } from "@/components/postulantes/PostulanteCard";
 import type { PublicCandidateListItem, PublicCandidatesStats } from "@/lib/public-candidates-list";
 
@@ -124,6 +125,7 @@ export function PostulantesDirectory() {
           <LinkButton href="/postulante/nuevo">Crear mi perfil gratis</LinkButton>
         </div>
 
+        <QuickChips value={filters} onChange={setFilters} />
         <PostulantesFilterBar value={filters} onChange={setFilters} />
 
         {data === null && error ? (

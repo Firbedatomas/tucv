@@ -5,6 +5,7 @@ import Link from "next/link";
 import { pb } from "@/lib/pocketbase";
 import { usePostulanteAuth } from "@/lib/use-postulante-auth";
 import { Card } from "@/components/ui/Card";
+import { TrackedLinkButton } from "@/components/analytics/TrackedLinkButton";
 
 type ChannelRow = { label: string; value: number };
 type Metrics = {
@@ -167,6 +168,35 @@ function Ready({ data }: { data: Metrics }) {
           value={invites.total.toLocaleString("es-AR")}
           hint={weekHint(invites.thisWeek)}
         />
+      </div>
+
+      {/* Loop de retorno: mensaje según tenga o no visitas, siempre empujando a
+          compartir el perfil para recibir más. */}
+      <div
+        className="mb-8 p-5 rounded-[var(--tucv-radius)] flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between"
+        style={{ backgroundColor: "var(--tucv-accent)", border: "2.5px solid var(--tucv-border)", boxShadow: "4px 4px 0 var(--tucv-border)" }}
+      >
+        <div>
+          <p className="font-bold" style={{ color: "var(--tucv-text)" }}>
+            {views.total > 0
+              ? `Tu perfil recibió ${views.total.toLocaleString("es-AR")} visita${views.total === 1 ? "" : "s"}`
+              : "Tu perfil todavía no tiene visitas"}
+          </p>
+          <p className="text-sm" style={{ color: "rgba(21,21,21,0.72)" }}>
+            {views.total > 0
+              ? "Compartilo para que más comercios lo vean."
+              : "Compartí tu link para empezar a recibir visitas de comercios."}
+          </p>
+        </div>
+        <TrackedLinkButton
+          href="/postulante/editar"
+          event="click_compartir_perfil"
+          eventProps={{ source: "mi_actividad" }}
+          variant="secondary"
+          className="shrink-0 text-sm"
+        >
+          Compartir mi perfil
+        </TrackedLinkButton>
       </div>
 
       {shares.byChannel.length > 0 && (

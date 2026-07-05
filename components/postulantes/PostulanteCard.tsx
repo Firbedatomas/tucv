@@ -7,7 +7,7 @@ import { timeAgo } from "@/lib/time-ago";
 import { trackEvent } from "@/lib/track";
 import { emitActivity } from "@/lib/emit-activity";
 import { Card } from "@/components/ui/Card";
-import { LinkButton } from "@/components/ui/Button";
+import { TrackedLinkButton } from "@/components/analytics/TrackedLinkButton";
 import { ReportProfileButton } from "@/components/postulantes/ReportProfileButton";
 import { PublicCandidateActions } from "@/components/postulantes/PublicCandidateActions";
 import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
@@ -70,6 +70,23 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
       // Sin red / error -> link crudo.
     }
     return profileUrl;
+  }
+
+  // Compartir nativo (Web Share API, mobile-first). Fallback: copiar link.
+  async function nativeShare() {
+    trackEvent("click_compartir_perfil", { source: "directorio" });
+    const shareUrl = await resolveShareUrl("copy");
+    const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title: candidate.displayName, text: shareTextValue, url: shareUrl });
+        emitActivity("profile_shared", { candidateId: candidate.id });
+        return;
+      } catch {
+        // cancelado por el usuario o no soportado -> caemos a copiar
+      }
+    }
+    navigator.clipboard?.writeText(shareUrl);
   }
 
   return (
@@ -137,15 +154,22 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
       </p>
 
       <div className="flex flex-wrap items-center gap-3 mt-1">
-        <LinkButton href={`/p/${candidate.slug}`} variant="secondary" className="text-sm px-3 py-2">
+        <TrackedLinkButton
+          href={`/p/${candidate.slug}`}
+          event="click_ver_perfil"
+          eventProps={{ source: "directorio" }}
+          variant="secondary"
+          className="text-sm px-3 py-2"
+        >
           Ver perfil
-        </LinkButton>
+        </TrackedLinkButton>
         <button
           type="button"
           className="text-xs underline hover:opacity-70 transition"
           style={{ color: "var(--tucv-muted)" }}
           onClick={async () => {
             track("whatsapp");
+            trackEvent("click_whatsapp", { source: "directorio" });
             const shareUrl = await resolveShareUrl("whatsapp");
             const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
             window.open(`https://wa.me/?text=${encodeURIComponent(shareTextValue)}`, "_blank");
@@ -157,14 +181,9 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           type="button"
           className="text-xs underline hover:opacity-70 transition"
           style={{ color: "var(--tucv-muted)" }}
-          onClick={async () => {
-            track("x");
-            const shareUrl = await resolveShareUrl("x");
-            const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTextValue)}`, "_blank");
-          }}
+          onClick={() => nativeShare()}
         >
-          X
+          Compartir
         </button>
         <button
           type="button"
@@ -172,6 +191,7 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           style={{ color: "var(--tucv-muted)" }}
           onClick={async () => {
             track("copy");
+            trackEvent("click_copiar_link", { source: "directorio" });
             const shareUrl = await resolveShareUrl("copy");
             navigator.clipboard?.writeText(shareUrl);
           }}

@@ -5,6 +5,7 @@ import { pb } from "@/lib/pocketbase";
 import { emptyJobFilters, matchesJobFilters, type JobFilters } from "@/lib/job-filters";
 import type { PublicJobListItem } from "@/lib/public-jobs-list";
 import { JobFilterBar } from "@/components/landing/JobFilterBar";
+import { JobQuickChips } from "@/components/landing/JobQuickChips";
 import { JobCard } from "@/components/landing/JobCard";
 
 // Red de contención por si el push llega a fallar en silencio (ej. una red
@@ -98,6 +99,7 @@ export function LiveJobsFeed() {
           Se actualiza solo, sin recargar la página. No hace falta cuenta para mirar.
         </p>
 
+        <JobQuickChips value={filters} onChange={setFilters} />
         <JobFilterBar value={filters} onChange={setFilters} />
 
         {jobs === null && error ? (

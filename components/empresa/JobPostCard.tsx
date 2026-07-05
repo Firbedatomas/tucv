@@ -193,6 +193,17 @@ export function JobPostCard({
         </span>
       </p>
 
+      {/* Loop de retorno: si está activa y todavía no llegan postulaciones,
+          empujamos a compartir el cartel (el botón "QR para vidriera" está acá
+          abajo). Mensaje según haya o no visitas todavía. */}
+      {!readOnly && (status === "Activa" || status === "Promocionada") && (applicantCount ?? 0) === 0 && (
+        <p className="text-xs mb-2 font-semibold" style={{ color: "var(--tucv-primary)" }}>
+          {(job.views ?? 0) === 0
+            ? "Compartí tu link o el cartel para empezar a recibir postulantes."
+            : "Tuvo visitas pero aún sin postulaciones — compartí el cartel para recibir más candidatos."}
+        </p>
+      )}
+
       <div className="flex flex-wrap gap-2 mb-2 items-center">
         <LinkButton href={`/empresa/busquedas/${job.id}`}>Ver postulantes</LinkButton>
         {/* QR/cartel siempre disponible para cualquier búsqueda -- es lo que la

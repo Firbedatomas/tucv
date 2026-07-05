@@ -6,6 +6,7 @@ import Link from "next/link";
 import { CATEGORIES, AVAILABILITY, EXPERIENCE, VACANCIES, JOB_PERKS, HARD_REQUIREMENTS, labelFor, labelsFor } from "@/lib/constants";
 import { formatThousands } from "@/lib/format";
 import { timeAgo } from "@/lib/time-ago";
+import { trackEvent } from "@/lib/track";
 import { businessSlugFor } from "@/lib/slug";
 
 export type JobCardData = {
@@ -94,9 +95,30 @@ export function JobCard({ job, featured }: { job: JobCardData; featured?: boolea
 
   const publicPath = job.short_code ? `${businessSlugFor(job.business_name)}/${job.short_code}` : job.slug;
 
+  // Compartir la búsqueda sin navegar (la card entera es un Link): frenamos la
+  // navegación y usamos Web Share API (mobile) con fallback a copiar link.
+  async function shareJob(e: React.MouseEvent) {
+    e.preventDefault();
+    e.stopPropagation();
+    trackEvent("click_compartir_busqueda", { source: "home_feed" });
+    const origin = typeof window !== "undefined" ? window.location.origin : "https://tucv.ar";
+    const url = `${origin}/b/${publicPath}`;
+    const title = job.role || job.name;
+    if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
+      try {
+        await navigator.share({ title, text: `${title}${job.business_name ? ` — ${job.business_name}` : ""}`, url });
+        return;
+      } catch {
+        // cancelado / no soportado -> copiar
+      }
+    }
+    navigator.clipboard?.writeText(url);
+  }
+
   return (
     <Link
       href={`/b/${publicPath}`}
+      onClick={() => trackEvent("click_ver_busqueda", { source: "home_feed" })}
       className="block p-4 rounded-[var(--tucv-radius)] transition hover:-translate-y-0.5"
       style={{
         backgroundColor: featured ? "var(--tucv-accent)" : "var(--tucv-surface)",
@@ -126,12 +148,20 @@ export function JobCard({ job, featured }: { job: JobCardData; featured?: boolea
         <div className="min-w-0 flex-1">
           <div className="flex items-start justify-between gap-3 flex-wrap">
             <div className="min-w-0">
-              {featured && (
+              {featured ? (
                 <span
                   className="inline-block text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-[var(--tucv-radius)] mb-1"
                   style={{ backgroundColor: "var(--tucv-text)", color: "var(--tucv-bg)" }}
                 >
                   Destacada
+                </span>
+              ) : (
+                <span
+                  className="inline-flex items-center gap-1 text-[10px] font-bold uppercase tracking-wide px-1.5 py-0.5 rounded-[var(--tucv-radius)] mb-1"
+                  style={{ backgroundColor: "#DCFCE7", color: "#128C4A", border: "1.5px solid #128C4A" }}
+                >
+                  <span className="w-1.5 h-1.5 rounded-full" style={{ backgroundColor: "#128C4A" }} />
+                  Activa
                 </span>
               )}
               <p className="font-bold truncate">{job.role || job.name}</p>
@@ -170,6 +200,23 @@ export function JobCard({ job, featured }: { job: JobCardData; featured?: boolea
               <RequirementChip key={r}>{labelFor(HARD_REQUIREMENTS, r)}</RequirementChip>
             ))}
             {hiddenCount > 0 && <InfoChip featured={featured}>+{hiddenCount}</InfoChip>}
+          </div>
+
+          <div
+            className="flex items-center gap-3 mt-3 pt-2.5"
+            style={{ borderTop: featured ? "1.5px solid var(--tucv-border)" : "1.5px solid var(--tucv-border)" }}
+          >
+            <span className="text-xs font-bold" style={{ color: "var(--tucv-primary)" }}>
+              Ver búsqueda →
+            </span>
+            <button
+              type="button"
+              onClick={shareJob}
+              className="text-xs underline hover:opacity-70 transition ml-auto"
+              style={{ color: featured ? "var(--tucv-text)" : "var(--tucv-muted)" }}
+            >
+              Compartir
+            </button>
           </div>
         </div>
       </div>
