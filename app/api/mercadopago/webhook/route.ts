@@ -3,6 +3,14 @@ import "server-only";
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { JOB_BOOST_DAYS, JOB_EXTEND_DAYS } from "@/lib/mercadopago-pricing";
 import { trackServerEvent } from "@/lib/plausible-server";
+import { notifyTelegram } from "@/lib/telegram";
+
+const PAYMENT_LABEL: Record<string, string> = {
+  plan_pro: "Plan Pro",
+  multi_local: "Plan Equipo",
+  job_boost: "Búsqueda destacada",
+  job_extend: "Extensión de búsqueda",
+};
 
 const MP_ACCESS_TOKEN = process.env.MERCADOPAGO_ACCESS_TOKEN;
 
@@ -68,6 +76,15 @@ export async function POST(req: Request) {
         type: ourPayment.type as string,
         amount: ourPayment.amount as number,
       });
+      // Aviso al admin por Telegram.
+      const payBiz = await admin
+        .collection("business_accounts")
+        .getOne(ourPayment.business as string)
+        .catch(() => null);
+      const payType = PAYMENT_LABEL[ourPayment.type as string] ?? (ourPayment.type as string);
+      await notifyTelegram(
+        `💳 Pago aprobado\n${payType} — $${ourPayment.amount}\nNegocio: ${payBiz?.business_name ?? ourPayment.business}`,
+      );
       if (ourPayment.type === "plan_pro" || ourPayment.type === "multi_local") {
         await admin
           .collection("business_accounts")

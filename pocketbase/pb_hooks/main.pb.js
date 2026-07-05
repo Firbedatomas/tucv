@@ -1,5 +1,25 @@
 /// <reference path="../pb_data/types.d.ts" />
 
+// Aviso al admin por Telegram (bot @Tucvar_bot). Best-effort, timeout corto:
+// nunca bloquea ni rompe la operación que lo dispara (mismo criterio que los
+// $http.send de email de más abajo). Lee token/chat del env del contenedor.
+function tgNotify(text) {
+  try {
+    const token = $os.getenv("TELEGRAM_BOT_TOKEN")
+    const chat = $os.getenv("TELEGRAM_ADMIN_CHAT_ID")
+    if (!token || !chat) return
+    $http.send({
+      url: "https://api.telegram.org/bot" + token + "/sendMessage",
+      method: "POST",
+      body: JSON.stringify({ chat_id: chat, text: text, disable_web_page_preview: true }),
+      headers: { "Content-Type": "application/json" },
+      timeout: 4,
+    })
+  } catch (err) {
+    // best-effort
+  }
+}
+
 // Login único con Google para `users` (empresas y postulantes comparten esta
 // colección de auth, distinguidos por su business_accounts/candidate_profiles
 // relacionado). Se aplica en cada arranque -- en vez de en una migration --
@@ -158,6 +178,13 @@ onRecordAfterCreateSuccess((e) => {
   } catch (err) {
     // idem: nunca bloquea ni rompe el alta del perfil.
   }
+
+  tgNotify(
+    "🙋 Nuevo postulante\n" +
+    (e.record.get("name") || "(sin nombre)") +
+    "\nZona: " + (e.record.get("city_zone") || "-") +
+    "\nRubros: " + ([].concat(e.record.get("categories") || []).join(", ") || "-")
+  )
 
   e.next()
 }, "candidate_profiles")
@@ -414,6 +441,14 @@ onRecordAfterCreateSuccess((e) => {
   } catch (err) {
     // nunca bloquea ni rompe el alta de la empresa.
   }
+
+  tgNotify(
+    "🏢 Nueva empresa\n" +
+    (e.record.get("business_name") || "(sin nombre)") +
+    "\nZona: " + (e.record.get("city_zone") || "-") +
+    (e.record.get("phone") ? "\nTel: " + e.record.get("phone") : "")
+  )
+
   e.next()
 }, "business_accounts")
 
@@ -497,6 +532,31 @@ onRecordCreate((e) => {
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
   e.record.set("expires_at", expiresAt.toISOString())
   e.record.set("active", true)
+  e.next()
+}, "job_posts")
+
+// Aviso al admin de nueva búsqueda por Telegram. afterCreateSuccess: ya pasó
+// los límites de plan (onRecordCreateRequest de arriba) y quedó persistida.
+onRecordAfterCreateSuccess((e) => {
+  try {
+    let bizName = e.record.get("business")
+    try {
+      const biz = e.app.findRecordById("business_accounts", e.record.get("business"))
+      bizName = biz.get("business_name") || bizName
+    } catch (err) {}
+    const cat = e.record.get("category") === "otro"
+      ? (e.record.get("category_other") || "otro")
+      : e.record.get("category")
+    tgNotify(
+      "📢 Nueva búsqueda\n" +
+      (e.record.get("role") || e.record.get("name") || "(puesto)") +
+      "\nRubro: " + (cat || "-") +
+      "\nZona: " + (e.record.get("address_zone") || "-") +
+      "\nNegocio: " + bizName
+    )
+  } catch (err) {
+    // best-effort
+  }
   e.next()
 }, "job_posts")
 
