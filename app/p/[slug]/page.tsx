@@ -152,6 +152,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                   url={profileUrl}
                   fileName={slug}
                   flyerButtonLabel="Descargar cartel para imprimir"
+                  onDownloadQr={() => emitActivity("profile_qr_downloaded", { candidateId: profile.id })}
+                  onDownloadPoster={() => emitActivity("profile_poster_downloaded", { candidateId: profile.id })}
                   renderFlyer={(qrDataUrl) =>
                     generateCandidateFlyerDataUrl({
                       displayName: profile.name,
@@ -398,6 +400,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                     url={profileUrl}
                     fileName={slug}
                     flyerButtonLabel="Descargar cartel para pegar"
+                    onDownloadQr={() => emitActivity("profile_qr_downloaded", { candidateId: profile.id })}
+                    onDownloadPoster={() => emitActivity("profile_poster_downloaded", { candidateId: profile.id })}
                     renderFlyer={(qrDataUrl) =>
                       generateCandidateFlyerDataUrl({
                         displayName: profile.name,

@@ -9,6 +9,7 @@ import { emitActivity } from "@/lib/emit-activity";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
 import { ReportProfileButton } from "@/components/postulantes/ReportProfileButton";
+import { PublicCandidateActions } from "@/components/postulantes/PublicCandidateActions";
 import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
 import type { PublicCandidateListItem } from "@/lib/public-candidates-list";
 
@@ -153,6 +154,12 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
         </button>
         <ReportProfileButton candidateId={candidate.id} />
       </div>
+
+      {/* Acciones para empresas dueñas logueadas (guardar / invitar /
+          solicitar contacto). Usa candidateId = id REAL de candidate_profiles,
+          no candidate.id (que es el id de la fila del espejo público). Para
+          anónimos y no-dueños no renderiza nada. */}
+      <PublicCandidateActions candidateId={candidate.candidateId} />
     </Card>
   );
 }

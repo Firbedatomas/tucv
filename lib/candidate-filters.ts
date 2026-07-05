@@ -14,6 +14,9 @@ export type CandidateFilters = {
   hasReferences: boolean;
   hasOwnTransport: boolean;
   immediateAvailability: boolean;
+  // Última actividad del perfil: timestamp en ms; 0 = sin filtro. El caller
+  // calcula el corte (Date.now() - ventana) en un event handler, nunca en render.
+  lastActivitySince: number;
 };
 
 export const emptyCandidateFilters: CandidateFilters = {
@@ -24,6 +27,7 @@ export const emptyCandidateFilters: CandidateFilters = {
   hasReferences: false,
   hasOwnTransport: false,
   immediateAvailability: false,
+  lastActivitySince: 0,
 };
 
 type FilterableCandidate = {
@@ -39,6 +43,7 @@ type FilterableCandidate = {
   references_text?: string;
   has_own_transport?: string;
   immediate_availability?: boolean;
+  updated?: string;
 };
 
 // Con experiencia cargada por rubro, "experiencia = X" solo tiene sentido
@@ -73,6 +78,15 @@ export function matchesCandidateFilters(candidate: FilterableCandidate, filters:
   if (filters.hasReferences && !candidateHasReferences(candidate)) return false;
   if (filters.hasOwnTransport && candidate.has_own_transport !== "si") return false;
   if (filters.immediateAvailability && !candidate.immediate_availability) return false;
+  // Última actividad: si hay corte activo, el perfil pasa solo si su `updated`
+  // es igual o posterior. Un candidato sin `updated` (o con fecha inválida) NO
+  // pasa cuando el filtro está activo: no podemos garantizar que estuvo activo
+  // en la ventana pedida, así que lo excluimos en vez de mostrarlo de más.
+  if (filters.lastActivitySince > 0) {
+    if (!candidate.updated) return false;
+    const updatedMs = new Date(candidate.updated).getTime();
+    if (Number.isNaN(updatedMs) || updatedMs < filters.lastActivitySince) return false;
+  }
   return true;
 }
 

@@ -32,6 +32,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     const items = approved
       .filter((r) => r.show_name)
       .map((r) => ({
+        id: r.id as string,
         name: publicDisplayName((r.recommender_name as string) || ""),
         relation: (r.relation as string) || "",
         text: (r.text as string) || "",

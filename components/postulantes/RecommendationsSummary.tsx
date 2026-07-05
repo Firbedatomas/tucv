@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { relationLabel } from "@/lib/references";
+import { ReportContentButton } from "@/components/postulantes/ReportContentButton";
 
 type Summary = {
   total: number;
   byRelation: Record<string, number>;
-  items: { name: string; relation: string; text: string }[];
+  items: { id: string; name: string; relation: string; text: string }[];
 };
 
 // Bloque público: conteo agregado de recomendaciones + nombre/texto solo de las
@@ -35,7 +36,7 @@ export function RecommendationsSummary({ slug }: { slug: string }) {
         {data.items
           .filter((it) => it.text)
           .map((it, i) => (
-            <div key={i} className="p-3 rounded-[var(--tucv-radius)]" style={{ backgroundColor: "var(--tucv-bg)", border: "1px solid var(--tucv-border)" }}>
+            <div key={it.id || i} className="p-3 rounded-[var(--tucv-radius)]" style={{ backgroundColor: "var(--tucv-bg)", border: "1px solid var(--tucv-border)" }}>
               <p className="text-sm" style={{ color: "var(--tucv-text)" }}>
                 “{it.text}”
               </p>
@@ -43,6 +44,9 @@ export function RecommendationsSummary({ slug }: { slug: string }) {
                 — {it.name}
                 {it.relation ? `, ${relationLabel(it.relation).toLowerCase()}` : ""}
               </p>
+              <div className="mt-1">
+                <ReportContentButton contentType="recommendation" contentId={it.id} />
+              </div>
             </div>
           ))}
       </div>

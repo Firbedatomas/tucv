@@ -1,9 +1,12 @@
 "use client";
 
+import { useState } from "react";
 import { CATEGORIES, EXPERIENCE, AVAILABILITY } from "@/lib/constants";
 import type { CandidateFilters } from "@/lib/candidate-filters";
 import { Card } from "@/components/ui/Card";
 import { inputClass, inputStyle } from "@/components/ui/Field";
+
+const DAY_MS = 24 * 60 * 60 * 1000;
 
 export function CandidateFilterBar({
   value,
@@ -14,6 +17,12 @@ export function CandidateFilterBar({
   onChange: (next: CandidateFilters) => void;
   extra?: React.ReactNode;
 }) {
+  // La ventana elegida (24h / 7d / 30d) se guarda en estado local: el filtro
+  // solo persiste el timestamp de corte absoluto (lastActivitySince), y volver
+  // a mapearlo a "qué ventana es" exigiría Date.now() en render (impuro). Si el
+  // padre resetea el filtro a 0, mostramos "Cualquiera" sin importar el estado.
+  const [activityWindowMs, setActivityWindowMs] = useState(0);
+
   function set<K extends keyof CandidateFilters>(key: K, v: CandidateFilters[K]) {
     onChange({ ...value, [key]: v });
   }
@@ -66,6 +75,23 @@ export function CandidateFilterBar({
               {opt.label}
             </option>
           ))}
+        </select>
+        <select
+          className={inputClass}
+          style={inputStyle}
+          value={value.lastActivitySince === 0 ? "" : String(activityWindowMs)}
+          onChange={(e) => {
+            // Date.now() se resuelve acá (event handler), nunca en render, para
+            // no disparar el "Cannot call impure function during render" del compiler.
+            const windowMs = Number(e.target.value);
+            setActivityWindowMs(windowMs);
+            set("lastActivitySince", windowMs > 0 ? Date.now() - windowMs : 0);
+          }}
+        >
+          <option value="">Cualquier actividad</option>
+          <option value={String(DAY_MS)}>Activos hoy</option>
+          <option value={String(7 * DAY_MS)}>Últimos 7 días</option>
+          <option value={String(30 * DAY_MS)}>Últimos 30 días</option>
         </select>
         {extra}
       </div>

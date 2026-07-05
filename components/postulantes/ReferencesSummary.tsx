@@ -2,11 +2,12 @@
 
 import { useEffect, useState } from "react";
 import { relationLabel } from "@/lib/references";
+import { ReportContentButton } from "@/components/postulantes/ReportContentButton";
 
 type Summary = {
   total: number;
   byRelation: Record<string, number>;
-  items: { name: string; relation: string; company: string; text: string }[];
+  items: { id: string; name: string; relation: string; company: string; text: string }[];
 };
 
 // Bloque PÚBLICO de referencias en el perfil. Muestra el resumen agregado
@@ -39,7 +40,7 @@ export function ReferencesSummary({ slug }: { slug: string }) {
       </p>
       <div className="space-y-2">
         {data.items.map((it, i) => (
-          <div key={i} className="p-3 rounded-[var(--tucv-radius)]" style={{ backgroundColor: "var(--tucv-bg)", border: "1px solid var(--tucv-border)" }}>
+          <div key={it.id || i} className="p-3 rounded-[var(--tucv-radius)]" style={{ backgroundColor: "var(--tucv-bg)", border: "1px solid var(--tucv-border)" }}>
             <p className="text-sm" style={{ color: "var(--tucv-text)" }}>
               “{it.text}”
             </p>
@@ -48,6 +49,9 @@ export function ReferencesSummary({ slug }: { slug: string }) {
               {it.relation ? `, ${relationLabel(it.relation).toLowerCase()}` : ""}
               {it.company ? ` en ${it.company}` : ""}
             </p>
+            <div className="mt-1">
+              <ReportContentButton contentType="reference" contentId={it.id} />
+            </div>
           </div>
         ))}
       </div>

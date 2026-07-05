@@ -33,6 +33,7 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
     const items = approved
       .filter((r) => r.show_name)
       .map((r) => ({
+        id: r.id as string,
         name: (r.referrer_name as string) || "",
         relation: (r.relation as string) || "",
         company: (r.company as string) || "",

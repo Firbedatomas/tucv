@@ -8,6 +8,8 @@ export function QRCodeView({
   fileName,
   renderFlyer,
   flyerButtonLabel = "Descargar plantilla para imprimir",
+  onDownloadQr,
+  onDownloadPoster,
 }: {
   url: string;
   fileName: string;
@@ -18,6 +20,11 @@ export function QRCodeView({
   // sin acoplar este componente a ninguno de los dos.
   renderFlyer?: (qrDataUrl: string) => Promise<string>;
   flyerButtonLabel?: string;
+  // Opcionales -- callbacks de métrica que se disparan cuando el usuario
+  // descarga el QR o el cartel/flyer. Los usos existentes que no los pasan
+  // no se ven afectados (se invocan con `?.()`).
+  onDownloadQr?: () => void;
+  onDownloadPoster?: () => void;
 }) {
   const [dataUrl, setDataUrl] = useState<string | null>(null);
   const [flyerUrl, setFlyerUrl] = useState<string | null>(null);
@@ -41,6 +48,7 @@ export function QRCodeView({
     if (!dataUrl || !renderFlyer) return;
     if (flyerUrl) {
       triggerDownload(flyerUrl);
+      onDownloadPoster?.();
       return;
     }
     setGeneratingFlyer(true);
@@ -48,6 +56,7 @@ export function QRCodeView({
       const flyer = await renderFlyer(dataUrl);
       setFlyerUrl(flyer);
       triggerDownload(flyer);
+      onDownloadPoster?.();
     } finally {
       setGeneratingFlyer(false);
     }
@@ -78,6 +87,7 @@ export function QRCodeView({
       <a
         href={dataUrl}
         download={`${fileName}.png`}
+        onClick={() => onDownloadQr?.()}
         className="text-sm font-semibold"
         style={{ color: "var(--tucv-primary)" }}
       >

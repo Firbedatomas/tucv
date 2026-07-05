@@ -13,6 +13,7 @@ import {
   type SavedStatus,
 } from "@/components/empresa/SavedCandidateControls";
 import { InviteCandidateControls, type InviteJob } from "@/components/empresa/InviteCandidateControls";
+import { ContactRequestControls } from "@/components/empresa/ContactRequestControls";
 
 type CandidateCounts = {
   total: number;
@@ -87,17 +88,24 @@ export function CandidateSearch({
       .catch(() => setContactStatus(new Map()));
   }, []);
 
-  async function requestContact(candidateId: string) {
+  async function requestContact(candidateId: string, jobPostId: string, reason: string) {
+    // Optimista: mostramos "pendiente" al toque; revertimos si el server falla.
     setContactStatus((prev) => new Map(prev).set(candidateId, "pending"));
     try {
       const res = await fetch("/api/contact-requests", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ token: pb().authStore.token, candidateId }),
+        body: JSON.stringify({ token: pb().authStore.token, candidateId, jobPostId, reason }),
       });
-      if (!res.ok) setContactStatus((prev) => new Map(prev).set(candidateId, ""));
+      if (!res.ok) {
+        setContactStatus((prev) => new Map(prev).set(candidateId, ""));
+        const data = await res.json().catch(() => ({}));
+        return { ok: false, error: (data as { error?: string }).error };
+      }
+      return { ok: true };
     } catch {
       setContactStatus((prev) => new Map(prev).set(candidateId, ""));
+      return { ok: false, error: "No se pudo enviar la solicitud. Reintentá." };
     }
   }
 
@@ -325,30 +333,14 @@ export function CandidateSearch({
                             </button>
                           );
                         }
-                        if (cstatus === "pending") {
-                          return (
-                            <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
-                              Solicitud de contacto enviada
-                            </span>
-                          );
-                        }
-                        if (cstatus === "rejected") {
-                          return (
-                            <span className="text-xs" style={{ color: "var(--tucv-muted)" }}>
-                              No aceptó el contacto
-                            </span>
-                          );
-                        }
-                        // El candidato no habilitó contacto directo: se puede pedir.
+                        // El candidato no habilitó contacto directo: se puede
+                        // pedir eligiendo búsqueda y motivo (opcionales).
                         return (
-                          <button
-                            type="button"
-                            onClick={() => requestContact(c.id)}
-                            className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border"
-                            style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-text)" }}
-                          >
-                            Solicitar contacto
-                          </button>
+                          <ContactRequestControls
+                            jobs={jobs}
+                            status={cstatus}
+                            onRequest={(jobPostId, reason) => requestContact(c.id, jobPostId, reason)}
+                          />
                         );
                       })()}
                       <SavedCandidateControls

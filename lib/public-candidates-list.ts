@@ -26,6 +26,11 @@ function displayName(fullName: string): string {
 // directorio público.
 export type PublicCandidateListItem = {
   id: string;
+  // id REAL de candidate_profiles (el campo `candidate` del espejo). `id` de
+  // arriba es el id de la fila del espejo public_candidate_cards, NO sirve
+  // para las APIs de empresa (guardar/invitar/solicitar contacto), que operan
+  // sobre candidate_profiles. Usar SIEMPRE este para esas acciones.
+  candidateId: string;
   slug: string;
   displayName: string;
   city_zone: string;
@@ -54,6 +59,7 @@ export type PublicCandidatesStats = {
 function mapCard(c: Record<string, unknown>): PublicCandidateListItem {
   return {
     id: c.id as string,
+    candidateId: c.candidate as string,
     slug: c.slug as string,
     displayName: (c.display_name as string) || "Postulante",
     city_zone: (c.city_zone as string) || "",
@@ -136,6 +142,9 @@ export async function getPublicCandidateCard(slug: string): Promise<PublicCandid
   if (!c) return null;
   return {
     id: c.id,
+    // Acá la fuente es candidate_profiles directamente, así que el id de la
+    // fila YA es el id real del candidato.
+    candidateId: c.id,
     slug: c.profile_slug as string,
     displayName: displayName((c.name as string) || ""),
     city_zone: (c.city_zone as string) || "",
