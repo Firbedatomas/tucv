@@ -40,6 +40,7 @@ import {
 } from "@/components/postulante/StudyLevelEntry";
 import { ReferenceListInput, type ReferenceValue } from "@/components/postulante/ReferenceListInput";
 import { ThousandsInput } from "@/components/ui/ThousandsInput";
+import { OnboardingCandidate } from "@/components/onboarding/OnboardingCandidate";
 
 export type CandidateFormValues = {
   firstName: string;
@@ -448,6 +449,7 @@ export function CandidateForm({
     const origin = typeof window !== "undefined" ? window.location.origin : "";
     const publicLink = success.slug ? `${origin}/p/${success.slug}` : null;
     return (
+      <>
       <Card>
         <h2 className="text-xl font-bold mb-2">
           {mode.kind === "create"
@@ -498,6 +500,8 @@ export function CandidateForm({
           </div>
         )}
       </Card>
+      {success.slug && <OnboardingCandidate slug={success.slug} />}
+      </>
     );
   }
 

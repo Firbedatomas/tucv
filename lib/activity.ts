@@ -35,7 +35,16 @@ export type ActivityType =
   | "job_created"
   | "job_shared"
   | "application_sent"
-  | "company_invited_candidate";
+  | "company_invited_candidate"
+  // Sistema de atribución (share_links): creación del link, click sobre él, y
+  // las conversiones que arrastra (registro/postulación llegadas por un share).
+  | "share_created"
+  | "share_clicked"
+  | "profile_viewed_from_share"
+  | "job_viewed_from_share"
+  | "candidate_registered_from_share"
+  | "company_registered_from_share"
+  | "application_sent_from_share";
 
 export type ActivityActor = "candidate" | "company" | "system";
 export type ActivityVisibility = "public" | "internal" | "private";

@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/track";
+import type { ShareChannel, ShareEntityType } from "@/lib/attribution";
 
 function registerShare(jobId: string, platform: "whatsapp" | "x" | "instagram") {
   trackEvent("Empresa: busqueda compartida", { channel: platform });
@@ -14,7 +15,23 @@ function registerShare(jobId: string, platform: "whatsapp" | "x" | "instagram") 
   }).catch(() => {});
 }
 
-export function ShareButtons({ jobId, url, title }: { jobId: string; url: string; title: string }) {
+// Atribución (opcional, backward-compatible): con `entityType`/`entityId`
+// creamos un share_link y compartimos la URL corta (/s/...) en vez de la cruda,
+// para saber qué canal trajo la vista/postulación. Sin esas props, comparte el
+// link crudo como siempre (el caller viejo no cambia).
+export function ShareButtons({
+  jobId,
+  url,
+  title,
+  entityType,
+  entityId,
+}: {
+  jobId: string;
+  url: string;
+  title: string;
+  entityType?: ShareEntityType;
+  entityId?: string;
+}) {
   const [copied, setCopied] = useState(false);
   // Detección de soporte real de Web Share con archivos (sobre todo Chrome
   // Android/iOS Safari recientes) -- en desktop casi nunca está, ahí
@@ -31,22 +48,44 @@ export function ShareButtons({ jobId, url, title }: { jobId: string; url: string
     setSupportsFileShare(typeof navigator.share === "function" && typeof navigator.canShare === "function");
   }, []);
 
-  function shareWhatsapp() {
-    registerShare(jobId, "whatsapp");
-    window.open(`https://wa.me/?text=${encodeURIComponent(`${title} ${url}`)}`, "_blank");
+  // Crea el share_link y devuelve la URL corta, o la cruda si no hay atribución
+  // configurada o falló la red -- nunca bloquea el compartir.
+  async function resolveShareUrl(channel: ShareChannel): Promise<string> {
+    if (!entityType || !entityId) return url;
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType, entityId, channel }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.url === "string") return data.url;
+      }
+    } catch {
+      // Sin red / error -> caemos al link crudo.
+    }
+    return url;
   }
 
-  function shareX() {
+  async function shareWhatsapp() {
+    registerShare(jobId, "whatsapp");
+    const shareUrl = await resolveShareUrl("whatsapp");
+    window.open(`https://wa.me/?text=${encodeURIComponent(`${title} ${shareUrl}`)}`, "_blank");
+  }
+
+  async function shareX() {
     registerShare(jobId, "x");
+    const shareUrl = await resolveShareUrl("x");
     window.open(
-      `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(url)}`,
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(title)}&url=${encodeURIComponent(shareUrl)}`,
       "_blank",
     );
   }
 
-  function copyLinkFallback() {
+  function copyLinkFallback(shareUrl: string) {
     navigator.clipboard
-      ?.writeText(url)
+      ?.writeText(shareUrl)
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -68,14 +107,18 @@ export function ShareButtons({ jobId, url, title }: { jobId: string; url: string
   async function shareInstagram() {
     registerShare(jobId, "instagram");
 
+    const shareUrl = await resolveShareUrl("instagram");
+
     if (supportsFileShare) {
       try {
+        // La imagen se sirve desde la URL cruda de la búsqueda (/b/.../share-image),
+        // no desde el link corto de atribución.
         const res = await fetch(`${url}/share-image`);
         if (res.ok) {
           const blob = await res.blob();
           const file = new File([blob], "busqueda-tucv.png", { type: "image/png" });
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title, text: title, url });
+            await navigator.share({ files: [file], title, text: title, url: shareUrl });
             return;
           }
         }
@@ -86,7 +129,7 @@ export function ShareButtons({ jobId, url, title }: { jobId: string; url: string
       }
     }
 
-    copyLinkFallback();
+    copyLinkFallback(shareUrl);
   }
 
   const buttonClass = "text-xs font-semibold px-2.5 py-1.5 rounded-[var(--tucv-radius)] hover:opacity-70 transition";

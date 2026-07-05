@@ -36,6 +36,7 @@ import { BoostJobButton } from "@/components/empresa/BoostJobButton";
 import { activeJobLimit, autoBoostsOnCreate, monthlyJobLimit, maxDurationDays, hidesExtraChips } from "@/lib/plan-limits";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { sanitizeVisibleMessage } from "@/lib/sanitize-html";
+import { OnboardingCompany } from "@/components/onboarding/OnboardingCompany";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -377,6 +378,7 @@ export function JobPostForm({
   if (created && mode.kind === "create") {
     const publicUrl = `${BASE_URL}/b/${businessSlugFor(businessName)}/${created.shortCode}`;
     return (
+      <>
       <Card>
         <h2 className="text-xl font-bold mb-2">¡Tu búsqueda ya está publicada!</h2>
         <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
@@ -432,6 +434,15 @@ export function JobPostForm({
           <BoostJobButton jobPostId={created.id} featuredUntil={created.featuredUntil} />
         </div>
       </Card>
+      <OnboardingCompany
+        slug={created.slug}
+        shortCode={created.shortCode}
+        jobId={created.id}
+        role={values.role}
+        businessName={businessName}
+        businessLogoUrl={businessLogoUrl}
+      />
+      </>
     );
   }
 

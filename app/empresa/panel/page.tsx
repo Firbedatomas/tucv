@@ -4,6 +4,7 @@ import { useBusinessAuth } from "@/lib/use-business-auth";
 import { canManageJobs, canSourceCandidates } from "@/lib/business-permissions";
 import { JobPostList } from "@/components/empresa/JobPostList";
 import { ExportApplicationsButton } from "@/components/empresa/ExportApplicationsButton";
+import { ReputationCard } from "@/components/empresa/ReputationCard";
 import { LinkButton } from "@/components/ui/Button";
 
 export default function PanelEmpresaPage() {
@@ -50,6 +51,7 @@ export default function PanelEmpresaPage() {
             </div>
           )}
         </div>
+        {canManageJobs(role) && <ReputationCard />}
         <JobPostList
           businessId={business?.id ?? null}
           businessPlan={business?.plan ?? "free"}

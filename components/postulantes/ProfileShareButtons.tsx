@@ -2,19 +2,29 @@
 
 import { useEffect, useState } from "react";
 import { trackEvent } from "@/lib/track";
+import type { ShareChannel, ShareEntityType } from "@/lib/attribution";
 
 // Misma estructura que components/public-job/ShareButtons.tsx, adaptada a
 // perfil de postulante -- Plausible (trackEvent) en vez de /api/job-share:
 // acá no hay un contador propio por perfil que mostrar en ningún panel
 // todavía, así que no vale la pena un segundo mecanismo de conteo.
+//
+// Atribución (opcional, backward-compatible): si vienen `entityType`/`entityId`
+// creamos un share_link antes de compartir y compartimos la URL corta (/s/...)
+// en vez de la cruda, para saber qué canal trajo la vista/conversión. Si no
+// vienen, se comporta como siempre (el caller viejo no cambia).
 export function ProfileShareButtons({
   url,
   text,
   onShare,
+  entityType,
+  entityId,
 }: {
   url: string;
   text: string;
   onShare?: (channel: string) => void;
+  entityType?: ShareEntityType;
+  entityId?: string;
 }) {
   const [copied, setCopied] = useState(false);
   const [supportsFileShare, setSupportsFileShare] = useState(false);
@@ -23,21 +33,48 @@ export function ProfileShareButtons({
     setSupportsFileShare(typeof navigator.share === "function" && typeof navigator.canShare === "function");
   }, []);
 
-  function shareWhatsapp() {
+  // Crea el share_link y devuelve la URL corta, o null si no hay atribución
+  // configurada o falló la red -- nunca debe bloquear el compartir.
+  async function resolveShareUrl(channel: ShareChannel): Promise<string> {
+    if (!entityType || !entityId) return url;
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType, entityId, channel }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.url === "string") return data.url;
+      }
+    } catch {
+      // Sin red / error -> caemos al link crudo, no rompemos el share.
+    }
+    return url;
+  }
+
+  async function shareWhatsapp() {
     trackEvent("Postulante: perfil compartido", { channel: "whatsapp", source: "perfil" });
     onShare?.("whatsapp");
-    window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+    const shareUrl = await resolveShareUrl("whatsapp");
+    const shareTextValue = shareUrl === url ? text : text.split(url).join(shareUrl);
+    window.open(`https://wa.me/?text=${encodeURIComponent(shareTextValue)}`, "_blank");
   }
 
-  function shareX() {
+  async function shareX() {
     trackEvent("Postulante: perfil compartido", { channel: "x", source: "perfil" });
     onShare?.("x");
-    window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}&url=${encodeURIComponent(url)}`, "_blank");
+    const shareUrl = await resolveShareUrl("x");
+    const shareTextValue = shareUrl === url ? text : text.split(url).join(shareUrl);
+    window.open(
+      `https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTextValue)}&url=${encodeURIComponent(shareUrl)}`,
+      "_blank",
+    );
   }
 
-  function copyLinkFallback() {
+  function copyLinkFallback(shareUrl: string) {
     navigator.clipboard
-      ?.writeText(url)
+      ?.writeText(shareUrl)
       .then(() => {
         setCopied(true);
         setTimeout(() => setCopied(false), 2000);
@@ -49,14 +86,19 @@ export function ProfileShareButtons({
     trackEvent("Postulante: perfil compartido", { channel: "instagram", source: "perfil" });
     onShare?.("instagram");
 
+    const shareUrl = await resolveShareUrl("instagram");
+    const shareTextValue = shareUrl === url ? text : text.split(url).join(shareUrl);
+
     if (supportsFileShare) {
       try {
+        // La imagen se sirve desde la URL cruda del perfil (/p/.../share-image),
+        // no desde el link corto de atribución.
         const res = await fetch(`${url}/share-image`);
         if (res.ok) {
           const blob = await res.blob();
           const file = new File([blob], "perfil-tucv.png", { type: "image/png" });
           if (navigator.canShare({ files: [file] })) {
-            await navigator.share({ files: [file], title: text, text, url });
+            await navigator.share({ files: [file], title: shareTextValue, text: shareTextValue, url: shareUrl });
             return;
           }
         }
@@ -65,7 +107,7 @@ export function ProfileShareButtons({
       }
     }
 
-    copyLinkFallback();
+    copyLinkFallback(shareUrl);
   }
 
   const buttonClass = "text-xs font-semibold px-2.5 py-1.5 rounded-[var(--tucv-radius)] hover:opacity-70 transition";

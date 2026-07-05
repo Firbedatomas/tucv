@@ -12,6 +12,7 @@ import { ReportProfileButton } from "@/components/postulantes/ReportProfileButto
 import { PublicCandidateActions } from "@/components/postulantes/PublicCandidateActions";
 import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
 import type { PublicCandidateListItem } from "@/lib/public-candidates-list";
+import type { ShareChannel } from "@/lib/attribution";
 
 // Igual patrón que PostedAgo en components/landing/JobCard.tsx: el "activo
 // hace X" se calcula recién montado en el cliente, no en el render de SSR,
@@ -49,6 +50,26 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
     if (channel === "whatsapp" || channel === "x") {
       emitActivity("profile_shared", { candidateId: candidate.id });
     }
+  }
+
+  // Crea un share_link para atribución y devuelve la URL corta (/s/...), o la
+  // cruda si falla la red -- nunca debe bloquear el compartir. entityId es el
+  // id REAL de candidate_profiles (candidateId), no el del espejo público.
+  async function resolveShareUrl(channel: ShareChannel): Promise<string> {
+    try {
+      const res = await fetch("/api/share", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ entityType: "profile", entityId: candidate.candidateId, channel }),
+      });
+      if (res.ok) {
+        const data = await res.json();
+        if (typeof data?.url === "string") return data.url;
+      }
+    } catch {
+      // Sin red / error -> link crudo.
+    }
+    return profileUrl;
   }
 
   return (
@@ -123,9 +144,11 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           type="button"
           className="text-xs underline hover:opacity-70 transition"
           style={{ color: "var(--tucv-muted)" }}
-          onClick={() => {
+          onClick={async () => {
             track("whatsapp");
-            window.open(`https://wa.me/?text=${encodeURIComponent(text)}`, "_blank");
+            const shareUrl = await resolveShareUrl("whatsapp");
+            const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
+            window.open(`https://wa.me/?text=${encodeURIComponent(shareTextValue)}`, "_blank");
           }}
         >
           WhatsApp
@@ -134,9 +157,11 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           type="button"
           className="text-xs underline hover:opacity-70 transition"
           style={{ color: "var(--tucv-muted)" }}
-          onClick={() => {
+          onClick={async () => {
             track("x");
-            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(text)}`, "_blank");
+            const shareUrl = await resolveShareUrl("x");
+            const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
+            window.open(`https://twitter.com/intent/tweet?text=${encodeURIComponent(shareTextValue)}`, "_blank");
           }}
         >
           X
@@ -145,9 +170,10 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           type="button"
           className="text-xs underline hover:opacity-70 transition"
           style={{ color: "var(--tucv-muted)" }}
-          onClick={() => {
+          onClick={async () => {
             track("copy");
-            navigator.clipboard?.writeText(profileUrl);
+            const shareUrl = await resolveShareUrl("copy");
+            navigator.clipboard?.writeText(shareUrl);
           }}
         >
           Copiar link

@@ -20,6 +20,7 @@ import { ReferencesSummary } from "@/components/postulantes/ReferencesSummary";
 import { RecommendationsManager } from "@/components/postulantes/RecommendationsManager";
 import { RecommendationsSummary } from "@/components/postulantes/RecommendationsSummary";
 import { RecommendButton } from "@/components/postulantes/RecommendButton";
+import { VisibilityChecklist } from "@/components/postulantes/VisibilityChecklist";
 
 type RichCategoryExperience = {
   category: string;
@@ -132,6 +133,15 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
       <div className="max-w-lg mx-auto">
         {isOwnProfile && (
           <>
+            <VisibilityChecklist
+              slug={slug}
+              categories={profile.categories}
+              availability={profile.availability}
+              bio={profile.bio}
+              has_own_transport={profile.has_own_transport}
+              immediate_availability={profile.immediate_availability}
+              category_experience={profile.category_experience}
+            />
             <div
               className="flex flex-wrap items-center justify-between gap-3 mb-4 p-3 rounded-[var(--tucv-radius)]"
               style={{ backgroundColor: "var(--tucv-bg)", border: "2px solid var(--tucv-border)" }}
@@ -146,6 +156,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
               <ProfileShareButtons
                 url={profileUrl}
                 text={`Estoy buscando laburo${profile.city_zone ? ` en ${profile.city_zone}` : ""}. Mi perfil: ${profileUrl}`}
+                entityType="profile"
+                entityId={profile.id}
               />
               <div className="mt-4">
                 <QRCodeView
@@ -372,6 +384,8 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                 <ProfileShareButtons
                   url={profileUrl}
                   text={`${firstName} está buscando laburo${zonePart}. Mirá su perfil en TuCV: ${profileUrl}`}
+                  entityType="profile"
+                  entityId={profile.id}
                   onShare={() => emitActivity("profile_shared", { candidateId: profile.id })}
                 />
 

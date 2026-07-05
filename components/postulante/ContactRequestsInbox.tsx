@@ -7,6 +7,7 @@ import { Card } from "@/components/ui/Card";
 type ContactRequest = {
   id: string;
   reason: string;
+  business: string;
   expand?: {
     business?: { business_name?: string };
     job_post?: { role?: string; name?: string };
@@ -41,6 +42,23 @@ export function ContactRequestsInbox({ candidateId }: { candidateId: string }) {
         body: JSON.stringify({ token: pb().authStore.token, action }),
       });
       if (res.ok) setRequests((prev) => prev.filter((r) => r.id !== id));
+    } catch {
+      // Silencioso: queda para reintentar.
+    } finally {
+      setBusyId(null);
+    }
+  }
+
+  async function blockBusiness(requestId: string, businessId: string) {
+    setBusyId(requestId);
+    try {
+      const res = await fetch("/api/blocks", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pb().authStore.token, businessId, action: "block" }),
+      });
+      // Al bloquear, sacamos también la solicitud pendiente de esta empresa.
+      if (res.ok) setRequests((prev) => prev.filter((r) => r.business !== businessId));
     } catch {
       // Silencioso: queda para reintentar.
     } finally {
@@ -97,6 +115,15 @@ export function ContactRequestsInbox({ candidateId }: { candidateId: string }) {
                   style={{ color: "var(--tucv-muted)" }}
                 >
                   Rechazar
+                </button>
+                <button
+                  type="button"
+                  onClick={() => blockBusiness(r.id, r.business)}
+                  disabled={busy}
+                  className="text-xs font-semibold px-3 py-1.5 ml-auto"
+                  style={{ color: "var(--tucv-muted)" }}
+                >
+                  Bloquear empresa
                 </button>
               </div>
             </div>

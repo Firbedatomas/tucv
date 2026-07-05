@@ -1,6 +1,31 @@
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { DataTable } from "@/components/admin/DataTable";
-import { DismissReportButton } from "@/components/admin/DismissReportButton";
+import { ModerateControls } from "@/components/admin/ModerateControls";
+
+// Estados de la cola de moderación (ver migración 1783270015). Vacío = recién
+// entrado, todavía sin tocar.
+const STATUS_LABELS: Record<string, string> = {
+  pending: "Pendiente",
+  reviewing: "En revisión",
+  resolved_no_action: "Sin acción",
+  hidden: "Oculto",
+  user_warned: "Advertido",
+  user_blocked: "Bloqueado",
+  reviewed: "Revisado",
+  dismissed: "Descartado",
+};
+
+function StatusBadge({ status }: { status: string }) {
+  const active = status !== "pending";
+  return (
+    <span
+      className="text-xs font-semibold whitespace-nowrap"
+      style={{ color: active ? "var(--tucv-text)" : "var(--tucv-muted)" }}
+    >
+      {STATUS_LABELS[status] || status}
+    </span>
+  );
+}
 
 // Sin paginación propia a propósito -- moderación básica, se espera bajo
 // volumen (a diferencia de postulantes/negocios). Si algún día esto se
@@ -53,6 +78,7 @@ export default async function AdminReportesPage() {
       profileSlug: candidate?.profile_slug as string | undefined,
       reason: REASON_LABELS[r.reason as string] || (r.reason as string),
       detail: (r.detail as string) || "—",
+      status: (r.status as string) || "pending",
       created: new Date(r.created as string).toLocaleString("es-AR"),
     };
   });
@@ -65,6 +91,7 @@ export default async function AdminReportesPage() {
       business: jobPost?.expand?.business?.business_name || "—",
       reason: REASON_LABELS[r.reason as string] || (r.reason as string),
       detail: (r.detail as string) || "—",
+      status: (r.status as string) || "pending",
       created: new Date(r.created as string).toLocaleString("es-AR"),
     };
   });
@@ -74,6 +101,7 @@ export default async function AdminReportesPage() {
     type: CONTENT_TYPE_LABELS[r.content_type as string] || (r.content_type as string),
     reason: REASON_LABELS[r.reason as string] || (r.reason as string),
     detail: (r.detail as string) || "—",
+    status: (r.status as string) || "pending",
     created: new Date(r.created as string).toLocaleString("es-AR"),
   }));
 
@@ -107,11 +135,12 @@ export default async function AdminReportesPage() {
           },
           { key: "reason", label: "Motivo" },
           { key: "detail", label: "Detalle" },
+          { key: "status", label: "Estado", render: (row) => <StatusBadge status={row.status} /> },
           { key: "created", label: "Fecha" },
           {
             key: "actions",
             label: "",
-            render: (row) => <DismissReportButton id={row.id} collection="profile_reports" />,
+            render: (row) => <ModerateControls reportType="profile" reportId={row.id} />,
           },
         ]}
       />
@@ -128,11 +157,12 @@ export default async function AdminReportesPage() {
           { key: "business", label: "Negocio" },
           { key: "reason", label: "Motivo" },
           { key: "detail", label: "Detalle" },
+          { key: "status", label: "Estado", render: (row) => <StatusBadge status={row.status} /> },
           { key: "created", label: "Fecha" },
           {
             key: "actions",
             label: "",
-            render: (row) => <DismissReportButton id={row.id} collection="business_reports" />,
+            render: (row) => <ModerateControls reportType="business" reportId={row.id} />,
           },
         ]}
       />
@@ -148,7 +178,13 @@ export default async function AdminReportesPage() {
           { key: "type", label: "Tipo" },
           { key: "reason", label: "Motivo" },
           { key: "detail", label: "Detalle" },
+          { key: "status", label: "Estado", render: (row) => <StatusBadge status={row.status} /> },
           { key: "created", label: "Fecha" },
+          {
+            key: "actions",
+            label: "",
+            render: (row) => <ModerateControls reportType="content" reportId={row.id} />,
+          },
         ]}
       />
     </div>

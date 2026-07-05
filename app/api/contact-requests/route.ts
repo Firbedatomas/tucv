@@ -10,6 +10,14 @@ import { checkRateLimit } from "@/lib/rate-limit";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
 const HOUR = 60 * 60 * 1000;
+const DAY = 24 * HOUR;
+
+// Límite diario de solicitudes por empresa según plan. El plan gratis es más
+// acotado para proteger la confianza del candidato (evitar spam masivo).
+function dailyLimitForPlan(plan: string | undefined): number {
+  return plan === "pro" || plan === "multi_local" ? 50 : 10;
+}
+const MAX_PER_CANDIDATE_30D = 3;
 
 // La empresa solicita contacto con un candidato (fallback a WhatsApp directo).
 // Queda pending; el candidato acepta/rechaza. Notifica por email si el
@@ -37,6 +45,62 @@ export async function POST(req: Request) {
     const admin = await pbAdmin();
     const candidate = await admin.collection("candidate_profiles").getOne(candidateId).catch(() => null);
     if (!candidate) return NextResponse.json({ error: "Candidato inexistente." }, { status: 404 });
+
+    // Bloqueo: si el candidato bloqueó a esta empresa, no puede contactarlo.
+    const blocked = await admin
+      .collection("blocks")
+      .getFirstListItem(admin.filter("candidate = {:c} && business = {:b}", { c: candidateId, b: business.id }))
+      .catch(() => null);
+    if (blocked) {
+      return NextResponse.json(
+        { error: "Este candidato no está recibiendo solicitudes de tu empresa." },
+        { status: 403 },
+      );
+    }
+
+    // Si el candidato rechazó una solicitud de esta empresa en los últimos 30
+    // días, no se puede volver a insistir hasta que pase ese plazo.
+    const rejectedSince = new Date(Date.now() - 30 * DAY).toISOString();
+    const recentlyRejected = await admin.collection("contact_requests").getList(1, 1, {
+      filter: admin.filter(
+        "business = {:b} && candidate = {:c} && status = 'rejected' && updated > {:since}",
+        { b: business.id, c: candidateId, since: rejectedSince },
+      ),
+    });
+    if (recentlyRejected.totalItems > 0) {
+      return NextResponse.json(
+        { error: "Este candidato rechazó una solicitud reciente. Podés volver a intentar más adelante." },
+        { status: 403 },
+      );
+    }
+
+    // Máximo de solicitudes al MISMO candidato en 30 días (evita hostigamiento).
+    const perCandidateSince = new Date(Date.now() - 30 * DAY).toISOString();
+    const toCandidate = await admin.collection("contact_requests").getList(1, 1, {
+      filter: admin.filter(
+        "business = {:b} && candidate = {:c} && created > {:since}",
+        { b: business.id, c: candidateId, since: perCandidateSince },
+      ),
+    });
+    if (toCandidate.totalItems >= MAX_PER_CANDIDATE_30D) {
+      return NextResponse.json(
+        { error: "Ya enviaste varias solicitudes a este candidato este mes. Esperá un poco antes de insistir." },
+        { status: 429 },
+      );
+    }
+
+    // Límite diario de solicitudes por empresa según el plan.
+    const dailyLimit = dailyLimitForPlan(business.plan as string | undefined);
+    const daySince = new Date(Date.now() - DAY).toISOString();
+    const todayCount = await admin.collection("contact_requests").getList(1, 1, {
+      filter: admin.filter("business = {:b} && created > {:since}", { b: business.id, since: daySince }),
+    });
+    if (todayCount.totalItems >= dailyLimit) {
+      return NextResponse.json(
+        { error: "Alcanzaste el límite de solicitudes por día de tu plan. Probá de nuevo mañana." },
+        { status: 429 },
+      );
+    }
 
     let job = null;
     if (jobPostId) {

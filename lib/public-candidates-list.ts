@@ -45,6 +45,46 @@ export type PublicCandidateListItem = {
   updated: string;
 };
 
+// Score de VISIBILIDAD -- transparente y documentado a propósito: solo ORDENA
+// el directorio (mejores arriba), nunca oculta a nadie (todos los que dieron
+// consentimiento siguen apareciendo). Trabaja únicamente con campos que ya
+// existen en el espejo public_candidate_cards (bio, categories, availability,
+// experience, immediate_availability, photo_url, source_updated); no inventa
+// datos. Los mismos criterios se le muestran al dueño en VisibilityChecklist,
+// así lo que sube el orden es exactamente lo que le pedimos que complete.
+//
+// Pesos (máximo 11):
+//   +3  disponibilidad inmediata (puede empezar ya)
+//   +2  tiene foto
+//   +2  actualizado en los últimos 7 días  (+1 si fue en los últimos 30)
+//   Perfil completo, cada parte suma por separado:
+//   +1  bio cargada
+//   +1  al menos un rubro
+//   +1  al menos un turno de disponibilidad
+//   +1  experiencia cargada (distinta de vacío / "sin_experiencia")
+const RECENT_7_DAYS = 7 * 24 * 60 * 60 * 1000;
+const RECENT_30_DAYS = 30 * 24 * 60 * 60 * 1000;
+
+function visibilityScore(item: PublicCandidateListItem, now: number): number {
+  let score = 0;
+  if (item.immediate_availability) score += 3;
+  if (item.photoUrl) score += 2;
+
+  const updatedAt = item.updated ? new Date(item.updated).getTime() : NaN;
+  if (!Number.isNaN(updatedAt)) {
+    const age = now - updatedAt;
+    if (age < RECENT_7_DAYS) score += 2;
+    else if (age < RECENT_30_DAYS) score += 1;
+  }
+
+  if (item.bio.trim()) score += 1;
+  if (item.categories.length > 0) score += 1;
+  if (item.availability.length > 0) score += 1;
+  if (item.experience && item.experience !== "sin_experiencia") score += 1;
+
+  return score;
+}
+
 export type PublicCandidatesStats = {
   totalVisible: number;
   newToday: number;
@@ -93,9 +133,24 @@ export async function listPublicCandidates(): Promise<{
     requestKey: null,
   });
 
-  const mapped: PublicCandidateListItem[] = items.filter((c) => c.slug).map((c) => mapCard(c as unknown as Record<string, unknown>));
-
   const now = Date.now();
+
+  // El espejo ya viene ordenado por -source_updated (arriba). Reordenamos por
+  // el score de visibilidad (mayor primero) y, a igualdad de score, mantenemos
+  // el más reciente arriba usando `updated` (source_updated) como desempate --
+  // así el orden es estable y explicable, no un ranking oculto.
+  const mapped: PublicCandidateListItem[] = items
+    .filter((c) => c.slug)
+    .map((c) => mapCard(c as unknown as Record<string, unknown>))
+    .map((item) => ({ item, score: visibilityScore(item, now) }))
+    .sort((a, b) => {
+      if (b.score !== a.score) return b.score - a.score;
+      const at = a.item.updated ? new Date(a.item.updated).getTime() : 0;
+      const bt = b.item.updated ? new Date(b.item.updated).getTime() : 0;
+      return bt - at;
+    })
+    .map(({ item }) => item);
+
   const DAY = 24 * 60 * 60 * 1000;
   const newToday = items.filter((c) => c.source_created && now - new Date(c.source_created as string).getTime() < DAY).length;
   const activeToday = items.filter((c) => c.source_updated && now - new Date(c.source_updated as string).getTime() < DAY).length;

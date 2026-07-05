@@ -66,6 +66,53 @@ function ChipRow({ label, children }: { label: string; children: React.ReactNode
   );
 }
 
+// Capa de confianza discreta del negocio -- solo métricas reales computadas
+// server-side en getPublicJob (nada inventado). No renderiza nada si el
+// negocio no tiene ningún dato para mostrar. La tasa de respuesta pide un
+// mínimo de 3 postulaciones para no publicar un "100%" apoyado en una sola.
+function TrustBadges({ job }: { job: PublicJob }) {
+  const showRate = job.business_response_rate != null && job.business_total_applications >= 3;
+  const badges: React.ReactNode[] = [];
+
+  if (job.business_verified) {
+    badges.push(
+      <span
+        key="verified"
+        className="inline-flex items-center gap-1 text-xs font-bold px-2.5 py-1 rounded-[var(--tucv-radius)]"
+        style={{ backgroundColor: "#DCFCE7", color: "#128C4A", border: "2px solid #128C4A" }}
+      >
+        <span aria-hidden>✓</span> Empresa verificada
+      </span>,
+    );
+  }
+  if (job.business_published_searches > 0) {
+    badges.push(
+      <span
+        key="published"
+        className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-[var(--tucv-radius)]"
+        style={{ color: "var(--tucv-muted)", border: "2px solid var(--tucv-border)" }}
+      >
+        {job.business_published_searches}{" "}
+        {job.business_published_searches === 1 ? "búsqueda publicada" : "búsquedas publicadas"}
+      </span>,
+    );
+  }
+  if (showRate) {
+    badges.push(
+      <span
+        key="rate"
+        className="inline-flex items-center text-xs font-semibold px-2.5 py-1 rounded-[var(--tucv-radius)]"
+        style={{ color: "var(--tucv-muted)", border: "2px solid var(--tucv-border)" }}
+      >
+        Responde el {Math.round((job.business_response_rate as number) * 100)}% de las postulaciones
+      </span>,
+    );
+  }
+
+  if (badges.length === 0) return null;
+  return <div className="flex flex-wrap gap-2 mb-3">{badges}</div>;
+}
+
 function PostedAgoText({ created }: { created: string }) {
   const [text, setText] = useState<string | null>(null);
   useEffect(() => {
@@ -229,6 +276,8 @@ export function PublicJobClient({ publicPath, initialJob }: { publicPath: string
           </p>
         )}
 
+        <TrustBadges job={job} />
+
         {(websiteUrl(job.business_website) || instagramUrl(job.business_instagram)) && (
           <div className="flex flex-wrap gap-2 mb-3">
             {websiteUrl(job.business_website) && (
@@ -260,7 +309,7 @@ export function PublicJobClient({ publicPath, initialJob }: { publicPath: string
 
         <div className="flex flex-wrap items-center gap-2 mb-4">
           {candidate && <FavoriteButton jobPostId={job.id} candidateId={candidate.id} />}
-          <ShareButtons jobId={job.id} url={`${BASE_URL}/b/${publicPath}`} title={`${job.role || job.name} en ${job.business_name}`} />
+          <ShareButtons jobId={job.id} url={`${BASE_URL}/b/${publicPath}`} title={`${job.role || job.name} en ${job.business_name}`} entityType="job" entityId={job.id} />
         </div>
 
         {!job.active && reason ? (

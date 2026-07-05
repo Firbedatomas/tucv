@@ -11,6 +11,7 @@ const NAV_ITEMS = [
   { href: "/admin/postulantes", label: "Postulantes" },
   { href: "/admin/pagos", label: "Pagos" },
   { href: "/admin/reportes", label: "Reportes" },
+  { href: "/admin/viralidad", label: "Viralidad" },
   { href: "/admin/embudo", label: "Embudo" },
   { href: "/admin/visitas", label: "Visitas" },
   { href: "/admin/correo", label: "Correo" },

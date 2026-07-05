@@ -54,7 +54,79 @@ export type PublicJob = {
   business_bio: string;
   business_created: string;
   business_plan: string;
+  // --- Capa de confianza del negocio (computada al leer, sin campos nuevos
+  // en PocketBase) ---
+  business_verified: boolean;
+  /** job_posts del negocio activas y sin vencer, ahora mismo. */
+  business_active_searches: number;
+  /** Total histórico de job_posts publicadas por el negocio. */
+  business_published_searches: number;
+  /** Postulaciones respondidas (estado != "nuevo") / total. null si no hubo
+   * ninguna postulación todavía. */
+  business_response_rate: number | null;
+  /** Total de postulaciones recibidas por el negocio -- para decidir si la
+   * tasa de respuesta tiene muestra suficiente antes de mostrarla. */
+  business_total_applications: number;
 };
+
+export type BusinessReputation = {
+  verified: boolean;
+  activeSearches: number;
+  publishedSearches: number;
+  responseRate: number | null;
+  totalApplications: number;
+};
+
+// Reputación honesta del negocio computada 100% al leer (conteos con
+// getList/totalItems, sin traer las filas) -- no hay campos derivados
+// guardados que puedan quedar desactualizados ni migración de PocketBase.
+// La tasa de respuesta usa el estado ACTUAL de la postulación como proxy de
+// "pasó de nuevo a otro estado": los estados solo avanzan (nuevo ->
+// contactado/entrevista/contratado/descartado), así que status != "nuevo"
+// equivale a "el negocio ya la trabajó". Compartida entre getPublicJob (link
+// público) y /api/business-reputation (panel de la empresa).
+export async function computeBusinessReputation(
+  businessId: string,
+  verified: boolean,
+): Promise<BusinessReputation> {
+  try {
+    const client = await pbAdmin();
+    const nowIso = new Date().toISOString();
+    const [published, active, totalApps, respondedApps] = await Promise.all([
+      client.collection("job_posts").getList(1, 1, {
+        filter: client.filter("business = {:b}", { b: businessId }),
+        requestKey: null,
+      }),
+      client.collection("job_posts").getList(1, 1, {
+        filter: client.filter("business = {:b} && active = true && expires_at > {:now}", {
+          b: businessId,
+          now: nowIso,
+        }),
+        requestKey: null,
+      }),
+      client.collection("applications").getList(1, 1, {
+        filter: client.filter("job_post.business = {:b}", { b: businessId }),
+        requestKey: null,
+      }),
+      client.collection("applications").getList(1, 1, {
+        filter: client.filter("job_post.business = {:b} && status != {:s}", { b: businessId, s: "nuevo" }),
+        requestKey: null,
+      }),
+    ]);
+    const totalApplications = totalApps.totalItems;
+    return {
+      verified,
+      activeSearches: active.totalItems,
+      publishedSearches: published.totalItems,
+      responseRate: totalApplications > 0 ? respondedApps.totalItems / totalApplications : null,
+      totalApplications,
+    };
+  } catch {
+    // Best-effort: si algún conteo falla, no rompemos la página -- devolvemos
+    // la reputación vacía (la UI no muestra nada cuando no hay datos).
+    return { verified, activeSearches: 0, publishedSearches: 0, responseRate: null, totalApplications: 0 };
+  }
+}
 
 // Compartida entre /api/public-job/[slug] (la usa el cliente para refrescar
 // el estado de la postulación) y app/b/[slug]/page.tsx + app/b/[slug]/[code]/page.tsx
@@ -101,9 +173,16 @@ export const getPublicJob = cache(async (identifier: string): Promise<PublicJob 
           bio?: string;
           created?: string;
           plan?: string;
+          verified?: boolean;
         }
       | undefined;
     const expired = new Date(job.expires_at as string).getTime() < Date.now();
+    // Reputación honesta del negocio -- conteos livianos (totalItems, sin
+    // traer filas). Si no hay negocio expandido, queda todo en cero/null y la
+    // UI no muestra nada.
+    const reputation = business?.id
+      ? await computeBusinessReputation(business.id, Boolean(business.verified))
+      : { verified: false, activeSearches: 0, publishedSearches: 0, responseRate: null, totalApplications: 0 };
     // Plan gratis: beneficios y requisitos no se muestran en el link
     // público (son "extra", no imprescindibles para postularse) -- se
     // sacan acá, del lado del servidor, para que ni siquiera lleguen al
@@ -143,6 +222,11 @@ export const getPublicJob = cache(async (identifier: string): Promise<PublicJob 
       business_bio: business?.bio ?? "",
       business_created: business?.created ?? "",
       business_plan: business?.plan ?? "free",
+      business_verified: reputation.verified,
+      business_active_searches: reputation.activeSearches,
+      business_published_searches: reputation.publishedSearches,
+      business_response_rate: reputation.responseRate,
+      business_total_applications: reputation.totalApplications,
     };
   } catch {
     return null;
