@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import QRCode from "qrcode";
+import { trackEvent } from "@/lib/track";
 
 export function QRCodeView({
   url,
@@ -46,6 +47,7 @@ export function QRCodeView({
   // descargar las veces que quiera sin regenerarla de nuevo.
   async function handleDownloadFlyer() {
     if (!dataUrl || !renderFlyer) return;
+    trackEvent("click_descargar_qr", { kind: "cartel" });
     if (flyerUrl) {
       triggerDownload(flyerUrl);
       onDownloadPoster?.();
@@ -87,7 +89,10 @@ export function QRCodeView({
       <a
         href={dataUrl}
         download={`${fileName}.png`}
-        onClick={() => onDownloadQr?.()}
+        onClick={() => {
+          trackEvent("click_descargar_qr", { kind: "qr" });
+          onDownloadQr?.();
+        }}
         className="text-sm font-semibold"
         style={{ color: "var(--tucv-primary)" }}
       >
