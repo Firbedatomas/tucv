@@ -265,9 +265,11 @@ function jobCategoryLabel(job: PublicJob): string {
 // viejo sigue sirviendo el contenido igual, solo deja de competir por
 // indexación con el nuevo.
 export function buildJobMetadata(job: PublicJob | null): Metadata {
-  if (!job) return { title: "Búsqueda no encontrada — TuCV" };
+  // Sin "— TuCV": el template del layout raíz ya aplica "%s — TuCV" (si no,
+  // el título sale duplicado "… — TuCV — TuCV").
+  if (!job) return { title: "Búsqueda no encontrada" };
 
-  const title = `${job.role} en ${job.business_name} — TuCV`;
+  const title = `${job.role} en ${job.business_name}`;
   const visibleMessagePlain = htmlToPlainText(job.visible_message);
   const description = `${jobCategoryLabel(job)} en ${job.address_zone}. ${visibleMessagePlain || `Búsqueda publicada por ${job.business_name} en TuCV.`}`.slice(
     0,

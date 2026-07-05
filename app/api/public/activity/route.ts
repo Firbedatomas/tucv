@@ -95,15 +95,20 @@ export async function GET(req: Request) {
 
     items.sort((a, b) => (a.at < b.at ? 1 : -1));
 
-    return NextResponse.json({
-      counters: {
-        activeJobs: activeJobs.totalItems,
-        registeredCandidates: registered.totalItems,
-        visibleCandidates: visible.totalItems,
-        applications: applications.totalItems,
+    return NextResponse.json(
+      {
+        counters: {
+          activeJobs: activeJobs.totalItems,
+          registeredCandidates: registered.totalItems,
+          visibleCandidates: visible.totalItems,
+          applications: applications.totalItems,
+        },
+        feed: items.slice(0, 20),
       },
-      feed: items.slice(0, 20),
-    });
+      // Cache corto: alimenta el bloque "TuCV late ahora" (7 queries por
+      // request). 30s no se nota en "vivo" y descarga la base bajo tráfico.
+      { headers: { "Cache-Control": "public, max-age=30" } },
+    );
   } catch {
     return NextResponse.json(
       { counters: { activeJobs: 0, registeredCandidates: 0, visibleCandidates: 0, applications: 0 }, feed: [] },

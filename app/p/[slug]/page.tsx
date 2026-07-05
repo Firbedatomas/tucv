@@ -3,7 +3,6 @@
 import { use, useEffect, useState } from "react";
 import Image from "next/image";
 import { CATEGORIES, AVAILABILITY, EXPERIENCE, STUDY_LEVELS, STUDY_STATUS, labelFor, labelsFor } from "@/lib/constants";
-import { calculateAge } from "@/lib/age";
 import { waLink } from "@/lib/whatsapp";
 import { formatThousands } from "@/lib/format";
 import { usePostulanteAuth } from "@/lib/use-postulante-auth";
@@ -53,8 +52,7 @@ type PublicProfile = {
   id: string;
   name: string;
   city_zone: string;
-  birth_date: string;
-  age_manual: number | null;
+  age: number | null;
   whatsapp: string;
   categories: string[];
   category_other: string;
@@ -123,7 +121,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   }
 
   const { profile } = state;
-  const age = calculateAge(profile.birth_date, profile.age_manual);
+  const age = profile.age;
   const expByCategory = Object.fromEntries((profile.category_experience ?? []).map((e) => [e.category, e]));
   const isOwnProfile = Boolean(ownProfile) && ownProfile?.id === profile.id;
   const profileUrl = `${typeof window !== "undefined" ? window.location.origin : "https://tucv.ar"}/p/${slug}`;

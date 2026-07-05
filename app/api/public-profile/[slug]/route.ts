@@ -1,5 +1,25 @@
 import { NextResponse } from "next/server";
 import { pbAdmin } from "@/lib/pocketbase-admin";
+import { calculateAge } from "@/lib/age";
+
+// Subcampos de category_experience que NO deben salir en público: teléfono/
+// nombre de un TERCERO (el referente) y la dirección del empleador anterior.
+type RawExp = Record<string, unknown>;
+function publicSafeExperience(list: unknown): RawExp[] {
+  if (!Array.isArray(list)) return [];
+  return list.map((e) => {
+    const x = (e ?? {}) as RawExp;
+    return {
+      category: x.category,
+      experience: x.experience,
+      company: x.company,
+      company_id: x.company_id,
+      start_year: x.start_year,
+      end_year: x.end_year,
+      is_current: x.is_current,
+    };
+  });
+}
 
 // pbAdmin() usa la URL INTERNA de Docker (http://tucv-pb:8090) para hablar
 // con PocketBase server-to-server -> nunca usar `client.files.getURL()` acá
@@ -30,12 +50,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       id: record.id,
       name: record.name,
       city_zone: record.city_zone,
-      birth_date: record.birth_date,
-      age_manual: record.age_manual ?? null,
+      // Nunca la fecha de nacimiento completa en público (Ley 25.326): solo la
+      // edad derivada. El slug es adivinable y el endpoint no exige auth.
+      age: calculateAge(record.birth_date as string, record.age_manual as number),
       whatsapp: record.whatsapp,
       categories: record.categories,
       category_other: record.category_other,
-      category_experience: record.category_experience,
+      category_experience: publicSafeExperience(record.category_experience),
       availability: record.availability,
       studies: record.studies,
       references: record.references,
