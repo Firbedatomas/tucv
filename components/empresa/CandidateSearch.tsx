@@ -286,6 +286,39 @@ export function CandidateSearch({
 
   return (
     <div>
+      {/* Resumen recruiter (P3): de un vistazo, cuántos hay, cuántos nuevos hoy y
+          cuántos pueden arrancar ya. Todo dato real de la lista cargada. */}
+      {(() => {
+        const startOfToday = new Date();
+        startOfToday.setHours(0, 0, 0, 0);
+        const nuevosHoy = candidates.filter(
+          (c) => c.updated != null && new Date(c.updated).getTime() >= startOfToday.getTime()
+        ).length;
+        const inmediatos = candidates.filter((c) => c.immediate_availability).length;
+        const stats = [
+          { n: candidates.length, l: "visibles" },
+          { n: nuevosHoy, l: "nuevos hoy" },
+          { n: inmediatos, l: "pueden empezar ya" },
+        ];
+        return (
+          <div className="mb-4 grid grid-cols-3 gap-2">
+            {stats.map((s) => (
+              <div
+                key={s.l}
+                className="p-3 text-center rounded-[var(--tucv-radius)]"
+                style={{ backgroundColor: "var(--tucv-surface)", border: "2px solid var(--tucv-border)", boxShadow: "3px 3px 0 var(--tucv-border)" }}
+              >
+                <div className="text-2xl font-extrabold" style={{ color: "var(--tucv-text)" }}>
+                  {s.n}
+                </div>
+                <div className="text-[11px] font-semibold uppercase tracking-wide leading-tight" style={{ color: "var(--tucv-muted)" }}>
+                  {s.l}
+                </div>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
       {newCompatCount > 0 && (
         <div
           className="mb-4 p-4 rounded-[var(--tucv-radius)] flex flex-wrap items-center gap-x-2 gap-y-1"
