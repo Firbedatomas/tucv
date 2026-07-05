@@ -18,7 +18,7 @@ const PATHS: Path[] = [
       "Descargás e imprimís el cartel con QR para pegar en la vidriera.",
       "Recibís postulantes ordenados por zona, experiencia y disponibilidad.",
     ],
-    cta: { label: "Publicar búsqueda gratis", href: "/empresa/busquedas/nueva", event: "click_crear_busqueda" },
+    cta: { label: "Publicar búsqueda gratis", href: "/empresa/busquedas/nueva", event: "crear_busqueda" },
   },
   {
     eyebrow: "Busco trabajo",
@@ -29,7 +29,7 @@ const PATHS: Path[] = [
       "Aparecés visible para los comercios que buscan cerca tuyo.",
       "Compartís tu perfil por WhatsApp para que te vean más.",
     ],
-    cta: { label: "Crear mi perfil gratis", href: "/postulante/nuevo", event: "click_crear_perfil" },
+    cta: { label: "Crear mi perfil gratis", href: "/postulante/nuevo", event: "crear_perfil" },
   },
 ];
 

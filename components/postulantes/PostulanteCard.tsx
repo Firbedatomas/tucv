@@ -74,7 +74,7 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
 
   // Compartir nativo (Web Share API, mobile-first). Fallback: copiar link.
   async function nativeShare() {
-    trackEvent("click_compartir_perfil", { source: "directorio" });
+    trackEvent("compartir_perfil", { source: "directorio" });
     const shareUrl = await resolveShareUrl("copy");
     const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
     if (typeof navigator !== "undefined" && typeof navigator.share === "function") {
@@ -156,7 +156,7 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
       <div className="flex flex-wrap items-center gap-3 mt-1">
         <TrackedLinkButton
           href={`/p/${candidate.slug}`}
-          event="click_ver_perfil"
+          event="ver_perfil"
           eventProps={{ source: "directorio" }}
           variant="secondary"
           className="text-sm px-3 py-2"
@@ -169,7 +169,7 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           style={{ color: "var(--tucv-muted)" }}
           onClick={async () => {
             track("whatsapp");
-            trackEvent("click_whatsapp", { source: "directorio" });
+            trackEvent("whatsapp", { source: "directorio" });
             const shareUrl = await resolveShareUrl("whatsapp");
             const shareTextValue = shareUrl === profileUrl ? text : text.split(profileUrl).join(shareUrl);
             window.open(`https://wa.me/?text=${encodeURIComponent(shareTextValue)}`, "_blank");
@@ -191,7 +191,7 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
           style={{ color: "var(--tucv-muted)" }}
           onClick={async () => {
             track("copy");
-            trackEvent("click_copiar_link", { source: "directorio" });
+            trackEvent("copiar_link", { source: "directorio" });
             const shareUrl = await resolveShareUrl("copy");
             navigator.clipboard?.writeText(shareUrl);
           }}

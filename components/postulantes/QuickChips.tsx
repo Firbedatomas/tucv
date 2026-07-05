@@ -7,7 +7,7 @@ type Chip = {
   label: string;
   patch: Partial<CandidateFilters>;
   isActive: (f: CandidateFilters) => boolean;
-  event: "filtro_rubro" | "filtro_chip" | "filtro_zona";
+  event: "filtro_chip" | "filtro_chip" | "filtro_chip";
 };
 
 // Cada chip aplica un FILTRO REAL sobre el estado del directorio (mismo
@@ -15,18 +15,18 @@ type Chip = {
 // está activo, lo limpia. Los de rubro limpian entre sí (category vs
 // categoryAny) para no mezclar dos rubros.
 const CHIPS: Chip[] = [
-  { label: "Atención al público", patch: { category: "atencion", categoryAny: undefined }, isActive: (f) => f.category === "atencion", event: "filtro_rubro" },
-  { label: "Gastronomía", patch: { category: "", categoryAny: ["cocina", "moza_mozo", "barista", "panaderia"] }, isActive: (f) => !!f.categoryAny?.length, event: "filtro_rubro" },
-  { label: "Caja", patch: { category: "caja", categoryAny: undefined }, isActive: (f) => f.category === "caja", event: "filtro_rubro" },
-  { label: "Reposición", patch: { category: "reposicion", categoryAny: undefined }, isActive: (f) => f.category === "reposicion", event: "filtro_rubro" },
-  { label: "Limpieza", patch: { category: "limpieza", categoryAny: undefined }, isActive: (f) => f.category === "limpieza", event: "filtro_rubro" },
-  { label: "Administración", patch: { category: "administracion_basica", categoryAny: undefined }, isActive: (f) => f.category === "administracion_basica", event: "filtro_rubro" },
-  { label: "Ventas", patch: { category: "ventas", categoryAny: undefined }, isActive: (f) => f.category === "ventas", event: "filtro_rubro" },
+  { label: "Atención al público", patch: { category: "atencion", categoryAny: undefined }, isActive: (f) => f.category === "atencion", event: "filtro_chip" },
+  { label: "Gastronomía", patch: { category: "", categoryAny: ["cocina", "moza_mozo", "barista", "panaderia"] }, isActive: (f) => !!f.categoryAny?.length, event: "filtro_chip" },
+  { label: "Caja", patch: { category: "caja", categoryAny: undefined }, isActive: (f) => f.category === "caja", event: "filtro_chip" },
+  { label: "Reposición", patch: { category: "reposicion", categoryAny: undefined }, isActive: (f) => f.category === "reposicion", event: "filtro_chip" },
+  { label: "Limpieza", patch: { category: "limpieza", categoryAny: undefined }, isActive: (f) => f.category === "limpieza", event: "filtro_chip" },
+  { label: "Administración", patch: { category: "administracion_basica", categoryAny: undefined }, isActive: (f) => f.category === "administracion_basica", event: "filtro_chip" },
+  { label: "Ventas", patch: { category: "ventas", categoryAny: undefined }, isActive: (f) => f.category === "ventas", event: "filtro_chip" },
   { label: "Sin experiencia", patch: { experience: "sin_experiencia" }, isActive: (f) => f.experience === "sin_experiencia", event: "filtro_chip" },
   { label: "Part time", patch: { availability: "part_time" }, isActive: (f) => f.availability === "part_time", event: "filtro_chip" },
   { label: "Full time", patch: { availability: "full_time" }, isActive: (f) => f.availability === "full_time", event: "filtro_chip" },
   { label: "Puede empezar ya", patch: { immediateAvailability: true }, isActive: (f) => f.immediateAvailability, event: "filtro_chip" },
-  { label: "Córdoba", patch: { zone: "Córdoba" }, isActive: (f) => f.zone.toLowerCase().includes("córdoba"), event: "filtro_zona" },
+  { label: "Córdoba", patch: { zone: "Córdoba" }, isActive: (f) => f.zone.toLowerCase().includes("córdoba"), event: "filtro_chip" },
 ];
 
 export function QuickChips({

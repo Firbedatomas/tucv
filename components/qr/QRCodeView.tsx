@@ -47,7 +47,7 @@ export function QRCodeView({
   // descargar las veces que quiera sin regenerarla de nuevo.
   async function handleDownloadFlyer() {
     if (!dataUrl || !renderFlyer) return;
-    trackEvent("click_descargar_qr", { kind: "cartel" });
+    trackEvent("descargar_qr", { kind: "cartel" });
     if (flyerUrl) {
       triggerDownload(flyerUrl);
       onDownloadPoster?.();
@@ -90,7 +90,7 @@ export function QRCodeView({
         href={dataUrl}
         download={`${fileName}.png`}
         onClick={() => {
-          trackEvent("click_descargar_qr", { kind: "qr" });
+          trackEvent("descargar_qr", { kind: "qr" });
           onDownloadQr?.();
         }}
         className="text-sm font-semibold"

@@ -223,7 +223,7 @@ export function PublicJobClient({ publicPath, initialJob }: { publicPath: string
         score,
       });
       trackEvent("Postulante: postulacion enviada");
-      trackEvent("click_postularme", { source: "busqueda_publica" });
+      trackEvent("postularme", { source: "busqueda_publica" });
       setState((s) => ({ ...s, applying: false, applied: true }));
     } catch {
       setState((s) => ({

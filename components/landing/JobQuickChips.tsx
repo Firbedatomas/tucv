@@ -7,22 +7,22 @@ type Chip = {
   label: string;
   patch: Partial<JobFilters>;
   isActive: (f: JobFilters) => boolean;
-  event: "filtro_rubro" | "filtro_chip" | "filtro_zona";
+  event: "filtro_chip" | "filtro_chip" | "filtro_chip";
 };
 
 // Chips que aplican un FILTRO REAL sobre el feed de búsquedas (mismo JobFilters
 // que la barra). Solo incluimos los que mapean a un campo real (no decorativos).
 const CHIPS: Chip[] = [
-  { label: "Atención al público", patch: { category: "atencion" }, isActive: (f) => f.category === "atencion", event: "filtro_rubro" },
-  { label: "Caja", patch: { category: "caja" }, isActive: (f) => f.category === "caja", event: "filtro_rubro" },
-  { label: "Reposición", patch: { category: "reposicion" }, isActive: (f) => f.category === "reposicion", event: "filtro_rubro" },
-  { label: "Limpieza", patch: { category: "limpieza" }, isActive: (f) => f.category === "limpieza", event: "filtro_rubro" },
-  { label: "Administración", patch: { category: "administracion_basica" }, isActive: (f) => f.category === "administracion_basica", event: "filtro_rubro" },
-  { label: "Ventas", patch: { category: "ventas" }, isActive: (f) => f.category === "ventas", event: "filtro_rubro" },
+  { label: "Atención al público", patch: { category: "atencion" }, isActive: (f) => f.category === "atencion", event: "filtro_chip" },
+  { label: "Caja", patch: { category: "caja" }, isActive: (f) => f.category === "caja", event: "filtro_chip" },
+  { label: "Reposición", patch: { category: "reposicion" }, isActive: (f) => f.category === "reposicion", event: "filtro_chip" },
+  { label: "Limpieza", patch: { category: "limpieza" }, isActive: (f) => f.category === "limpieza", event: "filtro_chip" },
+  { label: "Administración", patch: { category: "administracion_basica" }, isActive: (f) => f.category === "administracion_basica", event: "filtro_chip" },
+  { label: "Ventas", patch: { category: "ventas" }, isActive: (f) => f.category === "ventas", event: "filtro_chip" },
   { label: "Part time", patch: { shift: "part_time" }, isActive: (f) => f.shift === "part_time", event: "filtro_chip" },
   { label: "Full time", patch: { shift: "full_time" }, isActive: (f) => f.shift === "full_time", event: "filtro_chip" },
   { label: "Con sueldo", patch: { onlyWithSalary: true }, isActive: (f) => f.onlyWithSalary, event: "filtro_chip" },
-  { label: "Córdoba", patch: { zone: "Córdoba" }, isActive: (f) => f.zone.toLowerCase().includes("córdoba"), event: "filtro_zona" },
+  { label: "Córdoba", patch: { zone: "Córdoba" }, isActive: (f) => f.zone.toLowerCase().includes("córdoba"), event: "filtro_chip" },
 ];
 
 export function JobQuickChips({

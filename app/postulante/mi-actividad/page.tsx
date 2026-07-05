@@ -190,7 +190,7 @@ function Ready({ data }: { data: Metrics }) {
         </div>
         <TrackedLinkButton
           href="/postulante/editar"
-          event="click_compartir_perfil"
+          event="compartir_perfil"
           eventProps={{ source: "mi_actividad" }}
           variant="secondary"
           className="shrink-0 text-sm"

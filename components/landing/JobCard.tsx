@@ -100,7 +100,7 @@ export function JobCard({ job, featured }: { job: JobCardData; featured?: boolea
   async function shareJob(e: React.MouseEvent) {
     e.preventDefault();
     e.stopPropagation();
-    trackEvent("click_compartir_busqueda", { source: "home_feed" });
+    trackEvent("compartir_busqueda", { source: "home_feed" });
     const origin = typeof window !== "undefined" ? window.location.origin : "https://tucv.ar";
     const url = `${origin}/b/${publicPath}`;
     const title = job.role || job.name;
@@ -118,7 +118,7 @@ export function JobCard({ job, featured }: { job: JobCardData; featured?: boolea
   return (
     <Link
       href={`/b/${publicPath}`}
-      onClick={() => trackEvent("click_ver_busqueda", { source: "home_feed" })}
+      onClick={() => trackEvent("ver_busqueda", { source: "home_feed" })}
       className="block p-4 rounded-[var(--tucv-radius)] transition hover:-translate-y-0.5"
       style={{
         backgroundColor: featured ? "var(--tucv-accent)" : "var(--tucv-surface)",
