@@ -50,12 +50,15 @@ export function LiveActivity({
   city = "",
   title = "TuCV late ahora",
   plan,
+  compact = false,
 }: {
   city?: string;
   title?: string;
   // Plan del negocio (solo en contexto empresa). Habilita el upsell contextual
   // a Pro cuando es "free". Undefined en la landing pública -> sin upsell.
   plan?: string;
+  // Versión compacta para la home (menos alta): feed acotado + link a /radar.
+  compact?: boolean;
 }) {
   const [data, setData] = useState<Payload | null>(null);
   const [breakdown, setBreakdown] = useState<Breakdown | null>(null);
@@ -160,7 +163,7 @@ export function LiveActivity({
         Actividad reciente
       </p>
       <ul className="space-y-2">
-        {feed.map((item, i) => {
+        {(compact ? feed.slice(0, 4) : feed).map((item, i) => {
           const chip = FEED_CHIP[item.kind] ?? { label: "Movimiento", bg: "var(--tucv-surface)", fg: "var(--tucv-text)" };
           const detail = feedDetail(item.text);
           // El más reciente (el feed viene ordenado del más nuevo al más
@@ -202,6 +205,11 @@ export function LiveActivity({
           );
         })}
       </ul>
+      {compact && feed.length > 4 && (
+        <a href="/radar" className="inline-block text-sm font-bold underline mt-3" style={{ color: "var(--tucv-primary)" }}>
+          Ver toda la actividad →
+        </a>
+      )}
     </div>
   );
 
