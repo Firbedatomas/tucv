@@ -1,24 +1,9 @@
 /// <reference path="../pb_data/types.d.ts" />
 
-// Aviso al admin por Telegram (bot @Tucvar_bot). Best-effort, timeout corto:
-// nunca bloquea ni rompe la operación que lo dispara (mismo criterio que los
-// $http.send de email de más abajo). Lee token/chat del env del contenedor.
-function tgNotify(text) {
-  try {
-    const token = $os.getenv("TELEGRAM_BOT_TOKEN")
-    const chat = $os.getenv("TELEGRAM_ADMIN_CHAT_ID")
-    if (!token || !chat) return
-    $http.send({
-      url: "https://api.telegram.org/bot" + token + "/sendMessage",
-      method: "POST",
-      body: JSON.stringify({ chat_id: chat, text: text, disable_web_page_preview: true }),
-      headers: { "Content-Type": "application/json" },
-      timeout: 4,
-    })
-  } catch (err) {
-    // best-effort
-  }
-}
+// NOTA: los avisos de Telegram al admin van INLINE dentro de cada hook (buscar
+// "[tg]"), NO como helper compartido. PocketBase corre cada hook en un contexto
+// aislado donde las funciones top-level de este archivo NO están en scope
+// (daba "ReferenceError: tgNotify is not defined" y el hook fallaba sin avisar).
 
 // Login único con Google para `users` (empresas y postulantes comparten esta
 // colección de auth, distinguidos por su business_accounts/candidate_profiles
@@ -179,12 +164,37 @@ onRecordAfterCreateSuccess((e) => {
     // idem: nunca bloquea ni rompe el alta del perfil.
   }
 
-  tgNotify(
-    "🙋 Nuevo postulante\n" +
-    (e.record.get("name") || "(sin nombre)") +
-    "\nZona: " + (e.record.get("city_zone") || "-") +
-    "\nRubros: " + ([].concat(e.record.get("categories") || []).join(", ") || "-")
-  )
+  // Aviso Telegram INLINE (no como helper top-level): PocketBase corre cada hook
+  // en un contexto aislado, así que una función definida arriba NO está en scope
+  // acá -> daba "ReferenceError: tgNotify is not defined" y el hook fallaba sin
+  // avisar (por eso no llegaba ningún aviso). Va inline como los $http.send de
+  // email, que sí andan porque usan globals ($http/$os).
+  try {
+    const _tgTok = $os.getenv("TELEGRAM_BOT_TOKEN")
+    const _tgChat = $os.getenv("TELEGRAM_ADMIN_CHAT_ID")
+    if (_tgTok && _tgChat) {
+      const _tgRes = $http.send({
+        url: "https://api.telegram.org/bot" + _tgTok + "/sendMessage",
+        method: "POST",
+        body: JSON.stringify({
+          chat_id: _tgChat,
+          text:
+            "🙋 Nuevo postulante\n" +
+            (e.record.get("name") || "(sin nombre)") +
+            "\nZona: " + (e.record.get("city_zone") || "-") +
+            "\nRubros: " + ([].concat(e.record.get("categories") || []).join(", ") || "-"),
+          disable_web_page_preview: true,
+        }),
+        headers: { "Content-Type": "application/json" },
+        timeout: 6,
+      })
+      console.log("[tg] postulante -> " + (_tgRes.statusCode === 200 ? "ok" : "status " + _tgRes.statusCode + " " + String(_tgRes.raw).slice(0, 150)))
+    } else {
+      console.log("[tg] sin config TELEGRAM_BOT_TOKEN/CHAT_ID")
+    }
+  } catch (_tgErr) {
+    console.log("[tg] postulante EXCEPCION: " + _tgErr)
+  }
 
   e.next()
 }, "candidate_profiles")
@@ -442,12 +452,31 @@ onRecordAfterCreateSuccess((e) => {
     // nunca bloquea ni rompe el alta de la empresa.
   }
 
-  tgNotify(
-    "🏢 Nueva empresa\n" +
-    (e.record.get("business_name") || "(sin nombre)") +
-    "\nZona: " + (e.record.get("city_zone") || "-") +
-    (e.record.get("phone") ? "\nTel: " + e.record.get("phone") : "")
-  )
+  // Aviso Telegram INLINE (ver nota en el hook de candidate_profiles).
+  try {
+    const _tgTok = $os.getenv("TELEGRAM_BOT_TOKEN")
+    const _tgChat = $os.getenv("TELEGRAM_ADMIN_CHAT_ID")
+    if (_tgTok && _tgChat) {
+      const _tgRes = $http.send({
+        url: "https://api.telegram.org/bot" + _tgTok + "/sendMessage",
+        method: "POST",
+        body: JSON.stringify({
+          chat_id: _tgChat,
+          text:
+            "🏢 Nueva empresa\n" +
+            (e.record.get("business_name") || "(sin nombre)") +
+            "\nZona: " + (e.record.get("city_zone") || "-") +
+            (e.record.get("phone") ? "\nTel: " + e.record.get("phone") : ""),
+          disable_web_page_preview: true,
+        }),
+        headers: { "Content-Type": "application/json" },
+        timeout: 6,
+      })
+      console.log("[tg] empresa -> " + (_tgRes.statusCode === 200 ? "ok" : "status " + _tgRes.statusCode))
+    }
+  } catch (_tgErr) {
+    console.log("[tg] empresa EXCEPCION: " + _tgErr)
+  }
 
   e.next()
 }, "business_accounts")
@@ -547,15 +576,30 @@ onRecordAfterCreateSuccess((e) => {
     const cat = e.record.get("category") === "otro"
       ? (e.record.get("category_other") || "otro")
       : e.record.get("category")
-    tgNotify(
-      "📢 Nueva búsqueda\n" +
-      (e.record.get("role") || e.record.get("name") || "(puesto)") +
-      "\nRubro: " + (cat || "-") +
-      "\nZona: " + (e.record.get("address_zone") || "-") +
-      "\nNegocio: " + bizName
-    )
+    // Aviso Telegram INLINE (ver nota en el hook de candidate_profiles).
+    const _tgTok = $os.getenv("TELEGRAM_BOT_TOKEN")
+    const _tgChat = $os.getenv("TELEGRAM_ADMIN_CHAT_ID")
+    if (_tgTok && _tgChat) {
+      const _tgRes = $http.send({
+        url: "https://api.telegram.org/bot" + _tgTok + "/sendMessage",
+        method: "POST",
+        body: JSON.stringify({
+          chat_id: _tgChat,
+          text:
+            "📢 Nueva búsqueda\n" +
+            (e.record.get("role") || e.record.get("name") || "(puesto)") +
+            "\nRubro: " + (cat || "-") +
+            "\nZona: " + (e.record.get("address_zone") || "-") +
+            "\nNegocio: " + bizName,
+          disable_web_page_preview: true,
+        }),
+        headers: { "Content-Type": "application/json" },
+        timeout: 6,
+      })
+      console.log("[tg] busqueda -> " + (_tgRes.statusCode === 200 ? "ok" : "status " + _tgRes.statusCode))
+    }
   } catch (err) {
-    // best-effort
+    console.log("[tg] busqueda EXCEPCION: " + err)
   }
   e.next()
 }, "job_posts")
