@@ -35,6 +35,11 @@ type JobRecord = {
   salary_mode: string;
   salary_amount: string;
   screening_questions: ScreeningQuestion[] | null;
+  programs_mode?: string;
+  programs_interest?: string[] | null;
+  programs_public?: boolean;
+  programs_ask_applicant?: boolean;
+  programs_sort_top?: boolean;
 };
 
 export default function EditarBusquedaPage({ params }: { params: Promise<{ id: string }> }) {
@@ -145,6 +150,15 @@ export default function EditarBusquedaPage({ params }: { params: Promise<{ id: s
               salary_mode: state.job.salary_mode ?? "",
               salary_amount: state.job.salary_amount ?? "",
               screening_questions: state.job.screening_questions ?? [],
+              programs_mode: state.job.programs_mode || "none",
+              programs_interest: state.job.programs_interest ?? [],
+              // programs_visibility se reconstruye desde los booleanos guardados
+              // (es un campo de UI, no se persiste tal cual).
+              programs_visibility: [
+                state.job.programs_public ? "public" : "",
+                state.job.programs_ask_applicant ? "ask_applicant" : "",
+                state.job.programs_sort_top ? "sort_top" : "",
+              ].filter(Boolean),
             }}
           />
         )}

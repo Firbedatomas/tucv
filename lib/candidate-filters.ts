@@ -17,6 +17,12 @@ export type CandidateFilters = {
   // Última actividad del perfil: timestamp en ms; 0 = sin filtro. El caller
   // calcula el corte (Date.now() - ventana) en un event handler, nunca en render.
   lastActivitySince: number;
+  // Programas laborales: a diferencia de todos los demás, este NO excluye. Es
+  // un toggle que PROMUEVE a los compatibles arriba (la reordenación vive en
+  // ApplicantsPanel, no acá) -- por eso matchesCandidateFilters lo ignora a
+  // propósito. Excluir por compatibilidad reintroduciría el filtro por edad
+  // que la nota de arriba prohíbe.
+  programsCompatible: boolean;
 };
 
 export const emptyCandidateFilters: CandidateFilters = {
@@ -28,6 +34,7 @@ export const emptyCandidateFilters: CandidateFilters = {
   hasOwnTransport: false,
   immediateAvailability: false,
   lastActivitySince: 0,
+  programsCompatible: false,
 };
 
 type FilterableCandidate = {

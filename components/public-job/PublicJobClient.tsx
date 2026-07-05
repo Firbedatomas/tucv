@@ -109,6 +109,22 @@ function TrustBadges({ job }: { job: PublicJob }) {
     );
   }
 
+  // Programas laborales: señal seria e inclusiva de que el negocio acepta
+  // incorporar vía programas públicos de empleo. Nunca "busco gente con plan".
+  if (job.programs_accepts) {
+    badges.push(
+      <span
+        key="programs"
+        className="inline-flex items-center text-xs font-bold px-2.5 py-1 rounded-[var(--tucv-radius)]"
+        style={{ backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)", border: "2px solid var(--tucv-border)" }}
+      >
+        {job.programs_labels.length > 0
+          ? `Compatible con ${job.programs_labels.join(" / ")}`
+          : "Acepta programas de empleo"}
+      </span>,
+    );
+  }
+
   if (badges.length === 0) return null;
   return <div className="flex flex-wrap gap-2 mb-3">{badges}</div>;
 }
@@ -277,6 +293,13 @@ export function PublicJobClient({ publicPath, initialJob }: { publicPath: string
         )}
 
         <TrustBadges job={job} />
+
+        {job.programs_accepts && (
+          <p className="text-sm mb-3" style={{ color: "var(--tucv-muted)" }}>
+            Este negocio acepta postulantes que puedan incorporarse mediante programas públicos de
+            empleo, entrenamiento laboral o primer trabajo, según requisitos vigentes.
+          </p>
+        )}
 
         {(websiteUrl(job.business_website) || instagramUrl(job.business_instagram)) && (
           <div className="flex flex-wrap gap-2 mb-3">

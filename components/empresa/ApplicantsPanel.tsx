@@ -5,6 +5,12 @@ import { pb } from "@/lib/pocketbase";
 import { APPLICATION_STATUS, labelFor, type ScreeningQuestion, type ScreeningAnswer } from "@/lib/constants";
 import { waLink } from "@/lib/whatsapp";
 import { emptyCandidateFilters, matchesCandidateFilters } from "@/lib/candidate-filters";
+import { canPrioritizeProgramCandidates } from "@/lib/plan-limits";
+import {
+  candidateProgramCompatibility,
+  programBadges,
+  type ProgramCompatibility,
+} from "@/lib/employment-programs";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { inputClass, inputStyle } from "@/components/ui/Field";
@@ -42,6 +48,9 @@ type JobPost = {
   featured_until?: string;
   share_counts?: { whatsapp?: number; x?: number; instagram?: number };
   screening_questions?: ScreeningQuestion[];
+  province?: string;
+  programs_mode?: string;
+  programs_sort_top?: boolean;
   expand?: { business?: { plan?: string; business_name?: string; logo?: string; collectionId?: string; id?: string } };
 };
 
@@ -198,15 +207,56 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
     }
   }
 
+  // Programas laborales: la búsqueda pide compatibilidad y el plan habilita
+  // priorizar.
+  const programsActive = job?.programs_mode === "accept" || job?.programs_mode === "prioritize";
+  const canPrioritizePrograms = canPrioritizeProgramCandidates(job?.expand?.business?.plan ?? "free");
+
+  // Compatibilidad por postulante (declarado pisa inferido; nunca excluye).
+  const compatibilityByApp = useMemo(() => {
+    const map = new Map<string, ProgramCompatibility>();
+    if (!applications || !job || !programsActive) return map;
+    for (const app of applications) {
+      const c = app.expand?.candidate;
+      if (!c) continue;
+      map.set(
+        app.id,
+        candidateProgramCompatibility(
+          {
+            birth_date: c.birth_date,
+            age_manual: c.age_manual,
+            province: c.province,
+            work_situation: c.work_situation,
+            programs_enrolled: c.programs_enrolled,
+          },
+          { province: job.province },
+        ),
+      );
+    }
+    return map;
+  }, [applications, job, programsActive]);
+
   const filtered = useMemo(() => {
     if (!applications) return [];
-    return applications.filter((app) => {
+    const base = applications.filter((app) => {
       const c = app.expand?.candidate;
       if (!c) return false;
       if (status && app.status !== status) return false;
       return matchesCandidateFilters(c, filters);
     });
-  }, [applications, filters, status]);
+    // Promover compatibles arriba (NUNCA excluir) cuando la empresa lo pidió
+    // (programs_sort_top) o tocó el filtro rápido, y su plan lo permite.
+    // Partición estable: compatibles primero conservando el orden por score.
+    const promote = canPrioritizePrograms && (Boolean(job?.programs_sort_top) || filters.programsCompatible);
+    if (!promote) return base;
+    const compat: Application[] = [];
+    const rest: Application[] = [];
+    for (const app of base) {
+      if (compatibilityByApp.get(app.id)?.compatible) compat.push(app);
+      else rest.push(app);
+    }
+    return [...compat, ...rest];
+  }, [applications, filters, status, canPrioritizePrograms, job, compatibilityByApp]);
 
   if (notFound) {
     return (
@@ -357,6 +407,7 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
           <CandidateFilterBar
             value={filters}
             onChange={setFilters}
+            showProgramsFilter={programsActive && canPrioritizePrograms}
             extra={
               <select
                 className={inputClass}
@@ -386,6 +437,8 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
                 const c = app.expand!.candidate;
                 const expanded = expandedId === app.id;
 
+                const compat = compatibilityByApp.get(app.id);
+
                 return (
                   <Card key={app.id}>
                     <div className="flex gap-4">
@@ -394,6 +447,7 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
                         <CandidateCardBody
                           candidate={c}
                           expanded={expanded}
+                          extraBadges={compat ? programBadges(compat) : undefined}
                           topRightBadge={
                             <div className="flex flex-col items-end gap-1 shrink-0">
                               {job.screening_questions && job.screening_questions.length > 0 && (

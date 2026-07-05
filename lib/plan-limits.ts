@@ -39,6 +39,15 @@ export function hidesExtraChips(plan: string): boolean {
   return plan === "free";
 }
 
+// Programas laborales: quién puede PRIORIZAR/ordenar/filtrar candidatos
+// compatibles con programas públicos de empleo. Marcar "acepto compatibles" y
+// el badge público están disponibles en todos los planes (es la señal seria e
+// inclusiva, no se cobra); lo pago es la capa de gestión: priorizar arriba en
+// el panel, el filtro por programa y (a futuro) alertas.
+export function canPrioritizeProgramCandidates(plan: string): boolean {
+  return plan === "pro" || plan === "multi_local";
+}
+
 // Cuántos miembros de equipo (invitaciones pendientes + membresías activas,
 // sumadas) puede tener un negocio -- exclusivo del plan Equipo (antes
 // "Multi-sucursal"), ni Gratis ni Pro lo incluyen.

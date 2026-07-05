@@ -6,7 +6,7 @@ import { pb } from "@/lib/pocketbase";
 import { CATEGORIES, EXPERIENCE, AVAILABILITY, STUDY_LEVELS, STUDY_STATUS, labelFor, labelsFor } from "@/lib/constants";
 import { calculateAge } from "@/lib/age";
 import { formatThousands } from "@/lib/format";
-import { computeCandidateBadges, BADGE_TONE_STYLE } from "@/lib/candidate-badges";
+import { computeCandidateBadges, BADGE_TONE_STYLE, type CandidateBadge } from "@/lib/candidate-badges";
 import { timeAgo } from "@/lib/time-ago";
 
 type ReferenceEntry = { name: string; relation: string; phone: string };
@@ -57,6 +57,10 @@ export type CandidateLike = {
   has_own_transport?: string;
   immediate_availability?: boolean;
   expected_salary?: string;
+  // Programas de empleo (privados): insumos de compatibilidad. Solo los ve la
+  // empresa en su panel, nunca salen en vistas públicas.
+  work_situation?: string;
+  programs_enrolled?: string[] | null;
   consent_contact?: boolean;
   updated?: string;
 };
@@ -110,11 +114,17 @@ export function CandidateCardBody({
   expanded,
   topRightBadge,
   revealedWhatsapp,
+  extraBadges,
 }: {
   candidate: CandidateLike;
   expanded: boolean;
   topRightBadge?: React.ReactNode;
   revealedWhatsapp?: string;
+  // Badges que dependen de la BÚSQUEDA (ej. compatibilidad con programas de
+  // empleo) -- se calculan afuera (ApplicantsPanel) y no en
+  // computeCandidateBadges, que es agnóstico de búsqueda y se comparte con
+  // vistas públicas. Van primero: son los más accionables en este contexto.
+  extraBadges?: CandidateBadge[];
 }) {
   const age = candidate.age ?? calculateAge(candidate.birth_date, candidate.age_manual);
   const expMap = Object.fromEntries((candidate.category_experience ?? []).map((e) => [e.category, e]));
@@ -137,6 +147,7 @@ export function CandidateCardBody({
   // "Acepta contacto" es propio de la vista de empresa (el directorio público
   // no muestra WhatsApp), por eso no vive en computeCandidateBadges.
   if (candidate.consent_contact) badges.push({ label: "Acepta contacto", tone: "positive" });
+  const allBadges = extraBadges && extraBadges.length > 0 ? [...extraBadges, ...badges] : badges;
   // Congelar "ahora" al montar: Date.now() en render es impuro (regla del
   // React compiler) y para un "hace X" no hace falta que corra en vivo.
   const [now] = useState(() => Date.now());
@@ -193,9 +204,9 @@ export function CandidateCardBody({
         Disponible: <span style={{ color: "var(--tucv-text)" }}>{labelsFor(AVAILABILITY, candidate.availability).join(", ")}</span>
       </p>
 
-      {badges.length > 0 && (
+      {allBadges.length > 0 && (
         <div className="flex flex-wrap gap-1.5 mt-1.5">
-          {badges.map((b) => (
+          {allBadges.map((b) => (
             <span
               key={b.label}
               className="text-xs px-2 py-0.5 rounded-[var(--tucv-radius)]"

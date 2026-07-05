@@ -18,6 +18,9 @@ import {
   ROLE_SUGGESTIONS_BY_CATEGORY,
   taskSuggestionsFor,
   labelFor,
+  PROGRAM_MODE,
+  PROGRAM_INTEREST,
+  PROGRAM_VISIBILITY,
   type ScreeningQuestion,
 } from "@/lib/constants";
 import { Field, inputClass, inputStyle } from "@/components/ui/Field";
@@ -33,7 +36,15 @@ import { generateJobFlyerDataUrl } from "@/lib/job-flyer";
 import { makeJobSlug, slugify, generateShortCode, businessSlugFor } from "@/lib/slug";
 import { ThousandsInput } from "@/components/ui/ThousandsInput";
 import { BoostJobButton } from "@/components/empresa/BoostJobButton";
-import { activeJobLimit, autoBoostsOnCreate, monthlyJobLimit, maxDurationDays, hidesExtraChips } from "@/lib/plan-limits";
+import {
+  activeJobLimit,
+  autoBoostsOnCreate,
+  monthlyJobLimit,
+  maxDurationDays,
+  hidesExtraChips,
+  canPrioritizeProgramCandidates,
+} from "@/lib/plan-limits";
+import { suggestProgramsForZone, programById, PROGRAMS_DISCLAIMER } from "@/lib/employment-programs";
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { sanitizeVisibleMessage } from "@/lib/sanitize-html";
 import { OnboardingCompany } from "@/components/onboarding/OnboardingCompany";
@@ -61,6 +72,11 @@ type Values = {
   salary_mode: string;
   salary_amount: string;
   screening_questions: ScreeningQuestion[];
+  // Programas laborales (opcional). programs_visibility son chips de los que
+  // se derivan los booleanos programs_public/ask_applicant/sort_top al guardar.
+  programs_mode: string;
+  programs_interest: string[];
+  programs_visibility: string[];
 };
 
 const empty: Values = {
@@ -84,6 +100,9 @@ const empty: Values = {
   salary_mode: "",
   salary_amount: "",
   screening_questions: [],
+  programs_mode: "none",
+  programs_interest: [],
+  programs_visibility: [],
 };
 
 // Mismo largo que JOB_BOOST_DAYS en lib/mercadopago-pricing.ts (ese módulo
@@ -184,6 +203,16 @@ export function JobPostForm({
   }
   const lockedDuration = mode.kind === "create" ? maxDurationDays(plan) : null;
 
+  // Programas laborales: derivados de plan + estado actual.
+  const canPrioritizePrograms = canPrioritizeProgramCandidates(plan);
+  const wantsPrograms = values.programs_mode === "accept" || values.programs_mode === "prioritize";
+  const suggestedPrograms = suggestProgramsForZone(values.province);
+  // El chip "ordenar compatibles arriba" es de plan pago -- en gratis ni se
+  // muestra (el gating real al guardar está en el payload, más abajo).
+  const visibilityOptions = canPrioritizePrograms
+    ? PROGRAM_VISIBILITY
+    : PROGRAM_VISIBILITY.filter((o) => o.value !== "sort_top");
+
   function set<K extends keyof Values>(key: K, value: Values[K]) {
     setValues((v) => ({ ...v, [key]: value }));
     setSaved(false);
@@ -254,6 +283,18 @@ export function JobPostForm({
         salary_mode: values.salary_mode,
         salary_amount: values.salary_mode === "mostrar" ? values.salary_amount.trim() : "",
         screening_questions: screeningQuestions,
+        // Programas laborales. Gating de plan aplicado acá al guardar:
+        // "priorizar" en un plan sin la feature se degrada a "acepto", y
+        // programs_sort_top solo queda true si el plan lo permite.
+        programs_mode:
+          values.programs_mode === "prioritize" && !canPrioritizePrograms
+            ? "accept"
+            : values.programs_mode || "none",
+        programs_interest: wantsPrograms ? values.programs_interest : [],
+        programs_public: wantsPrograms && values.programs_visibility.includes("public"),
+        programs_ask_applicant: wantsPrograms && values.programs_visibility.includes("ask_applicant"),
+        programs_sort_top:
+          wantsPrograms && canPrioritizePrograms && values.programs_visibility.includes("sort_top"),
       };
 
       if (mode.kind === "edit") {
@@ -611,6 +652,100 @@ export function JobPostForm({
             ))}
           </select>
         </Field>
+
+        {/* Programas laborales: no es un requisito del puesto ni un beneficio
+            -- es una condición de contratación / compatibilidad, por eso va
+            entre "Experiencia requerida" y "Condiciones y beneficios". La
+            empresa publica una búsqueda normal; esto es una capa que TuCV
+            agrega encima, nunca "busco gente con plan". */}
+        <div
+          className="rounded-[var(--tucv-radius)] border-2 p-4 sm:p-5 space-y-4"
+          style={{ borderColor: "var(--tucv-border)", backgroundColor: "var(--tucv-bg)" }}
+        >
+          <div>
+            <h3 className="text-base font-bold" style={{ color: "var(--tucv-text)" }}>
+              Programas públicos de empleo{" "}
+              <span className="font-normal" style={{ color: "var(--tucv-muted)" }}>
+                (opcional)
+              </span>
+            </h3>
+            <p className="text-sm mt-1" style={{ color: "var(--tucv-muted)" }}>
+              Si aceptás incorporar por programas como PPP, Empleo +26, PIL o EPT, TuCV detecta
+              postulantes compatibles según zona, edad y situación laboral.
+            </p>
+          </div>
+
+          <Field label="¿Querés recibir candidatos compatibles con programas de empleo?">
+            <SingleChipSelect
+              options={PROGRAM_MODE}
+              value={values.programs_mode}
+              onChange={(v) => set("programs_mode", v || "none")}
+            />
+            {values.programs_mode === "prioritize" && !canPrioritizePrograms && (
+              <p className="text-xs mt-2 font-medium" style={{ color: "var(--tucv-accent)" }}>
+                Priorizar y ordenar compatibles arriba es parte de Pro. Se guarda como
+                &ldquo;acepto candidatos compatibles&rdquo;; pasá a Pro para priorizarlos.
+              </p>
+            )}
+          </Field>
+
+          {wantsPrograms && (
+            <>
+              {suggestedPrograms.length > 0 && (
+                <div>
+                  <p className="text-xs font-medium mb-2" style={{ color: "var(--tucv-muted)" }}>
+                    Por tu zona podrían aplicar:
+                  </p>
+                  <div className="flex flex-wrap gap-2">
+                    {suggestedPrograms.map((id) => (
+                      <span
+                        key={id}
+                        className="text-xs px-2.5 py-1 rounded-[var(--tucv-radius)] border-2"
+                        style={{
+                          borderColor: "var(--tucv-border)",
+                          color: "var(--tucv-text)",
+                          backgroundColor: "var(--tucv-surface)",
+                        }}
+                      >
+                        {programById(id).shortLabel}
+                      </span>
+                    ))}
+                  </div>
+                </div>
+              )}
+
+              <Field label="Interés principal (opcional)">
+                <ChipMultiSelect
+                  options={PROGRAM_INTEREST}
+                  value={values.programs_interest}
+                  onChange={(v) => set("programs_interest", v)}
+                />
+              </Field>
+
+              <Field label="Visibilidad">
+                <ChipMultiSelect
+                  options={visibilityOptions}
+                  value={values.programs_visibility}
+                  onChange={(v) => set("programs_visibility", v)}
+                />
+              </Field>
+
+              <p className="text-xs" style={{ color: "var(--tucv-muted)" }}>
+                {PROGRAMS_DISCLAIMER}
+              </p>
+            </>
+          )}
+
+          {values.programs_mode === "need_help" && (
+            <div
+              className="rounded-[var(--tucv-radius)] p-3 text-sm"
+              style={{ backgroundColor: "var(--tucv-surface)", color: "var(--tucv-text)" }}
+            >
+              Anotamos que querés ayuda. TuCV te va a contactar para detectar candidatos
+              compatibles y entender qué programa aplica según tu zona y el puesto.
+            </div>
+          )}
+        </div>
 
         <Field
           label="Condiciones y beneficios (opcional)"

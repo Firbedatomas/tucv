@@ -353,6 +353,67 @@ export const APPLICATION_STATUS: Option[] = [
   { value: "descartado", label: "Descartado" },
 ];
 
+// --- Programas laborales (compatibilidad con programas públicos de empleo) ---
+// El catálogo con reglas de edad/zona por programa vive en
+// lib/employment-programs.ts (es lógica, no solo labels). Acá solo las
+// opciones de UI (form de empresa y perfil del candidato).
+
+// Modo que elige la empresa en la búsqueda. "none" = búsqueda común.
+export const PROGRAM_MODE: Option[] = [
+  { value: "none", label: "No, búsqueda común" },
+  { value: "accept", label: "Sí, acepto candidatos compatibles" },
+  { value: "prioritize", label: "Sí, quiero priorizar compatibles" },
+  { value: "need_help", label: "Necesito ayuda para saber qué programa aplica" },
+];
+
+// Qué le interesa a la empresa del programa.
+export const PROGRAM_INTEREST: Option[] = [
+  { value: "primer_empleo", label: "Primer empleo joven" },
+  { value: "entrenamiento_laboral", label: "Entrenamiento laboral" },
+  { value: "contratacion_subsidio", label: "Contratación con subsidio" },
+  { value: "practica_profesional", label: "Práctica profesional / técnica" },
+  { value: "sugerir", label: "No sé, que TuCV me sugiera" },
+];
+
+// Chips de visibilidad. De estos se derivan los booleanos programs_public /
+// programs_ask_applicant / programs_sort_top al armar el payload. "sort_top"
+// está gated a plan pago (ver canPrioritizeProgramCandidates).
+export const PROGRAM_VISIBILITY: Option[] = [
+  { value: "public", label: "Mostrar badge público" },
+  { value: "ask_applicant", label: "Preguntar compatibilidad al postularse" },
+  { value: "sort_top", label: "Ordenar compatibles arriba" },
+];
+
+// --- Lado candidato (privado: solo matching + panel de la empresa) ---
+export const CANDIDATE_PROGRAMS_INTERESTED: Option[] = [
+  { value: "si", label: "Sí" },
+  { value: "no", label: "No" },
+  { value: "no_se", label: "No sé" },
+];
+
+export const CANDIDATE_PROGRAMS_ENROLLED: Option[] = [
+  { value: "ppp", label: "PPP" },
+  { value: "empleo_26", label: "Empleo +26" },
+  { value: "pil_ept", label: "PIL / EPT" },
+  { value: "progresar", label: "Progresar / formación laboral" },
+  { value: "otro", label: "Otro" },
+  { value: "ninguno", label: "No estoy inscripto/a" },
+  { value: "no_se", label: "No sé" },
+];
+
+export const ACCEPTS_TRAINING: Option[] = [
+  { value: "si", label: "Sí" },
+  { value: "no", label: "No" },
+  { value: "depende", label: "Depende de las condiciones" },
+];
+
+export const WORK_SITUATION: Option[] = [
+  { value: "sin_empleo_registrado", label: "Sin empleo registrado" },
+  { value: "informal", label: "Trabajo informal" },
+  { value: "registrado", label: "Trabajo registrado" },
+  { value: "prefiero_no_decir", label: "Prefiero no decir" },
+];
+
 export function labelFor(options: Option[], value: string): string {
   return options.find((o) => o.value === value)?.label ?? value;
 }

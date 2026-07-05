@@ -6,6 +6,7 @@ import { CATEGORIES, AVAILABILITY, EXPERIENCE, labelFor, labelsFor, type Screeni
 import { hidesExtraChips } from "@/lib/plan-limits";
 import { htmlToPlainText } from "@/lib/sanitize-html";
 import { businessSlugFor } from "@/lib/slug";
+import { suggestProgramsForZone, programById } from "@/lib/employment-programs";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -38,6 +39,11 @@ export type PublicJob = {
   salary_mode: string;
   salary_amount: string;
   screening_questions: ScreeningQuestion[];
+  // Programas laborales: si el negocio marcó que acepta programas de empleo y
+  // eligió mostrarlo público. programs_labels son los programas que podrían
+  // aplicar según la zona (para el badge específico "Compatible con PPP...").
+  programs_accepts: boolean;
+  programs_labels: string[];
   active: boolean;
   /** Flag cruda sin combinar con el vencimiento -- distingue "el negocio la
    * cerró a mano" (false acá, expires_at todavía en el futuro) de "se
@@ -189,6 +195,16 @@ export const getPublicJob = cache(async (identifier: string): Promise<PublicJob 
     // cliente en ese caso, no solo se oculten visualmente.
     const hideExtras = hidesExtraChips(business?.plan ?? "free");
 
+    // Programas laborales: el badge público solo si el negocio lo aceptó Y
+    // eligió mostrarlo. need_help/none no muestran badge (need_help es un lead
+    // interno, no una señal pública).
+    const programsMode = (job.programs_mode as string) ?? "none";
+    const programsAccepts =
+      Boolean(job.programs_public) && (programsMode === "accept" || programsMode === "prioritize");
+    const programsLabels = programsAccepts
+      ? suggestProgramsForZone(job.province as string).map((id) => programById(id).shortLabel)
+      : [];
+
     return {
       id: job.id,
       name: job.name,
@@ -208,6 +224,8 @@ export const getPublicJob = cache(async (identifier: string): Promise<PublicJob 
       salary_mode: job.salary_mode ?? "",
       salary_amount: job.salary_amount ?? "",
       screening_questions: job.screening_questions ?? [],
+      programs_accepts: programsAccepts,
+      programs_labels: programsLabels,
       active: Boolean(job.active) && !expired,
       raw_active: Boolean(job.active),
       created: job.created as string,

@@ -57,6 +57,10 @@ type RecordShape = {
   has_own_transport: string;
   immediate_availability: boolean;
   expected_salary: string;
+  programs_interested?: string;
+  programs_enrolled?: string[] | null;
+  accepts_training?: string;
+  work_situation?: string;
   consent_zone_visible: boolean;
   consent_contact: boolean;
   consent_public_profile: boolean;
@@ -138,6 +142,10 @@ function recordToValues(record: RecordShape): CandidateFormValues {
     has_own_transport: record.has_own_transport ?? "",
     immediate_availability: record.immediate_availability ?? false,
     expected_salary: record.expected_salary ?? "",
+    programs_interested: record.programs_interested ?? "",
+    programs_enrolled: record.programs_enrolled ?? [],
+    accepts_training: record.accepts_training ?? "",
+    work_situation: record.work_situation ?? "",
     consent_save: true,
     consent_zone_visible: record.consent_zone_visible ?? false,
     consent_contact: record.consent_contact ?? false,

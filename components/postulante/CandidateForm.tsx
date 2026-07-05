@@ -12,6 +12,10 @@ import {
   GENDER,
   STUDY_LEVELS,
   MOBILITY,
+  CANDIDATE_PROGRAMS_INTERESTED,
+  CANDIDATE_PROGRAMS_ENROLLED,
+  ACCEPTS_TRAINING,
+  WORK_SITUATION,
   labelFor,
   computeScreeningScore,
   type ScreeningQuestion,
@@ -68,6 +72,14 @@ export type CandidateFormValues = {
   has_own_transport: string;
   immediate_availability: boolean;
   expected_salary: string;
+  // Programas de empleo -- PRIVADO. Solo para matching y para el panel de la
+  // empresa a la que se postula; nunca sale en el perfil público ni el
+  // directorio. La declaración pisa la inferencia por edad (ver
+  // lib/employment-programs.ts).
+  programs_interested: string;
+  programs_enrolled: string[];
+  accepts_training: string;
+  work_situation: string;
   consent_save: boolean;
   consent_zone_visible: boolean;
   consent_contact: boolean;
@@ -97,6 +109,10 @@ export const emptyCandidateForm: CandidateFormValues = {
   has_own_transport: "",
   immediate_availability: false,
   expected_salary: "",
+  programs_interested: "",
+  programs_enrolled: [],
+  accepts_training: "",
+  work_situation: "",
   consent_save: false,
   consent_zone_visible: false,
   consent_contact: false,
@@ -358,6 +374,13 @@ export function CandidateForm({
       formData.append("has_own_transport", values.has_own_transport);
       formData.append("immediate_availability", String(values.immediate_availability));
       formData.append("expected_salary", values.expected_salary.trim());
+      // Programas de empleo (privado). Multi-select: un append por valor, igual
+      // que availability. Los single-select se mandan aunque estén vacíos para
+      // poder limpiarlos al editar.
+      formData.append("programs_interested", values.programs_interested);
+      values.programs_enrolled.forEach((p) => formData.append("programs_enrolled", p));
+      formData.append("accepts_training", values.accepts_training);
+      formData.append("work_situation", values.work_situation);
       formData.append("references", JSON.stringify(values.references));
       // references_text es un respaldo legacy de antes de "referencias
       // estructuradas" -- lo seguimos llenando por si algo todavía lo lee,
@@ -711,7 +734,47 @@ export function CandidateForm({
           <ReferenceListInput value={values.references} onChange={(next) => set("references", next)} />
         </Field>
 
-        <FormSection number={4} title="Para terminar" />
+        <FormSection
+          number={4}
+          title="Programas de empleo"
+          hint="Privado — solo se usa para mostrarte mejores oportunidades. No aparece en tu perfil público ni en el directorio."
+        />
+        <Field
+          label="¿Te interesa postularte a búsquedas compatibles con programas de empleo?"
+          hint="Algunos comercios pueden contratar mediante programas públicos de empleo o entrenamiento laboral."
+        >
+          <SingleChipSelect
+            options={CANDIDATE_PROGRAMS_INTERESTED}
+            value={values.programs_interested}
+            onChange={(v) => set("programs_interested", v)}
+          />
+        </Field>
+
+        <Field label="¿Estás inscripto/a en algún programa? (opcional)">
+          <ChipMultiSelect
+            options={CANDIDATE_PROGRAMS_ENROLLED}
+            value={values.programs_enrolled}
+            onChange={(v) => set("programs_enrolled", v)}
+          />
+        </Field>
+
+        <Field label="¿Aceptarías una práctica o entrenamiento laboral? (opcional)">
+          <SingleChipSelect
+            options={ACCEPTS_TRAINING}
+            value={values.accepts_training}
+            onChange={(v) => set("accepts_training", v)}
+          />
+        </Field>
+
+        <Field label="Situación laboral actual (opcional)">
+          <SingleChipSelect
+            options={WORK_SITUATION}
+            value={values.work_situation}
+            onChange={(v) => set("work_situation", v)}
+          />
+        </Field>
+
+        <FormSection number={5} title="Para terminar" />
         <Field label="Sueldo pretendido (opcional)" hint="Solo si querés compartirlo. Podés escribir un monto o 'a convenir'.">
           <ThousandsInput
             className={inputClass}

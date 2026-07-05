@@ -12,10 +12,14 @@ export function CandidateFilterBar({
   value,
   onChange,
   extra,
+  showProgramsFilter,
 }: {
   value: CandidateFilters;
   onChange: (next: CandidateFilters) => void;
   extra?: React.ReactNode;
+  // Solo se muestra si la búsqueda acepta programas y el plan permite
+  // priorizar. NO excluye: promueve compatibles arriba.
+  showProgramsFilter?: boolean;
 }) {
   // La ventana elegida (24h / 7d / 30d) se guarda en estado local: el filtro
   // solo persiste el timestamp de corte absoluto (lastActivitySince), y volver
@@ -120,6 +124,16 @@ export function CandidateFilterBar({
           />
           Disponibilidad inmediata
         </label>
+        {showProgramsFilter && (
+          <label className="flex items-center gap-2 text-sm">
+            <input
+              type="checkbox"
+              checked={value.programsCompatible}
+              onChange={(e) => set("programsCompatible", e.target.checked)}
+            />
+            Priorizar compatibles con programa
+          </label>
+        )}
       </div>
     </Card>
   );
