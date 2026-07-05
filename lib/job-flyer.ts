@@ -68,11 +68,17 @@ export async function generateJobFlyerDataUrl({
   businessName,
   qrDataUrl,
   logoUrl,
+  zone,
+  condition,
 }: {
   role: string;
   businessName: string;
   qrDataUrl: string;
   logoUrl?: string | null;
+  // Opcionales: zona y turno/condición para el cartel (pedido). Si no vienen,
+  // el cartel sale igual sin esa línea.
+  zone?: string;
+  condition?: string;
 }): Promise<string> {
   // W/H son el espacio de coordenadas "de diseño" -- todo el dibujo de acá
   // abajo sigue escrito en esa escala sin cambios. La resolución real del
@@ -163,6 +169,28 @@ export async function generateJobFlyerDataUrl({
       ctx.fillText(line, W / 2, y);
       y += 46;
     }
+  }
+
+  // Zona + turno/condición (chip pill), si vienen. Ayuda al que pasa por la
+  // vidriera a saber al toque si le sirve, sin escanear.
+  const tagLine = [zone, condition].filter(Boolean).join(" · ");
+  if (tagLine) {
+    y += 8;
+    ctx.font = "700 34px sans-serif";
+    const tagW = Math.min(W - 120, ctx.measureText(tagLine).width + 56);
+    const tagX = (W - tagW) / 2;
+    const tagH = 56;
+    ctx.fillStyle = COLORS.accent;
+    ctx.fillRect(tagX, y, tagW, tagH);
+    ctx.strokeStyle = COLORS.text;
+    ctx.lineWidth = 4;
+    ctx.strokeRect(tagX, y, tagW, tagH);
+    ctx.fillStyle = COLORS.text;
+    ctx.textAlign = "center";
+    ctx.textBaseline = "middle";
+    ctx.fillText(tagLine, W / 2, y + tagH / 2 + 2);
+    ctx.textBaseline = "alphabetic";
+    y += tagH + 12;
   }
 
   // QR -- el elemento principal. Antes era de tamaño FIJO (620) con posición

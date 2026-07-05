@@ -241,6 +241,7 @@ export function JobPostCard({
                 businessName: businessName ?? "",
                 qrDataUrl,
                 logoUrl: businessLogoUrl,
+                zone: job.address_zone,
               })
             }
           />
