@@ -62,7 +62,7 @@ export default function PreciosPage() {
           visibilidad, más velocidad o más búsquedas activas.
         </p>
 
-        <div className="grid sm:grid-cols-2 gap-6 mb-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6 mb-6">
           <Card>
             <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--tucv-muted)" }}>
               Postulantes
@@ -98,7 +98,7 @@ export default function PreciosPage() {
           </Card>
         </div>
 
-        <div className="grid sm:grid-cols-2 gap-6">
+        <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
           <Card>
             <p className="text-xs font-semibold uppercase tracking-wide mb-1" style={{ color: "var(--tucv-muted)" }}>
               Búsqueda destacada

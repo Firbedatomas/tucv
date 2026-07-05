@@ -220,7 +220,7 @@ export default async function AdminViralidadPage() {
       <p className="text-xs font-semibold uppercase tracking-wide mb-3" style={{ color: "var(--tucv-muted)" }}>
         Movimiento del último mes
       </p>
-      <div className="grid lg:grid-cols-3 gap-4">
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-4">
         <Card>
           <h2 className="font-semibold mb-3">Perfiles con más movimiento</h2>
           <DataTable

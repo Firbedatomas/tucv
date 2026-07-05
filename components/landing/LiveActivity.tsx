@@ -266,7 +266,7 @@ export function LiveActivity({
 
         {/* Nivel 2 -- actividad reciente + (en empresa) la caja de visibilidad. */}
         {(feed.length > 0 || showVisibility) && (
-          <div className={showVisibility ? "grid lg:grid-cols-3 gap-4 items-start" : ""}>
+          <div className={showVisibility ? "grid grid-cols-1 lg:grid-cols-3 gap-4 items-start" : ""}>
             {feed.length > 0 && <div className={showVisibility ? "lg:col-span-2" : ""}>{feedList}</div>}
 
             {showVisibility && (

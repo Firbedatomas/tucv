@@ -33,7 +33,7 @@ export function CandidateFilterBar({
 
   return (
     <Card className="mb-4">
-      <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-3">
+      <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
         <select
           className={inputClass}
           style={inputStyle}

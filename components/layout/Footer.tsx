@@ -34,7 +34,7 @@ export function Footer() {
   return (
     <footer style={{ backgroundColor: "var(--tucv-text)", borderTop: "4px solid var(--tucv-border)" }}>
       <div className="max-w-6xl mx-auto px-4 py-14">
-        <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
+        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-10 mb-12">
           <div className="lg:col-span-1">
             <span className="inline-flex items-center gap-2 mb-3">
               <LogoMark size={32} />

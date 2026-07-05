@@ -3,7 +3,7 @@ import { LinkButton } from "@/components/ui/Button";
 export function AudienceCards() {
   return (
     <section className="px-4 pb-14 sm:pb-20">
-      <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6">
         {/* Postulante -- camino calmo, de-emphasizado a propósito: en TuCV la
             conversión que importa es la de la empresa (igual que en el hero,
             donde "Crear búsqueda" es el CTA primario). Card blanca = elevada

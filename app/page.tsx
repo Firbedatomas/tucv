@@ -18,7 +18,7 @@ export default function LandingPage() {
 
       {/* 1. Hero empresa */}
       <section className="px-4 pt-6 pb-6 sm:pt-8 sm:pb-8" style={{ backgroundColor: "var(--tucv-text)" }}>
-        <div className="max-w-6xl mx-auto grid lg:grid-cols-2 gap-5 lg:gap-8 items-center">
+        <div className="max-w-6xl mx-auto grid grid-cols-1 lg:grid-cols-2 gap-5 lg:gap-8 items-center">
           <div className="text-center lg:text-left">
             <p
               className="inline-block text-xs font-bold tracking-wide uppercase mb-3 px-3 py-1.5 rounded-[var(--tucv-radius)] -rotate-2"

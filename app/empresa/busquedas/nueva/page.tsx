@@ -23,7 +23,7 @@ export default function NuevaBusquedaPage() {
 
   return (
     <main className="flex-1 px-4 py-10 sm:py-14">
-      <div className="max-w-5xl mx-auto grid lg:grid-cols-[minmax(0,1fr)_320px] gap-8 items-start">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 lg:grid-cols-[minmax(0,1fr)_320px] gap-8 items-start">
         <div className="max-w-lg lg:max-w-none">
           <h1 className="text-2xl sm:text-3xl font-bold mb-2">Creá tu búsqueda</h1>
           <p className="text-sm mb-6" style={{ color: "var(--tucv-muted)" }}>

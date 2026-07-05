@@ -7,7 +7,7 @@ const AFTER_ROWS = [
 export function BeforeAfter() {
   return (
     <section className="px-4 py-14 sm:py-20">
-      <div className="max-w-5xl mx-auto grid md:grid-cols-2 gap-6 items-stretch">
+      <div className="max-w-5xl mx-auto grid grid-cols-1 md:grid-cols-2 gap-6 items-stretch">
         <div
           className="rounded-[var(--tucv-radius)] p-5 sm:p-6"
           style={{

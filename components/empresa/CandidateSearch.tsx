@@ -390,7 +390,7 @@ export function CandidateSearch({
           </p>
         </Card>
       ) : (
-        <div className="grid lg:grid-cols-2 gap-3">
+        <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
           {filtered.map((c) => {
             const expanded = expandedId === c.id;
             return (

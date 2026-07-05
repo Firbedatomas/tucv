@@ -11,7 +11,7 @@ export function EmpresaSteps() {
     <section className="px-4 py-10 sm:py-14">
       <div className="max-w-4xl mx-auto">
         <h2 className="text-2xl sm:text-3xl font-bold text-center mb-8">Cómo funciona</h2>
-        <div className="grid sm:grid-cols-3 gap-4">
+        <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           {STEPS.map((s) => (
             <div
               key={s.n}

@@ -59,7 +59,7 @@ export default async function AdminVisitasPage() {
             />
           </Card>
 
-          <div className="grid sm:grid-cols-3 gap-4">
+          <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
             <Card>
               <h2 className="font-semibold mb-3">De dónde vienen</h2>
               {sources ? <BreakdownList rows={sources} /> : (

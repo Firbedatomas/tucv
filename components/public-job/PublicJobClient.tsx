@@ -239,7 +239,7 @@ export function PublicJobClient({ publicPath, initialJob }: { publicPath: string
 
   return (
     <main className="flex-1 px-4 py-10 sm:py-14">
-      <div className="max-w-5xl mx-auto lg:grid lg:grid-cols-3 lg:gap-8 lg:items-start">
+      <div className="max-w-5xl mx-auto lg:grid grid-cols-1 lg:grid-cols-3 lg:gap-8 lg:items-start">
       <div className="max-w-lg mx-auto lg:max-w-none lg:mx-0 lg:col-span-2">
         <div className="flex items-start justify-between gap-3 mb-3">
           <div className="flex items-center gap-2.5 min-w-0">

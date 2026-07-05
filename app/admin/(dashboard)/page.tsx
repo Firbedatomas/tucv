@@ -76,7 +76,7 @@ export default async function AdminResumenPage() {
         ))}
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 mb-4">
         <Card>
           <h2 className="font-semibold mb-3">Ingresos por plan (histórico)</h2>
           <CategoryBreakdown rows={metrics.revenueByPlan} formatValue={formatARS} />
@@ -87,7 +87,7 @@ export default async function AdminResumenPage() {
         </Card>
       </div>
 
-      <div className="grid sm:grid-cols-2 gap-4">
+      <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
         <Card>
           <h2 className="font-semibold mb-3">Búsquedas activas por rubro</h2>
           <CategoryBreakdown rows={metrics.activeJobsByCategory} />
