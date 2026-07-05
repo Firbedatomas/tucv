@@ -8,6 +8,7 @@ import { resolveBusinessAccess } from "@/lib/business-access";
 import { consumeGoogleProfile } from "@/lib/google-profile-stash";
 import { resizeImageFile } from "@/lib/image-resize";
 import { trackEvent } from "@/lib/track";
+import { emitConversion } from "@/lib/emit-activity";
 import { Field, inputClass, inputStyle } from "@/components/ui/Field";
 import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
@@ -113,6 +114,7 @@ export function RegistroForm() {
       if (logo) formData.append("logo", logo);
       await pb().collection("business_accounts").create(formData);
       trackEvent("Empresa: registro completado");
+      emitConversion("company_registered");
       // Recarga dura a propósito (no router.push): el Navbar ya está montado
       // desde antes de crear el negocio, con isAuthenticated=true pero sin
       // business_accounts todavía. Su chequeo de "hasBusiness" solo corre

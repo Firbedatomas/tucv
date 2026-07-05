@@ -5,7 +5,7 @@ import { pb } from "@/lib/pocketbase";
 import { usePostulanteAuth } from "@/lib/use-postulante-auth";
 import { consumeGoogleProfile } from "@/lib/google-profile-stash";
 import { trackEvent } from "@/lib/track";
-import { emitActivity } from "@/lib/emit-activity";
+import { emitActivity, emitConversion } from "@/lib/emit-activity";
 import {
   CATEGORIES,
   AVAILABILITY,
@@ -403,6 +403,7 @@ export function CandidateForm({
         trackEvent("Postulante: perfil completado");
         if (values.consent_public_profile) trackEvent("Postulante: perfil publico activado");
         emitActivity("candidate_registered", { candidateId: record.id });
+        emitConversion("candidate_registered");
         if (values.consent_public_profile) emitActivity("public_enabled", { candidateId: record.id });
 
         let applied = false;
@@ -421,6 +422,7 @@ export function CandidateForm({
             applied = true;
             trackEvent("Postulante: postulacion enviada");
             emitActivity("application_sent", { candidateId: record.id });
+            emitConversion("application_sent");
           } catch {
             // El perfil ya se guardó; si la postulación falla (búsqueda cerrada,
             // etc.) no lo tratamos como error del formulario.

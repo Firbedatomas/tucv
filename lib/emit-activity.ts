@@ -14,3 +14,20 @@ export function emitActivity(type: string, ids: { candidateId?: string; jobId?: 
     // no-op
   }
 }
+
+// Cierre del embudo de atribución: se llama cuando alguien CONVIERTE
+// (candidate_registered / application_sent / company_registered). El server lee
+// la cookie tucv_ref y, si vino de un share, acredita la conversión a ese canal.
+// Fire-and-forget; la cookie viaja sola con el fetch (mismo origen).
+export function emitConversion(event: "candidate_registered" | "application_sent" | "company_registered"): void {
+  try {
+    fetch("/api/attribution", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ event }),
+      keepalive: true,
+    }).catch(() => {});
+  } catch {
+    // no-op
+  }
+}
