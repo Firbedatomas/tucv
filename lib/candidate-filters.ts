@@ -55,23 +55,63 @@ type FilterableCandidate = {
   has_own_transport?: string;
   immediate_availability?: boolean;
   updated?: string;
+  // Modelo laboral relacional (Fase 2). Todos opcionales: un candidato sin estos
+  // campos cae al comportamiento viejo (categories + category_experience).
+  experience_categories?: string[]; // rubros de sus experiencias laborales
+  experience_roles?: string[]; // puestos (job_title) de sus experiencias
+  experience_tasks?: string[]; // tareas de sus experiencias
+  total_experience_months?: number;
 };
+
+// Un candidato cuenta para un rubro si lo tiene como rubro DESEADO (categories)
+// O tiene EXPERIENCIA en ese rubro (experience_categories). Así "empresa busca
+// caja" también trae a quien trabajó en caja aunque no lo haya elegido como
+// rubro principal. Sin experience_categories (perfil viejo) cae a categories.
+function candidateInCategory(candidate: FilterableCandidate, category: string): boolean {
+  if (!category) return true;
+  if (candidate.categories?.includes(category)) return true;
+  if (candidate.experience_categories?.includes(category)) return true;
+  return false;
+}
+
+const EXP_RANK: Record<string, number> = {
+  sin_experiencia: 0,
+  menos_6_meses: 1,
+  "6_a_12_meses": 2,
+  "1_a_3_anos": 3,
+  mas_3_anos: 4,
+};
+function monthsToBucket(m: number): string {
+  if (!m || m <= 0) return "sin_experiencia";
+  if (m < 6) return "menos_6_meses";
+  if (m < 12) return "6_a_12_meses";
+  if (m < 36) return "1_a_3_anos";
+  return "mas_3_anos";
+}
 
 // Con experiencia cargada por rubro, "experiencia = X" solo tiene sentido
 // atado a un rubro puntual. Si el filtro de rubro está seteado, exige esa
 // combinación exacta; si no, alcanza con que CUALQUIER rubro del candidato
-// tenga esa experiencia. Los perfiles viejos (sin category_experience)
-// caen al campo `experience` general como respaldo.
+// tenga esa experiencia. Perfiles con el modelo nuevo usan total_experience_
+// months (nivel >= al pedido); los viejos caen a category_experience y luego al
+// campo `experience` general.
 function candidateHasExperience(candidate: FilterableCandidate, filters: CandidateFilters): boolean {
   if (!filters.experience) return true;
   const entries = candidate.category_experience;
-  if (!entries || entries.length === 0) {
-    return candidate.experience === filters.experience;
+  if (entries && entries.length > 0) {
+    if (filters.category) {
+      return entries.some((e) => e.category === filters.category && e.experience === filters.experience);
+    }
+    return entries.some((e) => e.experience === filters.experience);
   }
-  if (filters.category) {
-    return entries.some((e) => e.category === filters.category && e.experience === filters.experience);
+  // Modelo nuevo: derivar del total y pedir nivel >= al filtro (más útil que
+  // exacto: "al menos 1-3 años" trae también a los de más de 3).
+  if (typeof candidate.total_experience_months === "number" && candidate.total_experience_months > 0) {
+    const want = EXP_RANK[filters.experience] ?? 0;
+    const have = EXP_RANK[monthsToBucket(candidate.total_experience_months)] ?? 0;
+    return have >= want;
   }
-  return entries.some((e) => e.experience === filters.experience);
+  return candidate.experience === filters.experience;
 }
 
 function candidateHasReferences(candidate: FilterableCandidate): boolean {
@@ -80,11 +120,11 @@ function candidateHasReferences(candidate: FilterableCandidate): boolean {
 }
 
 export function matchesCandidateFilters(candidate: FilterableCandidate, filters: CandidateFilters): boolean {
-  if (filters.category && !candidate.categories?.includes(filters.category)) return false;
+  if (filters.category && !candidateInCategory(candidate, filters.category)) return false;
   if (
     filters.categoryAny &&
     filters.categoryAny.length > 0 &&
-    !filters.categoryAny.some((c) => candidate.categories?.includes(c))
+    !filters.categoryAny.some((c) => candidateInCategory(candidate, c))
   ) {
     return false;
   }

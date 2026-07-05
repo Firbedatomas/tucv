@@ -43,6 +43,15 @@ export type PublicCandidateListItem = {
   bio: string;
   photoUrl: string | null;
   updated: string;
+  // Perfil laboral relacional (Fase 2). Opcionales/compat: el matching y la card
+  // caen a categories/experience si no vienen. snake_case a propósito para
+  // seguir siendo compatible con FilterableCandidate.
+  experience_categories?: string[];
+  total_experience_months?: number;
+  work_experience_count?: number;
+  dominant_categories?: string[];
+  latest_job_title?: string;
+  has_current_job?: boolean;
 };
 
 // Score de VISIBILIDAD -- transparente y documentado a propósito: solo ORDENA
@@ -112,6 +121,12 @@ function mapCard(c: Record<string, unknown>): PublicCandidateListItem {
     bio: (c.bio as string) || "",
     photoUrl: (c.photo_url as string) || null,
     updated: (c.source_updated as string) || (c.updated as string),
+    experience_categories: (c.experience_categories as string[]) || [],
+    total_experience_months: (c.total_experience_months as number) || 0,
+    work_experience_count: (c.work_experience_count as number) || 0,
+    dominant_categories: (c.dominant_categories as string[]) || [],
+    latest_job_title: (c.latest_job_title as string) || "",
+    has_current_job: Boolean(c.has_current_job),
   };
 }
 
@@ -186,7 +201,7 @@ export async function listPublicCandidates(): Promise<{
 // queda cacheada/indexada por rastreadores de redes sociales, mucho más
 // expuesta que la página en sí.
 const CANDIDATE_SAFE_FIELDS =
-  "id,collectionId,profile_slug,name,city_zone,categories,category_other,experience,availability,has_own_transport,immediate_availability,bio,photo,created,updated";
+  "id,collectionId,profile_slug,name,city_zone,categories,category_other,experience,availability,has_own_transport,immediate_availability,bio,photo,created,updated,total_experience_months,work_experience_count,dominant_categories,latest_job_title,has_current_job";
 
 export async function getPublicCandidateCard(slug: string): Promise<PublicCandidateListItem | null> {
   const client = await pbAdmin();
@@ -212,5 +227,10 @@ export async function getPublicCandidateCard(slug: string): Promise<PublicCandid
     bio: (c.bio as string) || "",
     photoUrl: c.photo ? publicFileUrl(c.collectionId as string, c.id, c.photo as string) : null,
     updated: c.updated as string,
+    total_experience_months: (c.total_experience_months as number) || 0,
+    work_experience_count: (c.work_experience_count as number) || 0,
+    dominant_categories: (c.dominant_categories as string[]) || [],
+    latest_job_title: (c.latest_job_title as string) || "",
+    has_current_job: Boolean(c.has_current_job),
   };
 }

@@ -373,6 +373,24 @@ onRecordAfterCreateSuccess((e) => {
   card.set("photo_url", photoUrl)
   card.set("source_created", e.record.get("created"))
   card.set("source_updated", e.record.get("updated"))
+  // Fase 2: cache del perfil laboral en el espejo (fallback: si el cache está
+  // vacío, la card usa `categories`/`experience` viejos, que también van acá).
+  card.set("total_experience_months", e.record.get("total_experience_months") || 0)
+  card.set("work_experience_count", e.record.get("work_experience_count") || 0)
+  card.set("dominant_categories", e.record.get("dominant_categories") || [])
+  card.set("latest_job_title", e.record.get("latest_job_title") || "")
+  card.set("has_current_job", !!e.record.get("has_current_job"))
+  {
+    // experience_categories = rubros distintos de las experiencias, para que el
+    // matching público cruce "trabajó en X" aunque no lo tenga como rubro deseado.
+    let _expCats = []
+    try {
+      const _exps = e.app.findRecordsByFilter("candidate_work_experiences", "candidate_profile = {:id}", "", 300, 0, { id: e.record.id })
+      const _seen = {}
+      for (let _i = 0; _i < _exps.length; _i++) { const _ct = _exps[_i].get("category"); if (_ct && !_seen[_ct]) { _seen[_ct] = 1; _expCats.push(_ct) } }
+    } catch (_err) { }
+    card.set("experience_categories", _expCats)
+  }
   e.app.save(card)
   e.next()
 }, "candidate_profiles")
@@ -417,6 +435,24 @@ onRecordAfterUpdateSuccess((e) => {
   card.set("photo_url", photoUrl)
   card.set("source_created", e.record.get("created"))
   card.set("source_updated", e.record.get("updated"))
+  // Fase 2: cache del perfil laboral en el espejo (fallback: si el cache está
+  // vacío, la card usa `categories`/`experience` viejos, que también van acá).
+  card.set("total_experience_months", e.record.get("total_experience_months") || 0)
+  card.set("work_experience_count", e.record.get("work_experience_count") || 0)
+  card.set("dominant_categories", e.record.get("dominant_categories") || [])
+  card.set("latest_job_title", e.record.get("latest_job_title") || "")
+  card.set("has_current_job", !!e.record.get("has_current_job"))
+  {
+    // experience_categories = rubros distintos de las experiencias, para que el
+    // matching público cruce "trabajó en X" aunque no lo tenga como rubro deseado.
+    let _expCats = []
+    try {
+      const _exps = e.app.findRecordsByFilter("candidate_work_experiences", "candidate_profile = {:id}", "", 300, 0, { id: e.record.id })
+      const _seen = {}
+      for (let _i = 0; _i < _exps.length; _i++) { const _ct = _exps[_i].get("category"); if (_ct && !_seen[_ct]) { _seen[_ct] = 1; _expCats.push(_ct) } }
+    } catch (_err) { }
+    card.set("experience_categories", _expCats)
+  }
   e.app.save(card)
   e.next()
 }, "candidate_profiles")
@@ -707,3 +743,39 @@ onRecordCreateRequest((e) => {
 
   e.next()
 }, "profile_reports")
+
+// ============================================================================
+// Fase 2 -- CACHE del perfil laboral. Cuando cambian las experiencias o sus
+// tareas, se recalcula el cache del candidate_profiles (años, cantidad, rubros/
+// tareas dominantes, último puesto, trabaja actualmente, experience global). La
+// lógica vive en lib_candidate_cache.js y se comparte vía require() (los hooks
+// corren aislados; require sí funciona dentro del callback). Best-effort: nunca
+// rompe la operación que lo dispara.
+// ============================================================================
+// require() + recompute van INLINE en cada callback: las funciones top-level de
+// este archivo NO están en scope dentro de los hooks aislados (daría
+// ReferenceError), pero require() sí funciona dentro del callback.
+onRecordAfterCreateSuccess((e) => {
+  try { require(`${__hooks}/lib_candidate_cache.js`).recompute(e.app, e.record.get("candidate_profile")) } catch (err) { console.log("[cache] " + err) }
+  e.next()
+}, "candidate_work_experiences")
+onRecordAfterUpdateSuccess((e) => {
+  try { require(`${__hooks}/lib_candidate_cache.js`).recompute(e.app, e.record.get("candidate_profile")) } catch (err) { console.log("[cache] " + err) }
+  e.next()
+}, "candidate_work_experiences")
+onRecordAfterDeleteSuccess((e) => {
+  try { require(`${__hooks}/lib_candidate_cache.js`).recompute(e.app, e.record.get("candidate_profile")) } catch (err) { console.log("[cache] " + err) }
+  e.next()
+}, "candidate_work_experiences")
+onRecordAfterCreateSuccess((e) => {
+  try { require(`${__hooks}/lib_candidate_cache.js`).recompute(e.app, e.record.get("candidate_profile")) } catch (err) { console.log("[cache] " + err) }
+  e.next()
+}, "candidate_experience_tasks")
+onRecordAfterUpdateSuccess((e) => {
+  try { require(`${__hooks}/lib_candidate_cache.js`).recompute(e.app, e.record.get("candidate_profile")) } catch (err) { console.log("[cache] " + err) }
+  e.next()
+}, "candidate_experience_tasks")
+onRecordAfterDeleteSuccess((e) => {
+  try { require(`${__hooks}/lib_candidate_cache.js`).recompute(e.app, e.record.get("candidate_profile")) } catch (err) { console.log("[cache] " + err) }
+  e.next()
+}, "candidate_experience_tasks")
