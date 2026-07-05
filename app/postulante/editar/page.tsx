@@ -15,6 +15,7 @@ import { LinkButton } from "@/components/ui/Button";
 import { DataRightsCard } from "@/components/ui/DataRightsCard";
 import { InvitationsInbox } from "@/components/postulante/InvitationsInbox";
 import { ContactRequestsInbox } from "@/components/postulante/ContactRequestsInbox";
+import { WorkExperienceManager } from "@/components/postulante/WorkExperienceManager";
 import { useRouter } from "next/navigation";
 
 type RichCategoryExperience = {
@@ -211,7 +212,20 @@ function EditarContent() {
           existingCvName: record.cv_file || undefined,
         }}
         initialValues={recordToValues(record)}
+        showDetailedExperience={false}
       />
+      {/* Fase 3A: experiencias laborales relacionales (múltiples, opcional). El
+          JSON viejo category_experience queda de respaldo (fallback). */}
+      <div className="mt-4">
+        <WorkExperienceManager
+          candidateId={record.id}
+          legacyCount={
+            (record.category_experience || []).filter(
+              (e) => e.company || e.company_id || e.start_year || e.is_current || (e.experience && e.experience !== "sin_experiencia"),
+            ).length
+          }
+        />
+      </div>
       <DataRightsCard
         data={record}
         fileNamePrefix="mi-perfil"

@@ -133,10 +133,18 @@ export function CandidateForm({
   mode,
   initialValues,
   applyToJobPostId,
+  showDetailedExperience = true,
 }: {
   mode: Mode;
   initialValues?: CandidateFormValues;
   applyToJobPostId?: string;
+  // Fase 3A: cuando es false (edición), se oculta la carga de experiencia por
+  // rubro (CategoryWorkEntry -> JSON viejo `category_experience`) porque las
+  // experiencias se manejan aparte en WorkExperienceManager (relacional). En ese
+  // caso el submit NO pisa category_experience ni experience: quedan read-only y
+  // el cache/experience los mantiene el hook de recálculo. En alta (create)
+  // sigue true -> flujo actual intacto.
+  showDetailedExperience?: boolean;
 }) {
   const { isAuthenticated, userId } = usePostulanteAuth({
     redirectIfLoggedOut: mode.kind === "create",
@@ -273,7 +281,7 @@ export function CandidateForm({
       // pasó justo eso a un usuario real que nunca llegó a guardar su perfil.
       return !entry.company.trim() || !entry.startYear;
     });
-    if (values.categories.length > 0 && incompleteWork) {
+    if (showDetailedExperience && values.categories.length > 0 && incompleteWork) {
       e.categoryWork = "Para cada rubro: marcá \"sin experiencia\" o completá al menos la empresa y desde qué año.";
     }
     if (values.availability.length === 0) e.availability = "Elegí al menos una disponibilidad.";
@@ -341,35 +349,42 @@ export function CandidateForm({
       values.categories.forEach((c) => formData.append("categories", c));
       formData.append("category_other", values.category_other.trim());
 
-      const categoryExperienceList = values.categories.map((category) => {
-        const entry = values.categoryWork[category] ?? emptyCategoryWork;
-        return {
-          category,
-          experience: computeExperienceBucket(entry, currentYear),
-          company: entry.company.trim(),
-          company_id: entry.companyId || null,
-          company_address: entry.companyAddress.trim(),
-          start_year: entry.startYear ? Number(entry.startYear) : null,
-          end_year: entry.isCurrent ? null : entry.endYear ? Number(entry.endYear) : null,
-          is_current: entry.isCurrent,
-          reference_name: entry.referenceName.trim(),
-          reference_phone: entry.referencePhone.trim(),
-          reference_role: entry.referenceRole.trim(),
-        };
-      });
-      formData.append("category_experience", JSON.stringify(categoryExperienceList));
-      formData.append(
-        "experience",
-        categoryExperienceList.some((e) => e.experience === "mas_3_anos")
-          ? "mas_3_anos"
-          : categoryExperienceList.some((e) => e.experience === "1_a_3_anos")
-            ? "1_a_3_anos"
-            : categoryExperienceList.some((e) => e.experience === "6_a_12_meses")
-              ? "6_a_12_meses"
-              : categoryExperienceList.some((e) => e.experience === "menos_6_meses")
-                ? "menos_6_meses"
-                : "sin_experiencia",
-      );
+      // Solo en modo detallado (alta) se escribe el JSON viejo category_experience
+      // + experience global. En edición (showDetailedExperience=false) quedan
+      // read-only: no se appendean, así el update de PocketBase no los toca y el
+      // hook de recálculo mantiene el `experience` desde las experiencias
+      // relacionales (WorkExperienceManager).
+      if (showDetailedExperience) {
+        const categoryExperienceList = values.categories.map((category) => {
+          const entry = values.categoryWork[category] ?? emptyCategoryWork;
+          return {
+            category,
+            experience: computeExperienceBucket(entry, currentYear),
+            company: entry.company.trim(),
+            company_id: entry.companyId || null,
+            company_address: entry.companyAddress.trim(),
+            start_year: entry.startYear ? Number(entry.startYear) : null,
+            end_year: entry.isCurrent ? null : entry.endYear ? Number(entry.endYear) : null,
+            is_current: entry.isCurrent,
+            reference_name: entry.referenceName.trim(),
+            reference_phone: entry.referencePhone.trim(),
+            reference_role: entry.referenceRole.trim(),
+          };
+        });
+        formData.append("category_experience", JSON.stringify(categoryExperienceList));
+        formData.append(
+          "experience",
+          categoryExperienceList.some((e) => e.experience === "mas_3_anos")
+            ? "mas_3_anos"
+            : categoryExperienceList.some((e) => e.experience === "1_a_3_anos")
+              ? "1_a_3_anos"
+              : categoryExperienceList.some((e) => e.experience === "6_a_12_meses")
+                ? "6_a_12_meses"
+                : categoryExperienceList.some((e) => e.experience === "menos_6_meses")
+                  ? "menos_6_meses"
+                  : "sin_experiencia",
+        );
+      }
       values.availability.forEach((a) => formData.append("availability", a));
       formData.append("has_own_transport", values.has_own_transport);
       formData.append("immediate_availability", String(values.immediate_availability));
@@ -660,7 +675,7 @@ export function CandidateForm({
           </Field>
         )}
 
-        {values.categories.length > 0 && (
+        {showDetailedExperience && values.categories.length > 0 && (
           <Field
             label="Experiencia por rubro"
             required
