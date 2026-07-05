@@ -149,7 +149,7 @@ export function matchesCandidateFilters(candidate: FilterableCandidate, filters:
   ) {
     return false;
   }
-  if (filters.zone && !candidate.city_zone?.toLowerCase().includes(filters.zone.toLowerCase())) {
+  if (filters.zone && !normalize(candidate.city_zone ?? "").includes(normalize(filters.zone))) {
     return false;
   }
   if (!candidateHasExperience(candidate, filters)) return false;
