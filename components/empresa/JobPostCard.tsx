@@ -11,10 +11,12 @@ import {
   totalShares,
   type JobPostForStatus,
 } from "@/lib/job-post-status";
-import { LinkButton } from "@/components/ui/Button";
+import { Button, LinkButton } from "@/components/ui/Button";
 import { BoostJobButton } from "@/components/empresa/BoostJobButton";
 import { ExtendJobButton } from "@/components/empresa/ExtendJobButton";
 import { ShareButtons } from "@/components/public-job/ShareButtons";
+import { QRCodeView } from "@/components/qr/QRCodeView";
+import { generateJobFlyerDataUrl } from "@/lib/job-flyer";
 import { businessSlugFor } from "@/lib/slug";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
@@ -51,6 +53,7 @@ export function JobPostCard({
   newCount,
   businessPlan,
   businessName,
+  businessLogoUrl,
   readOnly,
   onChanged,
   onDuplicated,
@@ -60,12 +63,14 @@ export function JobPostCard({
   newCount: number | null;
   businessPlan?: string;
   businessName?: string;
+  businessLogoUrl?: string | null;
   readOnly?: boolean;
   onChanged: (next: Partial<JobPostCardData>) => void;
   onDuplicated: (newJobId: string) => void;
 }) {
   const [showMore, setShowMore] = useState(false);
   const [showShare, setShowShare] = useState(false);
+  const [showQr, setShowQr] = useState(false);
   const [busy, setBusy] = useState(false);
 
   const status = displayStatus(job);
@@ -190,6 +195,12 @@ export function JobPostCard({
 
       <div className="flex flex-wrap gap-2 mb-2 items-center">
         <LinkButton href={`/empresa/busquedas/${job.id}`}>Ver postulantes</LinkButton>
+        {/* QR/cartel siempre disponible para cualquier búsqueda -- es lo que la
+            empresa imprime y pega en la vidriera; no debería estar escondido en
+            "Más acciones" ni solo en la pantalla de detalle. */}
+        <Button type="button" variant="secondary" onClick={() => setShowQr((v) => !v)}>
+          {showQr ? "Ocultar QR" : "QR para vidriera"}
+        </Button>
         {/* Una vez publicada, no se puede editar -- cambiar el puesto/
             requisitos después de que alguien ya se postuló en base a lo
             original sería confuso para esa persona. Solo se puede editar
@@ -203,6 +214,27 @@ export function JobPostCard({
         )}
         {!readOnly && (canPromote || featured) && <BoostJobButton jobPostId={job.id} featuredUntil={job.featured_until} />}
       </div>
+
+      {showQr && (
+        <div
+          className="mt-3 pt-3 flex flex-col sm:flex-row items-center gap-4"
+          style={{ borderTop: "1.5px solid var(--tucv-border)" }}
+        >
+          <QRCodeView
+            url={publicUrl}
+            fileName={job.slug}
+            flyerButtonLabel="Descargar cartel para vidriera"
+            renderFlyer={(qrDataUrl) =>
+              generateJobFlyerDataUrl({
+                role: job.role || job.name,
+                businessName: businessName ?? "",
+                qrDataUrl,
+                logoUrl: businessLogoUrl,
+              })
+            }
+          />
+        </div>
+      )}
 
       <button
         type="button"

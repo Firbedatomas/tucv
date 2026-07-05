@@ -56,6 +56,7 @@ export default function PanelEmpresaPage() {
           businessId={business?.id ?? null}
           businessPlan={business?.plan ?? "free"}
           businessName={business?.business_name}
+          businessLogoUrl={business?.logoUrl ? `/api/business-logo/${business.id}` : null}
           readOnly={!canManageJobs(role)}
         />
       </div>

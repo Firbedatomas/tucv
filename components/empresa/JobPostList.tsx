@@ -35,11 +35,13 @@ export function JobPostList({
   businessId,
   businessPlan,
   businessName,
+  businessLogoUrl,
   readOnly,
 }: {
   businessId: string | null;
   businessPlan?: string;
   businessName?: string;
+  businessLogoUrl?: string | null;
   readOnly?: boolean;
 }) {
   const [state, setState] = useState<
@@ -118,6 +120,7 @@ export function JobPostList({
       onChanged={updateJobLocal}
       businessPlan={businessPlan ?? "free"}
       businessName={businessName}
+      businessLogoUrl={businessLogoUrl}
       readOnly={readOnly}
     />
   );
@@ -131,6 +134,7 @@ function ReadyList({
   onChanged,
   businessPlan,
   businessName,
+  businessLogoUrl,
   readOnly,
 }: {
   items: JobPostCardData[];
@@ -140,6 +144,7 @@ function ReadyList({
   onChanged: (jobId: string, patch: Partial<JobPostCardData>) => void;
   businessPlan: string;
   businessName?: string;
+  businessLogoUrl?: string | null;
   readOnly?: boolean;
 }) {
   const withStatus = useMemo(() => items.map((job) => ({ job, status: displayStatus(job) })), [items]);
@@ -211,6 +216,7 @@ function ReadyList({
               newCount={counts[job.id]?.nuevos ?? null}
               businessPlan={businessPlan}
               businessName={businessName}
+              businessLogoUrl={businessLogoUrl}
               readOnly={readOnly}
               onChanged={(patch) => onChanged(job.id, patch)}
               onDuplicated={(newJobId) => {

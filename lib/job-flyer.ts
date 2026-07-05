@@ -154,12 +154,21 @@ export async function generateJobFlyerDataUrl({
     }
   }
 
-  // QR -- el elemento más grande, centrado
-  const qrImg = await loadImage(qrDataUrl);
-  const qrSize = 620;
-  const qrX = (W - qrSize) / 2;
-  const qrY = y + 40;
+  // QR -- el elemento principal. Antes era de tamaño FIJO (620) con posición
+  // flotante según cuánto ocupara el puesto/logo/nombre de arriba -> con textos
+  // largos o logo, el QR y el CTA se derramaban sobre el footer y el texto se
+  // superponía. Ahora el QR se DIMENSIONA para entrar siempre entre el contenido
+  // y el bloque de CTA, que a su vez queda por encima del footer.
   const qrPad = 24;
+  const footerH = 110;
+  const footerTop = H - footerH;
+  const ctaBlockH = 130; // aire reservado para las 2 líneas del call-to-action
+  const qrBoxTop = y + 24;
+  const qrAvail = footerTop - ctaBlockH - qrBoxTop - qrPad * 2;
+  const qrSize = Math.max(300, Math.min(620, qrAvail));
+  const qrX = (W - qrSize) / 2;
+  const qrY = qrBoxTop + qrPad;
+  const qrImg = await loadImage(qrDataUrl);
   ctx.fillStyle = COLORS.surface;
   ctx.fillRect(qrX - qrPad, qrY - qrPad, qrSize + qrPad * 2, qrSize + qrPad * 2);
   ctx.strokeStyle = COLORS.text;
@@ -167,19 +176,20 @@ export async function generateJobFlyerDataUrl({
   ctx.strokeRect(qrX - qrPad, qrY - qrPad, qrSize + qrPad * 2, qrSize + qrPad * 2);
   ctx.drawImage(qrImg, qrX, qrY, qrSize, qrSize);
 
-  // Call to action bajo el QR
-  const ctaY = qrY + qrSize + qrPad + 70;
+  // Call to action -- centrado en el espacio entre el QR y el footer, siempre
+  // por encima de este (la altura del QR ya garantiza que entra).
+  const qrBoxBottom = qrY + qrSize + qrPad;
+  ctx.textAlign = "center";
   ctx.fillStyle = COLORS.text;
   ctx.font = "800 44px sans-serif";
-  ctx.fillText("Escaneá y dejá tu perfil", W / 2, ctaY);
+  ctx.fillText("Escaneá y dejá tu perfil", W / 2, qrBoxBottom + 56);
   ctx.fillStyle = COLORS.muted;
   ctx.font = "500 32px sans-serif";
-  ctx.fillText("Con la cámara de tu celular", W / 2, ctaY + 48);
+  ctx.fillText("Con la cámara de tu celular", W / 2, qrBoxBottom + 100);
 
   // Footer TuCV
-  const footerH = 110;
   ctx.fillStyle = COLORS.text;
-  ctx.fillRect(0, H - footerH, W, footerH);
+  ctx.fillRect(0, footerTop, W, footerH);
   ctx.fillStyle = COLORS.bg;
   ctx.font = "900 46px sans-serif";
   ctx.fillText("TuCV", W / 2, H - footerH / 2 + 16);
