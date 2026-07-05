@@ -450,7 +450,7 @@ export function ApplicantsPanel({ jobPostId, readOnly }: { jobPostId: string; re
                             {expanded ? "Ocultar perfil" : "Ver perfil"}
                           </button>
                           <a
-                            href={waLink(c.whatsapp, `Hola ${c.name}, te contacto por tu postulación en TuCV.`)}
+                            href={waLink(c.whatsapp ?? "", `Hola ${c.name}, te contacto por tu postulación en TuCV.`)}
                             target="_blank"
                             rel="noopener noreferrer"
                             className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"

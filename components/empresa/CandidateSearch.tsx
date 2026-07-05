@@ -35,7 +35,8 @@ export function CandidateSearch({
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
   const [counts, setCounts] = useState<CandidateCounts | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
-  const [revealedContactId, setRevealedContactId] = useState<string | null>(null);
+  // WhatsApp revelado por candidato (traído del server tras autorizar).
+  const [revealedWhatsapp, setRevealedWhatsapp] = useState<Map<string, string>>(new Map());
   const [filters, setFilters] = useState(emptyCandidateFilters);
   // Mini-CRM: candidatos guardados por este negocio, indexados por candidate id.
   const [saved, setSaved] = useState<Map<string, SavedRecord>>(new Map());
@@ -46,11 +47,17 @@ export function CandidateSearch({
   // Estado de solicitud de contacto por candidato: pending / accepted / rejected.
   const [contactStatus, setContactStatus] = useState<Map<string, string>>(new Map());
 
+  // Los candidatos ya NO se leen directo de PocketBase (eso mandaba whatsapp/
+  // fecha-nac/cv de todos a cualquier logueado). Se piden a un endpoint server
+  // que devuelve una proyección segura (sin whatsapp; edad en vez de DOB).
   useEffect(() => {
-    pb()
-      .collection("candidate_profiles")
-      .getFullList<CandidateLike>({ filter: "consent_zone_visible = true", sort: "-created" })
-      .then(setCandidates)
+    fetch("/api/empresa/candidates", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ token: pb().authStore.token }),
+    })
+      .then((r) => (r.ok ? r.json() : null))
+      .then((d) => setCandidates((d?.candidates as CandidateLike[]) ?? []))
       .catch(() => setCandidates([]));
   }, []);
 
@@ -109,13 +116,24 @@ export function CandidateSearch({
     }
   }
 
-  function logReveal(candidateId: string) {
-    // Auditoría del acceso al WhatsApp (contact_revealed), best-effort.
-    fetch("/api/contact-requests/reveal", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ token: pb().authStore.token, candidateId }),
-    }).catch(() => {});
+  // Trae el WhatsApp desde el server SOLO si está autorizado (consent_contact o
+  // solicitud aceptada); el server valida y audita (contact_revealed). El número
+  // ya no viaja en el listado.
+  async function revealContact(candidateId: string) {
+    try {
+      const res = await fetch("/api/contact-requests/reveal", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ token: pb().authStore.token, candidateId }),
+      });
+      const data = await res.json().catch(() => ({}));
+      if (res.ok && (data as { whatsapp?: string }).whatsapp) {
+        const wa = (data as { whatsapp: string }).whatsapp;
+        setRevealedWhatsapp((prev) => new Map(prev).set(candidateId, wa));
+      }
+    } catch {
+      // silencioso
+    }
   }
 
   async function inviteCandidate(candidateId: string, jobPostId: string, message: string) {
@@ -292,7 +310,7 @@ export function CandidateSearch({
                 <div className="flex gap-4">
                   <CandidateAvatar candidate={c} />
                   <div className="min-w-0 flex-1">
-                    <CandidateCardBody candidate={c} expanded={expanded} />
+                    <CandidateCardBody candidate={c} expanded={expanded} revealedWhatsapp={revealedWhatsapp.get(c.id)} />
 
                     <div className="flex flex-wrap gap-2 mt-3">
                       <button
@@ -309,9 +327,10 @@ export function CandidateSearch({
                         // directo, o si aceptó una solicitud puntual de esta empresa.
                         const canReveal = c.consent_contact || cstatus === "accepted";
                         if (canReveal) {
-                          return revealedContactId === c.id ? (
+                          const wa = revealedWhatsapp.get(c.id);
+                          return wa ? (
                             <a
-                              href={waLink(c.whatsapp, `Hola ${c.name}, te contacto desde TuCV.`)}
+                              href={waLink(wa, `Hola ${c.name}, te contacto desde TuCV.`)}
                               target="_blank"
                               rel="noopener noreferrer"
                               className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
@@ -322,10 +341,7 @@ export function CandidateSearch({
                           ) : (
                             <button
                               type="button"
-                              onClick={() => {
-                                setRevealedContactId(c.id);
-                                if (c.consent_contact) logReveal(c.id);
-                              }}
+                              onClick={() => revealContact(c.id)}
                               className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)]"
                               style={{ backgroundColor: "var(--tucv-primary)", color: "#fff" }}
                             >

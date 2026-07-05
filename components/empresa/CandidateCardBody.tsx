@@ -21,15 +21,30 @@ type CategoryExperienceEntry = {
   is_current?: boolean;
 };
 
+// Este componente lo alimentan DOS caminos:
+//  - /api/empresa/candidates (búsqueda proactiva): proyección SEGURA -> trae
+//    age/photoUrl/cvUrl y NUNCA whatsapp (se revela aparte).
+//  - ApplicantsPanel (postulantes que YA aplicaron a la búsqueda, viewRule
+//    legítimo): record crudo -> birth_date/photo/cv_file/whatsapp.
+// La seguridad la garantiza el ENDPOINT (no manda whatsapp), no el tipo; por
+// eso los campos son opcionales y el componente resuelve cualquiera de los dos.
 export type CandidateLike = {
   id: string;
   name: string;
-  whatsapp: string;
   city_zone: string;
   city?: string;
   province?: string;
-  birth_date: string;
-  age_manual: number;
+  // Proyección segura:
+  age?: number | null;
+  photoUrl?: string | null;
+  cvUrl?: string | null;
+  // Record crudo (postulantes):
+  birth_date?: string;
+  age_manual?: number;
+  whatsapp?: string;
+  photo?: string;
+  cv_file?: string;
+  collectionId?: string;
   categories: string[];
   category_other: string;
   category_experience: CategoryExperienceEntry[] | null;
@@ -42,12 +57,8 @@ export type CandidateLike = {
   has_own_transport?: string;
   immediate_availability?: boolean;
   expected_salary?: string;
-  photo: string;
-  cv_file: string;
   consent_contact?: boolean;
   updated?: string;
-  collectionId: string;
-  collectionName: string;
 };
 
 function formatStudy(entry: StudyEntry | string): string {
@@ -71,7 +82,7 @@ function candidateReferences(c: CandidateLike): string[] {
 }
 
 export function CandidateAvatar({ candidate }: { candidate: CandidateLike }) {
-  const photoUrl = candidate.photo ? pb().files.getURL(candidate, candidate.photo) : null;
+  const photoUrl = candidate.photoUrl ?? (candidate.photo ? pb().files.getURL(candidate, candidate.photo) : null);
   if (photoUrl) {
     return (
       <Image
@@ -98,15 +109,20 @@ export function CandidateCardBody({
   candidate,
   expanded,
   topRightBadge,
+  revealedWhatsapp,
 }: {
   candidate: CandidateLike;
   expanded: boolean;
   topRightBadge?: React.ReactNode;
+  revealedWhatsapp?: string;
 }) {
-  const age = calculateAge(candidate.birth_date, candidate.age_manual);
+  const age = candidate.age ?? calculateAge(candidate.birth_date, candidate.age_manual);
   const expMap = Object.fromEntries((candidate.category_experience ?? []).map((e) => [e.category, e]));
   const references = candidateReferences(candidate);
-  const cvUrl = candidate.cv_file ? pb().files.getURL(candidate, candidate.cv_file) : null;
+  const cvUrl = candidate.cvUrl ?? (candidate.cv_file ? pb().files.getURL(candidate, candidate.cv_file) : null);
+  // Postulantes (ApplicantsPanel) traen whatsapp legítimo; la búsqueda proactiva
+  // solo lo tiene tras revelarlo.
+  const shownWhatsapp = revealedWhatsapp ?? candidate.whatsapp;
   // Mismos badges que el directorio público (/p/[slug], PostulanteCard) para no
   // desincronizar el criterio de "qué señales de confianza mostrar". Antes acá
   // se reimplementaban a mano solo "movilidad" y "puede empezar ya".
@@ -233,11 +249,13 @@ export function CandidateCardBody({
               </div>
             </div>
           )}
-          {candidate.consent_contact ? (
-            <p style={{ color: "var(--tucv-muted)" }}>WhatsApp: {candidate.whatsapp}</p>
+          {/* En la búsqueda proactiva el WhatsApp no viaja en el listado: se
+              muestra solo cuando la empresa lo reveló. En postulantes ya está. */}
+          {shownWhatsapp ? (
+            <p style={{ color: "var(--tucv-muted)" }}>WhatsApp: {shownWhatsapp}</p>
           ) : (
             <p style={{ color: "var(--tucv-muted)" }}>
-              Este candidato todavía no habilitó que las empresas vean su WhatsApp.
+              Usá &quot;Contactar&quot; para {candidate.consent_contact ? "ver su WhatsApp" : "pedirle contacto"}.
             </p>
           )}
           {cvUrl && (
