@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
 import { timeAgo } from "@/lib/time-ago";
+import { LinkButton } from "@/components/ui/Button";
 
 type Counters = {
   activeJobs: number;
@@ -45,7 +46,17 @@ function feedDetail(text: string): string {
 // "TuCV late ahora": contadores REALES + feed anonimizado de movimiento. Los
 // números salen tal cual de la base (mejor real que inflado). El feed se
 // refresca por polling; no decimos "en vivo" salvo que haya movimiento real.
-export function LiveActivity({ city = "", title = "TuCV late ahora" }: { city?: string; title?: string }) {
+export function LiveActivity({
+  city = "",
+  title = "TuCV late ahora",
+  plan,
+}: {
+  city?: string;
+  title?: string;
+  // Plan del negocio (solo en contexto empresa). Habilita el upsell contextual
+  // a Pro cuando es "free". Undefined en la landing pública -> sin upsell.
+  plan?: string;
+}) {
   const [data, setData] = useState<Payload | null>(null);
   const [breakdown, setBreakdown] = useState<Breakdown | null>(null);
   const [now, setNow] = useState(0);
@@ -116,27 +127,30 @@ export function LiveActivity({ city = "", title = "TuCV late ahora" }: { city?: 
   const regForBox = breakdown ? breakdown.total : counters.registeredCandidates;
   const hidden = breakdown ? Math.max(0, breakdown.total - breakdown.visiblesEmpresas) : null;
 
+  // Subtexto de cada métrica: en contexto empresa (showVisibility) leemos los
+  // números en clave comercial ("qué significan para vos"); en la landing
+  // pública, la lectura neutra de siempre.
   const stats: { value: number; label: string; sub: string; accent?: boolean }[] = [
     {
       value: counters.activeJobs,
       label: counters.activeJobs === 1 ? "búsqueda activa" : "búsquedas activas",
-      sub: "ahora mismo",
+      sub: showVisibility ? "negocios compitiendo por candidatos" : "ahora mismo",
     },
     {
       value: counters.registeredCandidates,
       label: counters.registeredCandidates === 1 ? "postulante registrado" : "postulantes registrados",
-      sub: "en TuCV",
+      sub: showVisibility ? "ya cargaron su perfil" : "en TuCV",
     },
     {
       value: counters.visibleCandidates,
       label: counters.visibleCandidates === 1 ? "candidato visible" : "candidatos visibles",
-      sub: "podés contactar",
+      sub: showVisibility ? "listos para que los contactes" : "podés contactar",
       accent: true,
     },
     {
       value: counters.applications,
       label: counters.applications === 1 ? "postulación enviada" : "postulaciones enviadas",
-      sub: "en total",
+      sub: showVisibility ? "intención real de trabajo" : "en total",
     },
   ];
 
@@ -208,7 +222,7 @@ export function LiveActivity({ city = "", title = "TuCV late ahora" }: { city?: 
         </div>
         <p className="text-sm mb-5" style={{ color: "var(--tucv-muted)" }}>
           {showVisibility
-            ? "Lo último que se mueve cerca tuyo. Se actualiza solo, sin recargar."
+            ? "Personas que eligieron mostrarse a negocios, búsquedas activas y postulaciones reales cerca tuyo. Se actualiza solo, sin recargar."
             : "Números reales de TuCV, ahora mismo. Se actualiza solo, sin recargar."}
         </p>
 
@@ -272,11 +286,61 @@ export function LiveActivity({ city = "", title = "TuCV late ahora" }: { city?: 
                 <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
                   Solo aparecen personas que eligieron ser visibles para empresas.
                   {hidden && hidden > 0
-                    ? ` ${hidden} todavía no se muestran públicamente o tienen el perfil incompleto.`
+                    ? ` ${hidden} todavía no activaron visibilidad pública o tienen el perfil incompleto.`
                     : ""}
                 </p>
+                {/* CTAs comerciales: la acción fuerte es publicar una búsqueda
+                    (así te llegan postulantes); el link secundario baja a la
+                    lista para invitar/contactar a los que ya están visibles. */}
+                <div className="flex flex-wrap items-center gap-3 mt-4">
+                  <LinkButton href="/empresa/busquedas/nueva" className="text-sm">
+                    Crear búsqueda
+                  </LinkButton>
+                  <a
+                    href="#candidatos"
+                    className="text-sm font-semibold underline"
+                    style={{ color: "var(--tucv-text)" }}
+                  >
+                    Invitá candidatos visibles
+                  </a>
+                </div>
               </aside>
             )}
+          </div>
+        )}
+
+        {/* Upsell Pro contextual: solo negocio gratis. Explica el valor en clave
+            de velocidad, no bloquea nada. De-emphasizado (surface + borde), con
+            un chip Pro para ubicarlo sin gritar. */}
+        {showVisibility && plan === "free" && (
+          <div
+            className="mt-6 p-4 sm:p-5 rounded-[var(--tucv-radius)] flex flex-col sm:flex-row sm:items-center gap-4 sm:justify-between"
+            style={{
+              backgroundColor: "var(--tucv-surface)",
+              border: "2px solid var(--tucv-border)",
+              boxShadow: "var(--tucv-shadow)",
+            }}
+          >
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <span
+                  className="text-[11px] font-bold uppercase tracking-wide px-2 py-0.5 rounded-full"
+                  style={{ backgroundColor: "var(--tucv-accent)", color: "var(--tucv-text)", border: "1.5px solid var(--tucv-border)" }}
+                >
+                  Pro
+                </span>
+                <p className="font-bold" style={{ color: "var(--tucv-text)" }}>
+                  Cubrí puestos más rápido
+                </p>
+              </div>
+              <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
+                Con Pro tenés más búsquedas activas al mismo tiempo, más días publicadas, más
+                contactos por día y prioridad en tu zona.
+              </p>
+            </div>
+            <LinkButton href="/precios" variant="secondary" className="shrink-0 text-sm">
+              Ver planes
+            </LinkButton>
           </div>
         )}
       </div>

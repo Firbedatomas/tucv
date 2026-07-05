@@ -34,6 +34,9 @@ export function CandidateSearch({
   // Búsquedas activas del negocio (para invitar) y candidatos ya invitados
   // (candidate id -> etiqueta de la búsqueda) para reflejar el estado.
   const [jobs, setJobs] = useState<InviteJob[]>([]);
+  // Rubros (category) de las búsquedas activas del negocio -- para marcar y
+  // promover candidatos que coinciden. NUNCA excluye (igual que programas).
+  const [jobCategories, setJobCategories] = useState<Set<string>>(new Set());
   const [invited, setInvited] = useState<Map<string, string>>(new Map());
   // Estado de solicitud de contacto por candidato: pending / accepted / rejected.
   const [contactStatus, setContactStatus] = useState<Map<string, string>>(new Map());
@@ -69,13 +72,19 @@ export function CandidateSearch({
     const now = new Date().toISOString();
     pb()
       .collection("job_posts")
-      .getFullList<{ id: string; role: string; name: string }>({
+      .getFullList<{ id: string; role: string; name: string; category: string }>({
         filter: `business = "${businessId}" && active = true && expires_at > "${now}"`,
-        fields: "id,role,name",
+        fields: "id,role,name,category",
         requestKey: null,
       })
-      .then((rows) => setJobs(rows.map((j) => ({ id: j.id, label: j.role || j.name || "Búsqueda" }))))
-      .catch(() => setJobs([]));
+      .then((rows) => {
+        setJobs(rows.map((j) => ({ id: j.id, label: j.role || j.name || "Búsqueda" })));
+        setJobCategories(new Set(rows.map((j) => j.category).filter(Boolean)));
+      })
+      .catch(() => {
+        setJobs([]);
+        setJobCategories(new Set());
+      });
   }, [businessId]);
 
   useEffect(() => {
@@ -203,11 +212,27 @@ export function CandidateSearch({
     return narrowByZoneCascade(candidates, businessCity, businessProvince);
   }, [candidates, filters.zone, businessCity, businessProvince]);
 
+  // Un candidato "coincide con tus búsquedas" si alguno de sus rubros está entre
+  // los rubros de las búsquedas activas del negocio. Solo etiqueta/ordena.
+  const matchesActiveJob = (c: CandidateLike) =>
+    jobCategories.size > 0 && (c.categories ?? []).some((cat) => jobCategories.has(cat));
+
   const filtered = useMemo(() => {
     if (!candidates) return [];
     const base = zoneCascade ? zoneCascade.candidates : candidates;
-    return base.filter((c) => matchesCandidateFilters(c, filters));
-  }, [candidates, zoneCascade, filters]);
+    const matched = base.filter((c) => matchesCandidateFilters(c, filters));
+    if (jobCategories.size === 0) return matched;
+    // Promover (NUNCA excluir) los que coinciden con el rubro de alguna búsqueda
+    // activa. Partición estable: conserva el orden original dentro de cada grupo.
+    const compat: CandidateLike[] = [];
+    const rest: CandidateLike[] = [];
+    for (const c of matched) {
+      ((c.categories ?? []).some((cat) => jobCategories.has(cat)) ? compat : rest).push(c);
+    }
+    return [...compat, ...rest];
+  }, [candidates, zoneCascade, filters, jobCategories]);
+
+  const compatCount = jobCategories.size > 0 ? filtered.filter(matchesActiveJob).length : 0;
 
   if (!candidates) {
     return (
@@ -249,6 +274,12 @@ export function CandidateSearch({
               {(filteredView ? visibles : filtered.length) === 1 ? "" : "s"}
               {filteredView ? " con estos filtros" : " en tu zona"}
             </p>
+            {compatCount > 0 && (
+              <p className="text-sm font-semibold mt-1" style={{ color: "var(--tucv-text)" }}>
+                {compatCount === 1 ? "1 candidato coincide" : `${compatCount} candidatos coinciden`} con tus
+                búsquedas activas — {compatCount === 1 ? "está" : "están"} primero en la lista.
+              </p>
+            )}
             {zoneCascade && zoneCascade.tier !== "country" && (
               <p className="text-xs mt-1" style={{ color: "var(--tucv-muted)" }}>
                 {zoneCascade.tier === "city"
@@ -282,7 +313,14 @@ export function CandidateSearch({
                 <div className="flex gap-4">
                   <CandidateAvatar candidate={c} />
                   <div className="min-w-0 flex-1">
-                    <CandidateCardBody candidate={c} expanded={expanded} revealedWhatsapp={revealedWhatsapp.get(c.id)} />
+                    <CandidateCardBody
+                      candidate={c}
+                      expanded={expanded}
+                      revealedWhatsapp={revealedWhatsapp.get(c.id)}
+                      extraBadges={
+                        matchesActiveJob(c) ? [{ label: "Coincide con tu búsqueda", tone: "highlight" }] : undefined
+                      }
+                    />
 
                     <div className="flex flex-wrap gap-2 mt-3">
                       <button

@@ -28,8 +28,8 @@ export default function CandidatosPage() {
           Perfiles de tu zona que eligieron ser visibles para negocios, aunque no se hayan
           postulado a ninguna de tus búsquedas.
         </p>
-        <LiveActivity city={business.city} title="Movimiento en tu zona" />
-        <div className="mt-6">
+        <LiveActivity city={business.city} title="Tu zona está empezando a moverse" plan={business.plan} />
+        <div id="candidatos" className="mt-6 scroll-mt-4">
           <CandidateSearch
             businessId={business.id}
             businessCity={business.city}
