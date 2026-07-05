@@ -15,14 +15,6 @@ import {
 import { InviteCandidateControls, type InviteJob } from "@/components/empresa/InviteCandidateControls";
 import { ContactRequestControls } from "@/components/empresa/ContactRequestControls";
 
-type CandidateCounts = {
-  total: number;
-  visiblesEmpresas: number;
-  perfilPublico: number;
-  incompletos: number;
-  ocultos: number;
-};
-
 export function CandidateSearch({
   businessId,
   businessCity,
@@ -33,7 +25,6 @@ export function CandidateSearch({
   businessProvince: string;
 }) {
   const [candidates, setCandidates] = useState<CandidateLike[] | null>(null);
-  const [counts, setCounts] = useState<CandidateCounts | null>(null);
   const [expandedId, setExpandedId] = useState<string | null>(null);
   // WhatsApp revelado por candidato (traído del server tras autorizar).
   const [revealedWhatsapp, setRevealedWhatsapp] = useState<Map<string, string>>(new Map());
@@ -202,16 +193,6 @@ export function CandidateSearch({
     }
   }
 
-  // Desglose agregado (total registrados vs visibles) desde el server: el
-  // cliente business solo puede leer los consent_zone_visible, así que el
-  // "4 registrados en TuCV" sale de /api/candidate-counts (pbAdmin, solo conteos).
-  useEffect(() => {
-    fetch("/api/candidate-counts")
-      .then((r) => (r.ok ? r.json() : null))
-      .then((data) => setCounts(data))
-      .catch(() => setCounts(null));
-  }, []);
-
   // Sin zona tipeada a mano, arrancamos por la ciudad del negocio; si no hay
   // nadie ahí, ampliamos a la provincia; si tampoco, no restringe (ver
   // narrowByZoneCascade). En cuanto la empresa escribe algo en el filtro de
@@ -253,7 +234,10 @@ export function CandidateSearch({
       {(() => {
         const visibles = candidates.length;
         const filteredView = filtered.length !== visibles;
-        const noSeMuestran = counts ? Math.max(0, counts.total - counts.visiblesEmpresas) : null;
+        // El desglose "visibles vs registrados" + la explicación viven ahora en
+        // la caja de "Movimiento en tu zona" (LiveActivity) arriba, para no
+        // repetir el mismo texto dos veces en la misma página. Acá dejamos solo
+        // el conteo del resultado, que sí depende de los filtros activos.
         return (
           <div className="mb-5">
             <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
@@ -263,19 +247,7 @@ export function CandidateSearch({
               {filteredView ? `de ${visibles} ` : ""}
               candidato{(filteredView ? visibles : filtered.length) === 1 ? "" : "s"} visible
               {(filteredView ? visibles : filtered.length) === 1 ? "" : "s"}
-              {counts ? (
-                <>
-                  {" · "}
-                  <span style={{ color: "var(--tucv-text)" }}>{counts.total}</span> registrado
-                  {counts.total === 1 ? "" : "s"} en TuCV
-                </>
-              ) : null}
-            </p>
-            <p className="text-xs mt-1" style={{ color: "var(--tucv-muted)" }}>
-              Solo aparecen personas que eligieron ser visibles para empresas.
-              {noSeMuestran && noSeMuestran > 0
-                ? ` ${noSeMuestran} todavía no se muestran públicamente o tienen el perfil incompleto.`
-                : ""}
+              {filteredView ? " con estos filtros" : " en tu zona"}
             </p>
             {zoneCascade && zoneCascade.tier !== "country" && (
               <p className="text-xs mt-1" style={{ color: "var(--tucv-muted)" }}>
