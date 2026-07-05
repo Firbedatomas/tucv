@@ -5,6 +5,7 @@ import Image from "next/image";
 import { CATEGORIES, AVAILABILITY, EXPERIENCE, STUDY_LEVELS, STUDY_STATUS, labelFor, labelsFor } from "@/lib/constants";
 import { waLink } from "@/lib/whatsapp";
 import { formatThousands } from "@/lib/format";
+import { experienceYearsLabel, periodLabel, categoryLabel } from "@/lib/experience-display";
 import { usePostulanteAuth } from "@/lib/use-postulante-auth";
 import { trackEvent } from "@/lib/track";
 import { emitActivity } from "@/lib/emit-activity";
@@ -66,6 +67,39 @@ type PublicProfile = {
   expected_salary: string;
   photoUrl: string | null;
   cvUrl: string | null;
+  // Modelo relacional (Fase 3B). Opcionales: si vacíos, la UI cae al fallback
+  // viejo (category_experience/studies).
+  work_experiences?: PublicWorkExp[];
+  education?: PublicEducation[];
+  total_experience_months?: number;
+  work_experience_count?: number;
+  dominant_categories?: string[];
+  latest_job_title?: string;
+  has_current_job?: boolean;
+};
+
+type PublicWorkExp = {
+  job_title: string;
+  category: string;
+  company_name: string;
+  city: string;
+  start_year: number | null;
+  start_month: number | null;
+  end_year: number | null;
+  end_month: number | null;
+  currently_working: boolean;
+  description: string;
+  tasks: string[];
+};
+
+type PublicEducation = {
+  title: string;
+  kind: string;
+  institution: string;
+  level: string;
+  status: string;
+  start_year: number | null;
+  end_year: number | null;
 };
 
 export default function PublicProfilePage({ params }: { params: Promise<{ slug: string }> }) {
@@ -123,6 +157,12 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
   const { profile } = state;
   const age = profile.age;
   const expByCategory = Object.fromEntries((profile.category_experience ?? []).map((e) => [e.category, e]));
+  // Fase 3B: si hay experiencias relacionales, mostramos la sección nueva
+  // "Experiencia laboral" y dejamos "Rubros" solo con los rubros (sin el detalle
+  // viejo inline, para no duplicar). Si no hay, cae al display viejo (fallback).
+  const workExps = profile.work_experiences ?? [];
+  const hasNewExp = workExps.length > 0;
+  const education = profile.education ?? [];
   const isOwnProfile = Boolean(ownProfile) && ownProfile?.id === profile.id;
   const profileUrl = `${typeof window !== "undefined" ? window.location.origin : "https://tucv.ar"}/p/${slug}`;
 
@@ -245,7 +285,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
               return (
                 <div key={c} className="text-sm">
                   <span className="font-semibold">{label}</span>
-                  {exp && exp.experience !== "sin_experiencia" && (
+                  {!hasNewExp && exp && exp.experience !== "sin_experiencia" && (
                     <span style={{ color: "var(--tucv-muted)" }}>
                       {" "}
                       · {labelFor(EXPERIENCE, exp.experience)}
@@ -259,13 +299,59 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                       )}
                     </span>
                   )}
-                  {exp && exp.experience === "sin_experiencia" && (
+                  {!hasNewExp && exp && exp.experience === "sin_experiencia" && (
                     <span style={{ color: "var(--tucv-muted)" }}> · sin experiencia todavía</span>
                   )}
                 </div>
               );
             })}
           </div>
+
+          {hasNewExp && (
+            <div className="mb-5">
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--tucv-muted)" }}>
+                Experiencia laboral
+              </p>
+              {(() => {
+                const yrs = experienceYearsLabel(profile.total_experience_months);
+                const count = profile.work_experience_count ?? workExps.length;
+                const parts: string[] = [];
+                if (yrs) parts.push(yrs);
+                if (count > 0) parts.push(`${count} ${count === 1 ? "experiencia" : "experiencias"}`);
+                return parts.length ? <p className="text-sm font-semibold mb-3">{parts.join(" · ")}</p> : null;
+              })()}
+              <div className="space-y-3">
+                {workExps.map((e, i) => (
+                  <div
+                    key={i}
+                    className="rounded-[var(--tucv-radius)] p-3"
+                    style={{ backgroundColor: "var(--tucv-bg)", border: "1.5px solid var(--tucv-border)" }}
+                  >
+                    <p className="font-bold break-words">{e.job_title || categoryLabel(e.category) || "Experiencia"}</p>
+                    <p className="text-sm break-words" style={{ color: "var(--tucv-muted)" }}>
+                      {[e.company_name, categoryLabel(e.category)].filter(Boolean).join(" · ")}
+                    </p>
+                    {periodLabel(e) && (
+                      <p className="text-xs mt-0.5" style={{ color: "var(--tucv-muted)" }}>
+                        {periodLabel(e)}
+                      </p>
+                    )}
+                    {e.tasks.length > 0 && (
+                      <p className="text-sm mt-1.5 break-words">
+                        <span style={{ color: "var(--tucv-muted)" }}>Tareas: </span>
+                        {e.tasks.join(", ")}
+                      </p>
+                    )}
+                    {e.description && (
+                      <p className="text-sm mt-1 break-words" style={{ color: "var(--tucv-text)" }}>
+                        {e.description}
+                      </p>
+                    )}
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
 
           <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--tucv-muted)" }}>
             Disponibilidad
@@ -281,7 +367,28 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
             </p>
           )}
 
-          {profile.studies?.length > 0 && (
+          {/* Estudios: relacional (candidate_education) si hay; si no, fallback al
+              JSON viejo `studies`; si tampoco, no se muestra el bloque. */}
+          {education.length > 0 ? (
+            <>
+              <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--tucv-muted)" }}>
+                Estudios
+              </p>
+              <div className="space-y-2 mb-5">
+                {education.map((s, i) => {
+                  const statusLbl =
+                    s.status === "en_curso" ? "en curso" : s.status === "abandonado" ? "abandonado" : s.status === "completo" ? "completo" : "";
+                  const meta = [s.institution, statusLbl].filter(Boolean).join(" · ");
+                  return (
+                    <div key={i} className="text-sm break-words">
+                      <span className="font-semibold">{s.title}</span>
+                      {meta && <span style={{ color: "var(--tucv-muted)" }}> — {meta}</span>}
+                    </div>
+                  );
+                })}
+              </div>
+            </>
+          ) : profile.studies?.length > 0 ? (
             <>
               <p className="text-xs font-semibold uppercase tracking-wide mb-2" style={{ color: "var(--tucv-muted)" }}>
                 Estudios
@@ -298,7 +405,7 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
                 ))}
               </div>
             </>
-          )}
+          ) : null}
 
           {profile.references?.length > 0 && (
             <>

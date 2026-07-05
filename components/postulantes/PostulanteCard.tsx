@@ -11,6 +11,7 @@ import { TrackedLinkButton } from "@/components/analytics/TrackedLinkButton";
 import { ReportProfileButton } from "@/components/postulantes/ReportProfileButton";
 import { PublicCandidateActions } from "@/components/postulantes/PublicCandidateActions";
 import { ProfileBadges } from "@/components/postulantes/ProfileBadges";
+import { experienceYearsLabel } from "@/lib/experience-display";
 import type { PublicCandidateListItem } from "@/lib/public-candidates-list";
 import type { ShareChannel } from "@/lib/attribution";
 
@@ -132,14 +133,36 @@ export function PostulanteCard({ candidate }: { candidate: PublicCandidateListIt
         ))}
       </div>
 
-      <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
-        {[
-          candidate.experience ? labelFor(EXPERIENCE, candidate.experience) : "",
-          candidate.availability.length ? labelsFor(AVAILABILITY, candidate.availability).join(" · ") : "",
-        ]
-          .filter(Boolean)
-          .join(" · ") || "Sin datos de experiencia cargados"}
-      </p>
+      {/* Resumen compacto de experiencia (Fase 3B): usa el cache relacional
+          (años aprox + cantidad); si no hay, cae al `experience` global viejo.
+          Nunca el historial completo -- eso va en el perfil (/p/[slug]). */}
+      {(() => {
+        const yrs = experienceYearsLabel(candidate.total_experience_months);
+        const count = candidate.work_experience_count ?? 0;
+        const parts: string[] = [];
+        if (yrs) parts.push(yrs);
+        else if (candidate.experience && candidate.experience !== "sin_experiencia")
+          parts.push(labelFor(EXPERIENCE, candidate.experience));
+        if (count > 0) parts.push(`${count} ${count === 1 ? "experiencia" : "experiencias"}`);
+        return (
+          <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
+            {parts.join(" · ") || "Sin experiencia cargada"}
+          </p>
+        );
+      })()}
+      {candidate.latest_job_title ? (
+        <p className="text-sm break-words" style={{ color: "var(--tucv-text)" }}>
+          Último puesto: <span className="font-semibold">{candidate.latest_job_title}</span>
+          {candidate.has_current_job ? (
+            <span style={{ color: "var(--tucv-muted)" }}> · trabaja actualmente</span>
+          ) : null}
+        </p>
+      ) : null}
+      {candidate.availability.length > 0 && (
+        <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
+          {labelsFor(AVAILABILITY, candidate.availability).join(" · ")}
+        </p>
+      )}
 
       {candidate.bio && (
         <p className="text-sm line-clamp-2" style={{ color: "var(--tucv-text)" }}>
