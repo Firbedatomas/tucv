@@ -166,7 +166,11 @@ export function JobPostForm({
       return null;
     }
   });
-  const [values, setValues] = useState<Values>(restoredDraft ?? initialValues ?? empty);
+  // Mergear siempre sobre `empty`: un borrador guardado antes de que existieran
+  // campos nuevos (ej. programs_*) no los tiene, y restaurarlo tal cual dejaría
+  // esas claves en undefined -> componentes como ChipMultiSelect que hacen
+  // value.includes(...) reventarían. El spread backfillea los defaults.
+  const [values, setValues] = useState<Values>({ ...empty, ...(restoredDraft ?? initialValues ?? {}) });
   const [draftDismissed, setDraftDismissed] = useState(false);
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
@@ -193,7 +197,7 @@ export function JobPostForm({
   }, [mode.kind, mode.kind === "edit" ? mode.jobId : null, values]);
 
   function discardDraft() {
-    setValues(initialValues ?? empty);
+    setValues({ ...empty, ...(initialValues ?? {}) });
     setDraftDismissed(true);
     try {
       window.localStorage.removeItem(draftKey(mode));

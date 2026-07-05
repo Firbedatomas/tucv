@@ -13,19 +13,23 @@ export function ChipMultiSelect({
   onChange: (next: string[]) => void;
   max?: number;
 }) {
+  // Defensa: un caller puede pasar undefined (ej. un borrador viejo restaurado
+  // sin este campo). Tratar como lista vacía en vez de reventar en .includes.
+  const selected = value ?? [];
+
   function toggle(v: string) {
-    if (value.includes(v)) {
-      onChange(value.filter((x) => x !== v));
+    if (selected.includes(v)) {
+      onChange(selected.filter((x) => x !== v));
     } else {
-      if (max && value.length >= max) return;
-      onChange([...value, v]);
+      if (max && selected.length >= max) return;
+      onChange([...selected, v]);
     }
   }
 
   return (
     <div className="flex flex-wrap gap-2">
       {options.map((opt) => {
-        const active = value.includes(opt.value);
+        const active = selected.includes(opt.value);
         return (
           <button
             key={opt.value}
