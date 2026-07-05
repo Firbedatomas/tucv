@@ -9,6 +9,14 @@ import { logActivity } from "@/lib/activity";
 
 const POCKETBASE_URL = process.env.POCKETBASE_URL || "http://127.0.0.1:8092";
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
+const DAY = 24 * 60 * 60 * 1000;
+
+// Límite diario de invitaciones por empresa según plan -- mismo criterio que las
+// solicitudes de contacto (app/api/contact-requests): el plan pago tiene más
+// cupo, lo que hace real el beneficio "más invitaciones por día".
+function dailyLimitForPlan(plan: string | undefined): number {
+  return plan === "pro" || plan === "multi_local" ? 50 : 10;
+}
 
 // Mismo patrón que app/api/business-invites: valida el token de sesión y
 // devuelve el business_accounts DUEÑO. Un viewer no tiene fila propia -> tira.
@@ -53,6 +61,19 @@ export async function POST(req: Request) {
     // Solo se invita a quien eligió ser visible para empresas.
     if (!candidate.consent_zone_visible) {
       return NextResponse.json({ error: "Ese candidato no está visible para empresas." }, { status: 403 });
+    }
+
+    // Límite diario de invitaciones por empresa según el plan.
+    const dailyLimit = dailyLimitForPlan(business.plan as string | undefined);
+    const daySince = new Date(Date.now() - DAY).toISOString();
+    const todayCount = await admin.collection("candidate_invitations").getList(1, 1, {
+      filter: admin.filter("business = {:b} && created > {:since}", { b: business.id, since: daySince }),
+    });
+    if (todayCount.totalItems >= dailyLimit) {
+      return NextResponse.json(
+        { error: "Alcanzaste el límite de invitaciones por día de tu plan. Probá de nuevo mañana." },
+        { status: 429 },
+      );
     }
 
     let invitation;

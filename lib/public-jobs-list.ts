@@ -68,15 +68,19 @@ export async function listPublicJobs(): Promise<PublicJobListItem[]> {
   });
 
   const nowMs = Date.now();
-  const mapped = items.map((job) => {
+  const enriched = items.map((job) => {
     const business = job.expand?.business as
       | { business_name?: string; logo?: string; collectionId?: string; id?: string; plan?: string }
       | undefined;
     const featured = Boolean(job.featured_until) && new Date(job.featured_until as string).getTime() > nowMs;
+    // Prioridad de plan pago: dentro del mismo nivel de destacado, las búsquedas
+    // de negocios Pro/Equipo rankean sobre las gratuitas. Hace real el beneficio
+    // "prioridad en tu zona y rubro" (más visibilidad -> más postulantes).
+    const pro = business?.plan === "pro" || business?.plan === "multi_local";
     // Mismo criterio que getPublicJob (lib/public-job.ts): plan gratis no
     // muestra beneficios ni requisitos en el link público.
     const hideExtras = hidesExtraChips(business?.plan ?? "free");
-    return {
+    const item: PublicJobListItem = {
       id: job.id,
       slug: job.slug,
       short_code: job.short_code ?? "",
@@ -101,13 +105,15 @@ export async function listPublicJobs(): Promise<PublicJobListItem[]> {
       created: job.created as string,
       featured,
     };
+    return { item, featured, pro };
   });
 
   // El sort de PocketBase ya deja lo destacado arriba en la práctica (fechas
   // futuras > vacío/pasado en DESC), pero no está garantizado para
   // featured_until vencido vs. nunca seteado -- reordenamos en JS para que
-  // "featured" sea la fuente de verdad real, no una suposición sobre cómo
-  // ordena la base.
-  mapped.sort((a, b) => Number(b.featured) - Number(a.featured));
-  return mapped;
+  // "featured" sea la fuente de verdad real. El sort de V8 es estable, así que
+  // dentro de cada nivel (destacado, luego Pro) se conserva el orden por fecha
+  // que ya trajo PocketBase (-created).
+  enriched.sort((a, b) => Number(b.featured) - Number(a.featured) || Number(b.pro) - Number(a.pro));
+  return enriched.map((e) => e.item);
 }
