@@ -89,6 +89,15 @@ export async function generateJobFlyerDataUrl({
   if (!ctx) throw new Error("no se pudo crear el canvas");
   ctx.scale(PRINT_SCALE, PRINT_SCALE);
 
+  // Isotipo TuCV (ficha + check) como SVG inline -> data URL, para brandear el
+  // cartel sin depender de un asset servido. Colores hardcodeados igual que
+  // components/ui/Logo.tsx (un canvas no lee variables CSS). Si falla la carga,
+  // seguimos sin él (no vale romper el cartel entero por el logo).
+  const TUCV_LOGO = `data:image/svg+xml,${encodeURIComponent(
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 64 64"><rect x="6" y="8" width="52" height="52" rx="10" fill="#151515"/><rect x="4" y="4" width="52" height="52" rx="10" fill="#FF4405" stroke="#151515" stroke-width="4"/><rect x="17" y="14" width="26" height="34" rx="4" fill="#FFFFFF" stroke="#151515" stroke-width="2.5" transform="rotate(-8 30 31)"/><path d="M22 32 L28 39 L42 21" fill="none" stroke="#151515" stroke-width="5" stroke-linecap="round" stroke-linejoin="round" transform="rotate(-8 30 31)"/></svg>',
+  )}`;
+  const tucvLogo = await loadImage(TUCV_LOGO).catch(() => null);
+
   // Fondo
   ctx.fillStyle = COLORS.bg;
   ctx.fillRect(0, 0, W, H);
@@ -96,18 +105,20 @@ export async function generateJobFlyerDataUrl({
   ctx.lineWidth = 10;
   ctx.strokeRect(5, 5, W - 10, H - 10);
 
-  // Header naranja
+  // Header amarillo (color de marca TuCV). Texto oscuro: sobre amarillo el
+  // blanco perdería contraste. Isotipo TuCV arriba a la izquierda.
   const headerH = 260;
-  ctx.fillStyle = COLORS.primary;
+  ctx.fillStyle = COLORS.accent;
   ctx.fillRect(0, 0, W, headerH);
   ctx.fillStyle = COLORS.text;
   ctx.fillRect(0, headerH - 8, W, 8);
+  if (tucvLogo) ctx.drawImage(tucvLogo, 44, 34, 88, 88);
 
-  ctx.fillStyle = COLORS.primaryText;
+  ctx.fillStyle = COLORS.text;
   ctx.textAlign = "center";
   ctx.font = "900 76px sans-serif";
-  ctx.fillText("SE BUSCA", W / 2, 110);
-  ctx.fillText("PERSONAL", W / 2, 195);
+  ctx.fillText("SE BUSCA", W / 2, 128);
+  ctx.fillText("PERSONAL", W / 2, 213);
 
   // Puesto (personalización principal)
   let y = headerH + 90;
@@ -187,12 +198,27 @@ export async function generateJobFlyerDataUrl({
   ctx.font = "500 32px sans-serif";
   ctx.fillText("Con la cámara de tu celular", W / 2, qrBoxBottom + 100);
 
-  // Footer TuCV
+  // Footer -- marca TuCV (isotipo) + el link para tipear a mano: tucv.ar.
   ctx.fillStyle = COLORS.text;
   ctx.fillRect(0, footerTop, W, footerH);
-  ctx.fillStyle = COLORS.bg;
+  const fLogo = 62;
+  const fCenterY = footerTop + footerH / 2;
   ctx.font = "900 46px sans-serif";
-  ctx.fillText("TuCV", W / 2, H - footerH / 2 + 16);
+  const linkText = "tucv.ar";
+  const linkW = ctx.measureText(linkText).width;
+  const gap = 18;
+  const blockW = (tucvLogo ? fLogo + gap : 0) + linkW;
+  let bx = (W - blockW) / 2;
+  if (tucvLogo) {
+    ctx.drawImage(tucvLogo, bx, fCenterY - fLogo / 2, fLogo, fLogo);
+    bx += fLogo + gap;
+  }
+  ctx.fillStyle = COLORS.bg; // crema sobre el negro del footer
+  ctx.textAlign = "left";
+  ctx.textBaseline = "middle";
+  ctx.fillText(linkText, bx, fCenterY);
+  ctx.textAlign = "center";
+  ctx.textBaseline = "alphabetic";
 
   return canvas.toDataURL("image/png");
 }
