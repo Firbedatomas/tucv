@@ -10,9 +10,25 @@
   --color-foreground: var(--foreground);
 }
 
+html,
 body {
   background: var(--background);
   color: var(--foreground);
+  /* Red global anti scroll lateral (pedido: en celulares chicos 360-414px nada
+     puede superar el ancho). Cualquier widget que se pase queda contenido en
+     vez de romper el scroll horizontal de toda la página. Los bloques que sí
+     necesitan scroll horizontal propio (tablas anchas) usan overflow-x-auto en
+     su contenedor y siguen andando. */
+  max-width: 100%;
+  overflow-x: hidden;
+}
+
+/* Imágenes y media nunca empujan el layout más allá del viewport. */
+img,
+svg,
+video,
+canvas {
+  max-width: 100%;
 }
 
 /* RichTextEditor (Mensaje visible en crear búsqueda) -- placeholder de un
