@@ -167,6 +167,49 @@ export async function listDetectedOpportunities(limit = 200): Promise<DetectedOp
   return out;
 }
 
+// Candidatos que mostraron interés en las búsquedas detectadas de un negocio YA
+// reclamado -> se le muestran en el panel (cumple el gancho "reclamá para ver los
+// interesados"). Proyección segura: nada de whatsapp/DNI (NEVER_PUBLIC_FIELDS).
+export type InterestedCandidate = { id: string; name: string; slug: string; cityZone: string };
+
+export async function getBusinessDetectedInterest(
+  businessAccountId: string,
+): Promise<{ total: number; candidates: InterestedCandidate[] }> {
+  const admin = await pbAdmin();
+  const sb = await admin
+    .collection("sourced_businesses")
+    .getFirstListItem(admin.filter("claimed_business = {:b}", { b: businessAccountId }), { requestKey: null })
+    .catch(() => null);
+  if (!sb) return { total: 0, candidates: [] };
+
+  const jobs = await admin
+    .collection("sourced_jobs")
+    .getFullList({ filter: admin.filter("sourced_business = {:id}", { id: sb.id }), requestKey: null })
+    .catch(() => []);
+  if (!jobs.length) return { total: 0, candidates: [] };
+
+  const or = jobs.map((j) => `sourced_job = "${j.id}"`).join(" || ");
+  const interests = await admin
+    .collection("candidate_interest")
+    .getFullList({ filter: or, expand: "candidate", sort: "-created", requestKey: null })
+    .catch(() => []);
+
+  const seen = new Set<string>();
+  const candidates: InterestedCandidate[] = [];
+  for (const it of interests) {
+    const c = (it.expand as { candidate?: Record<string, unknown> } | undefined)?.candidate;
+    if (!c || seen.has(c.id as string)) continue;
+    seen.add(c.id as string);
+    candidates.push({
+      id: c.id as string,
+      name: (c.name as string) || "Candidato",
+      slug: (c.profile_slug as string) || "",
+      cityZone: (c.city_zone as string) || "",
+    });
+  }
+  return { total: interests.length, candidates };
+}
+
 export async function countInterest(sourcedJobId: string): Promise<number> {
   const admin = await pbAdmin();
   const res = await admin

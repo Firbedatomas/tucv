@@ -6,6 +6,7 @@ import { JobPostList } from "@/components/empresa/JobPostList";
 import { ExportApplicationsButton } from "@/components/empresa/ExportApplicationsButton";
 import { ReputationCard } from "@/components/empresa/ReputationCard";
 import { NewCandidatesBanner } from "@/components/empresa/NewCandidatesBanner";
+import { DetectedInterestBanner } from "@/components/empresa/DetectedInterestBanner";
 import { LinkButton } from "@/components/ui/Button";
 
 export default function PanelEmpresaPage() {
@@ -52,6 +53,7 @@ export default function PanelEmpresaPage() {
             </div>
           )}
         </div>
+        {canManageJobs(role) && <DetectedInterestBanner />}
         {canSourceCandidates(role) && <NewCandidatesBanner />}
         {canManageJobs(role) && <ReputationCard />}
         <JobPostList

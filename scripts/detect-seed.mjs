@@ -61,19 +61,19 @@ function validPhone(d) {
 function extract(html, pageUrl) {
   const out = { name: "", email: "", whatsapp: "", roles: [], logo: "" };
 
-  // Logo / imagen oficial, en orden de preferencia. Se resuelve a URL absoluta.
-  // Con los fallbacks (apple-touch-icon / favicon) casi ningún sitio queda sin
-  // imagen -- todos tienen al menos un favicon.
+  // Logo, en orden de CALIDAD. Preferimos íconos cuadrados de buena resolución
+  // (apple-touch-icon suele ser el logo a 180px) y evitamos el favicon crudo
+  // (16px, se ve borroso). Si nada sirve, el favicon de Google a 128px es un
+  // fallback CONSISTENTE y siempre disponible (mejor que uno roto o pixelado).
   let logo = "";
   const tryers = [
     () => (html.match(/<img[^>]*\b(?:class|alt|id)=["'][^"']*logo[^"']*["'][^>]*>/i) || html.match(/<img[^>]*\bsrc=["'][^"']*logo[^"']*["'][^>]*>/i))?.[0].match(/\bsrc=["']([^"']+)["']/i)?.[1],
-    () => html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1],
-    () => html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
     () => html.match(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i)?.[1] || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*apple-touch-icon[^"']*["']/i)?.[1],
-    () => html.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i)?.[1] || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:shortcut )?icon["']/i)?.[1],
+    () => html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1],
   ];
-  for (const t of tryers) { const v = t(); if (v) { logo = v; break; } }
-  if (logo) { try { out.logo = new URL(logo, pageUrl).href.slice(0, 500); } catch {} }
+  for (const t of tryers) { const v = t(); if (v) { try { logo = new URL(v, pageUrl).href; break; } catch {} } }
+  if (!logo) { try { logo = `https://www.google.com/s2/favicons?domain=${new URL(pageUrl).hostname}&sz=128`; } catch {} }
+  out.logo = logo.slice(0, 500);
 
   // schema.org (Organization + JobPosting) en JSON-LD
   const ld = [...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)];
@@ -160,11 +160,15 @@ async function main() {
   const dup = await fetch(`${PB}/api/collections/sourced_businesses/records?perPage=1&filter=${encodeURIComponent(`source_url="${url}"`)}`, { headers: H }).then((r) => r.json());
   if (dup?.totalItems > 0) {
     const ex = dup.items[0];
-    if (d.logo && !ex.logo_url) {
+    // Sobrescribimos el logo si cambió (para reemplazar los favicons malos por
+    // la mejor fuente). No pisamos un logo puesto A MANO desde el panel: solo si
+    // el actual estaba vacío o era un favicon (google s2 / .ico).
+    const isAuto = !ex.logo_url || /google\.com\/s2\/favicons|\.ico(\?|$)/i.test(ex.logo_url);
+    if (d.logo && d.logo !== ex.logo_url && isAuto) {
       await fetch(`${PB}/api/collections/sourced_businesses/records/${ex.id}`, { method: "PATCH", headers: H, body: JSON.stringify({ logo_url: d.logo }) }).catch(() => {});
-      console.log(`\nYa estaba sembrada — logo backfilleado. id=${ex.id}`);
+      console.log(`\nYa estaba sembrada — logo actualizado. id=${ex.id}`);
     } else {
-      console.log(`\nYa estaba sembrada (source_url repetido). id=${ex.id}`);
+      console.log(`\nYa estaba sembrada. id=${ex.id}`);
     }
     return;
   }

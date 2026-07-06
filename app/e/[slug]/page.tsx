@@ -3,6 +3,7 @@ import { notFound } from "next/navigation";
 import { getSourcedBusinessBySlug } from "@/lib/sourced";
 import { UnverifiedBusiness } from "@/components/sourced/UnverifiedBusiness";
 import { ShareRow } from "@/components/sourced/ShareRow";
+import { LogoImg } from "@/components/sourced/LogoImg";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
 
@@ -49,18 +50,7 @@ export default async function SourcedBusinessPage({ params }: { params: Promise<
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-4">
-          <div
-            className="shrink-0 w-16 h-16 rounded-[var(--tucv-radius)] flex items-center justify-center text-2xl font-bold overflow-hidden"
-            style={{ backgroundColor: "var(--tucv-bg)", border: "2px solid var(--tucv-border)", color: "var(--tucv-muted)" }}
-            aria-hidden
-          >
-            {biz.logoUrl ? (
-              // eslint-disable-next-line @next/next/no-img-element
-              <img src={biz.logoUrl} alt="" className="w-full h-full" style={{ objectFit: "contain" }} />
-            ) : (
-              biz.name.charAt(0).toUpperCase()
-            )}
-          </div>
+          <LogoImg src={biz.logoUrl} name={biz.name} size={64} />
           <div className="min-w-0">
             <h1 className="text-2xl font-bold leading-tight">{biz.name}</h1>
             <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>

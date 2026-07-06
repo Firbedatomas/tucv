@@ -7,6 +7,7 @@ import { buildOutreachMessage } from "@/lib/sourced-outreach";
 import { Card } from "@/components/ui/Card";
 import { Button } from "@/components/ui/Button";
 import { inputClass, inputStyle } from "@/components/ui/Field";
+import { LogoImg } from "@/components/sourced/LogoImg";
 
 export type SourcedRow = {
   id: string;
@@ -134,15 +135,9 @@ export function SourcedManager({ rows }: { rows: SourcedRow[] }) {
                       type="button"
                       onClick={() => setLogoEditId(logoEditId === r.id ? null : r.id)}
                       title="Editar logo"
-                      className="shrink-0 w-10 h-10 rounded-[var(--tucv-radius)] flex items-center justify-center text-sm font-bold overflow-hidden"
-                      style={{ backgroundColor: "var(--tucv-bg)", border: r.logoUrl ? "1.5px solid var(--tucv-border)" : "1.5px dashed var(--tucv-border)", color: "var(--tucv-muted)" }}
+                      className="shrink-0 rounded-[var(--tucv-radius)]"
                     >
-                      {r.logoUrl ? (
-                        // eslint-disable-next-line @next/next/no-img-element
-                        <img src={r.logoUrl} alt="" className="w-full h-full" style={{ objectFit: "contain" }} />
-                      ) : (
-                        "+"
-                      )}
+                      <LogoImg src={r.logoUrl} name={r.name} size={40} />
                     </button>
                     <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">

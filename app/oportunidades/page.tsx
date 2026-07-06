@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import Link from "next/link";
 import { listDetectedOpportunities } from "@/lib/sourced";
 import { LinkButton } from "@/components/ui/Button";
+import { LogoImg } from "@/components/sourced/LogoImg";
 
 export const metadata: Metadata = {
   title: "Oportunidades cerca tuyo — TuCV",
@@ -51,18 +52,7 @@ export default async function OportunidadesPage() {
                       className="flex items-center gap-3 rounded-[var(--tucv-radius)] px-4 py-3"
                       style={{ border: "2px solid var(--tucv-border)", backgroundColor: "var(--tucv-surface)" }}
                     >
-                      <div
-                        className="shrink-0 w-10 h-10 rounded-[var(--tucv-radius)] flex items-center justify-center text-sm font-bold overflow-hidden"
-                        style={{ backgroundColor: "var(--tucv-bg)", border: "1.5px solid var(--tucv-border)", color: "var(--tucv-muted)" }}
-                        aria-hidden
-                      >
-                        {o.logoUrl ? (
-                          // eslint-disable-next-line @next/next/no-img-element
-                          <img src={o.logoUrl} alt="" className="w-full h-full" style={{ objectFit: "contain" }} />
-                        ) : (
-                          o.businessName.charAt(0).toUpperCase()
-                        )}
-                      </div>
+                      <LogoImg src={o.logoUrl} name={o.businessName} size={40} />
                       <div className="min-w-0 flex-1">
                         <p className="font-bold truncate">{o.businessName}</p>
                         <p className="text-sm truncate" style={{ color: "var(--tucv-muted)" }}>
