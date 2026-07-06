@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { pb } from "@/lib/pocketbase";
 import { useBusinessAuth } from "@/lib/use-business-auth";
 import { resolveBusinessAccess } from "@/lib/business-access";
+import { safeNextPath } from "@/lib/safe-next-path";
 import { consumeGoogleProfile } from "@/lib/google-profile-stash";
 import { resizeImageFile } from "@/lib/image-resize";
 import { trackEvent } from "@/lib/track";
@@ -47,8 +48,7 @@ export function RegistroForm() {
     resolveBusinessAccess(pb(), userId)
       .then((access) => {
         if (access) {
-          const rawNext = new URLSearchParams(window.location.search).get("next");
-          router.replace(rawNext && rawNext.startsWith("/") ? rawNext : "/empresa/panel");
+          router.replace(safeNextPath(new URLSearchParams(window.location.search).get("next")));
         } else setCheckingExisting(false);
       })
       .catch(() => setCheckingExisting(false));
@@ -118,10 +118,9 @@ export function RegistroForm() {
       trackEvent("Empresa: registro completado");
       emitConversion("company_registered");
       // `next` = a dónde volver tras registrarse (ej. el formulario de crear
-      // búsqueda que empezó sin cuenta). Solo rutas internas. Sin `next`, al
-      // panel como siempre.
-      const rawNext = new URLSearchParams(window.location.search).get("next");
-      const next = rawNext && rawNext.startsWith("/") ? rawNext : null;
+      // búsqueda que empezó sin cuenta). safeNextPath bloquea redirects
+      // externos; sin `next` válido, al panel como siempre.
+      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"), "/empresa/panel");
       // Recarga dura a propósito (no router.push): el Navbar ya está montado
       // desde antes de crear el negocio, con isAuthenticated=true pero sin
       // business_accounts todavía. Su chequeo de "hasBusiness" solo corre

@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import { pb } from "@/lib/pocketbase";
 import { stashGoogleProfile } from "@/lib/google-profile-stash";
+import { safeNextPath } from "@/lib/safe-next-path";
 import { GoogleButton } from "@/components/ui/GoogleButton";
 import { Card } from "@/components/ui/Card";
 
@@ -24,8 +25,11 @@ export function LoginForm({ next }: { next?: string }) {
         stashGoogleProfile({ name: googleName, avatarUrl: googleAvatar });
       }
 
-      if (next) {
-        router.push(next);
+      // safeNextPath bloquea open-redirect (//evil.com, javascript:, etc.).
+      // Si `next` no es un path interno válido, se ignora y sigue el default.
+      const safeNext = safeNextPath(next, "");
+      if (safeNext) {
+        router.push(safeNext);
         return;
       }
 

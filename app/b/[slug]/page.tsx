@@ -1,6 +1,7 @@
 import type { Metadata } from "next";
 import { notFound } from "next/navigation";
 import { getPublicJob, incrementJobViews, buildJobMetadata, buildJobJsonLd } from "@/lib/public-job";
+import { serializeJsonLd } from "@/lib/json-ld";
 import { PublicJobClient } from "@/components/public-job/PublicJobClient";
 
 // Sin esto, Next.js puede cachear el resultado de getPublicJob() (usa fetch
@@ -37,7 +38,7 @@ export default async function PublicJobPage({ params }: { params: Promise<{ slug
   return (
     <>
       {jsonLd && (
-        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }} />
+        <script type="application/ld+json" dangerouslySetInnerHTML={{ __html: serializeJsonLd(jsonLd) }} />
       )}
       <PublicJobClient publicPath={slug} initialJob={job} />
     </>

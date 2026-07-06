@@ -457,18 +457,25 @@ onRecordAfterUpdateSuccess((e) => {
   e.next()
 }, "candidate_profiles")
 
-// Protege `plan` (free/pro) de business_accounts: una empresa autenticada
-// puede editar su propio registro (nombre, teléfono, zona), pero NO puede
-// auto-otorgarse el plan pago -- eso lo cambia solo un superusuario (por
-// ahora a mano vía el admin de PocketBase, hasta que haya cobro real).
+// Protege los campos ADMINISTRATIVOS de business_accounts: una empresa
+// autenticada puede editar su propio registro (nombre, teléfono, zona), pero
+// NO puede auto-cambiar:
+//   - plan (free/pro): auto-otorgarse el plan pago.
+//   - suspended: un negocio suspendido por moderación podría des-suspenderse
+//     solo (las búsquedas se ocultan si suspended=true) -> evasión de sanción.
+//   - verified: auto-otorgarse el badge "negocio verificado" que se muestra
+//     público.
+// Como la updateRule es a nivel registro (deja al dueño tocar cualquier campo),
+// estos se fuerzan al valor previo salvo superusuario. El form de edición no
+// manda estos campos, así que esto solo bloquea el bypass por API directa.
 // hasSuperuserAuth() vive en los hooks *Request (nivel API), no en
 // onRecordCreate/onRecordUpdate (nivel modelo, sin contexto de request).
 onRecordUpdateRequest((e) => {
   if (!e.hasSuperuserAuth()) {
     const previous = e.app.findRecordById("business_accounts", e.record.id)
-    if (e.record.get("plan") !== previous.get("plan")) {
-      e.record.set("plan", previous.get("plan"))
-    }
+    e.record.set("plan", previous.get("plan"))
+    e.record.set("suspended", previous.get("suspended"))
+    e.record.set("verified", previous.get("verified"))
   }
   e.next()
 }, "business_accounts")
@@ -517,11 +524,13 @@ onRecordAfterCreateSuccess((e) => {
   e.next()
 }, "business_accounts")
 
-// Mismo cuidado en la creación: nadie arranca en "pro" mandando el campo a
-// mano en el alta.
+// Mismo cuidado en la creación: nadie arranca en "pro", "verificado" ni
+// "suspendido" mandando esos campos a mano en el alta.
 onRecordCreateRequest((e) => {
-  if (!e.hasSuperuserAuth() && e.record.get("plan")) {
-    e.record.set("plan", "")
+  if (!e.hasSuperuserAuth()) {
+    if (e.record.get("plan")) e.record.set("plan", "")
+    e.record.set("suspended", false)
+    e.record.set("verified", false)
   }
   e.next()
 }, "business_accounts")
@@ -548,6 +557,9 @@ onRecordCreateRequest((e) => {
     // mandado el cliente (el form ni deja elegir otra cosa, pero esto lo
     // hace real del lado del servidor también).
     e.record.set("duration_days", "7")
+    // Destacar (featured_until) es un producto pago -- un free no puede
+    // mandarlo a mano en el alta para quedar promocionado gratis.
+    e.record.set("featured_until", "")
 
     const activeCount = e.app.countRecords(
       "job_posts",
@@ -597,6 +609,22 @@ onRecordCreate((e) => {
   const expiresAt = new Date(Date.now() + days * 24 * 60 * 60 * 1000)
   e.record.set("expires_at", expiresAt.toISOString())
   e.record.set("active", true)
+  e.next()
+}, "job_posts")
+
+// Protege los campos PAGOS de job_posts en el update: featured_until (destacar
+// = boost pago) y expires_at (duración / extensión, también paga) los setea
+// SOLO el webhook de MercadoPago con auth de superusuario. Sin esto, el dueño
+// podía pegarle un update directo a PocketBase y quedar promocionado o extender
+// su búsqueda gratis (bypass de los productos pagos y de los 7 días del plan
+// free). El form de edición normal NO manda estos campos, así que se fuerzan al
+// valor previo salvo superusuario -- las ediciones legítimas no se ven afectadas.
+onRecordUpdateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    const previous = e.app.findRecordById("job_posts", e.record.id)
+    e.record.set("featured_until", previous.get("featured_until"))
+    e.record.set("expires_at", previous.get("expires_at"))
+  }
   e.next()
 }, "job_posts")
 

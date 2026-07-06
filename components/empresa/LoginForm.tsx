@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { pb } from "@/lib/pocketbase";
 import { stashGoogleProfile } from "@/lib/google-profile-stash";
 import { resolveBusinessAccess } from "@/lib/business-access";
+import { safeNextPath } from "@/lib/safe-next-path";
 import { GoogleButton } from "@/components/ui/GoogleButton";
 import { Card } from "@/components/ui/Card";
 
@@ -24,12 +25,11 @@ export function LoginForm() {
       const userId = client.authStore.record?.id;
       const access = userId ? await resolveBusinessAccess(client, userId) : null;
       // `next` = a dónde volver tras loguear (ej. el formulario de crear
-      // búsqueda que la empresa empezó sin cuenta). Solo rutas internas
-      // (empieza con "/") para no habilitar open-redirect. Si ya tiene
-      // negocio, va directo a `next`; si no, pasa por registro llevándose el
-      // `next` para volver al final.
-      const rawNext = new URLSearchParams(window.location.search).get("next");
-      const next = rawNext && rawNext.startsWith("/") ? rawNext : null;
+      // búsqueda que la empresa empezó sin cuenta). safeNextPath solo deja
+      // pasar paths internos seguros (bloquea //evil.com, javascript:, etc.);
+      // "" = no había un next válido. Si ya tiene negocio, va directo a `next`;
+      // si no, pasa por registro llevándose el `next` para volver al final.
+      const next = safeNextPath(new URLSearchParams(window.location.search).get("next"), "");
       if (access) {
         router.push(next || "/empresa/panel");
       } else {
