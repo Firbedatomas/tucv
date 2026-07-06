@@ -6,6 +6,7 @@ import { waLink } from "@/lib/whatsapp";
 import { emptyCandidateFilters, matchesCandidateFilters, narrowByZoneCascade, type CandidateFilters } from "@/lib/candidate-filters";
 import { CATEGORIES, labelFor } from "@/lib/constants";
 import { experienceYearsLabel } from "@/lib/experience-display";
+import { trackEvent } from "@/lib/track";
 import { Card } from "@/components/ui/Card";
 import { CandidateFilterBar } from "@/components/empresa/CandidateFilterBar";
 import { CandidateAvatar, CandidateCardBody, type CandidateLike } from "@/components/empresa/CandidateCardBody";
@@ -121,6 +122,23 @@ export function CandidateSearch({
   // Estado de solicitud de contacto por candidato: pending / accepted / rejected.
   const [contactStatus, setContactStatus] = useState<Map<string, string>>(new Map());
 
+  // Wrapper de filtros: detecta qué filtro se ACTIVÓ (cambió a un valor no
+  // vacío) para medir uso de filtros en el embudo. Luego setea normalmente.
+  function handleFiltersChange(next: CandidateFilters) {
+    (Object.keys(next) as (keyof CandidateFilters)[]).forEach((k) => {
+      const after = next[k];
+      const active = after !== "" && after !== false && after !== 0 && after != null;
+      if (filters[k] !== after && active) trackEvent("recruiter_filtro", { filtro: String(k) });
+    });
+    setFilters(next);
+  }
+
+  // Medición del embudo recruiter (24/48h): "entró al panel" es el top del
+  // embudo -> permite ver el drop-off hasta abrir_perfil/visto/guardar/contactar.
+  useEffect(() => {
+    trackEvent("recruiter_panel");
+  }, []);
+
   // Los candidatos ya NO se leen directo de PocketBase (eso mandaba whatsapp/
   // fecha-nac/cv de todos a cualquier logueado). Se piden a un endpoint server
   // que devuelve una proyección segura (sin whatsapp; edad en vez de DOB).
@@ -161,6 +179,7 @@ export function CandidateSearch({
   // aparecer en el listado. No toca saved_candidates.
   async function markViewed(candidateId: string) {
     if (reviewed.has(candidateId)) return;
+    trackEvent("recruiter_marcar_visto");
     setReviewed((prev) => new Map(prev).set(candidateId, "pending"));
     try {
       const rec = await pb()
@@ -206,6 +225,7 @@ export function CandidateSearch({
   }, []);
 
   async function requestContact(candidateId: string, jobPostId: string, reason: string) {
+    trackEvent("recruiter_contactar", { via: "solicitud" });
     // Optimista: mostramos "pendiente" al toque; revertimos si el server falla.
     setContactStatus((prev) => new Map(prev).set(candidateId, "pending"));
     try {
@@ -230,6 +250,7 @@ export function CandidateSearch({
   // solicitud aceptada); el server valida y audita (contact_revealed). El número
   // ya no viaja en el listado.
   async function revealContact(candidateId: string) {
+    trackEvent("recruiter_contactar", { via: "revelar_whatsapp" });
     try {
       const res = await fetch("/api/contact-requests/reveal", {
         method: "POST",
@@ -275,6 +296,7 @@ export function CandidateSearch({
   }
 
   async function saveCandidate(candidateId: string) {
+    trackEvent("recruiter_guardar");
     try {
       const rec = await pb()
         .collection("saved_candidates")
@@ -484,7 +506,10 @@ export function CandidateSearch({
         <select
           id="cand-sort"
           value={sortBy}
-          onChange={(e) => setSortBy(e.target.value)}
+          onChange={(e) => {
+            setSortBy(e.target.value);
+            trackEvent("recruiter_orden", { orden: e.target.value });
+          }}
           className="rounded-[var(--tucv-radius)] px-3 py-2 text-sm flex-1 min-w-0"
           style={{ border: "2px solid var(--tucv-border)", backgroundColor: "var(--tucv-surface)", color: "var(--tucv-text)" }}
         >
@@ -496,7 +521,7 @@ export function CandidateSearch({
         </select>
       </div>
 
-      <CandidateFilterBar value={filters} onChange={setFilters} />
+      <CandidateFilterBar value={filters} onChange={handleFiltersChange} />
 
       {filtered.length === 0 ? (
         <Card className="text-center">
@@ -551,7 +576,10 @@ export function CandidateSearch({
                           const opening = !expanded;
                           setExpandedId(opening ? c.id : null);
                           // Marcar visto al ABRIR el perfil (no al cerrarlo ni por listarse).
-                          if (opening) markViewed(c.id);
+                          if (opening) {
+                            trackEvent("recruiter_abrir_perfil");
+                            markViewed(c.id);
+                          }
                         }}
                         className="text-xs font-semibold px-3 py-1.5 rounded-[var(--tucv-radius)] border"
                         style={{ borderColor: "var(--tucv-border)", color: "var(--tucv-text)" }}
