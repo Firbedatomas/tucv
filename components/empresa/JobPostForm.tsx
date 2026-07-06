@@ -316,6 +316,17 @@ export function JobPostForm({
         return;
       }
 
+      // Fill-first: si llegaste hasta acá sin cuenta/negocio (entraste por
+      // "Publicar búsqueda gratis" sin loguear), la búsqueda ya quedó
+      // autoguardada en localStorage (draftKey "new", ver el autoguardado
+      // arriba). Te mandamos a iniciar sesión y volvés a ESTE formulario con
+      // todo lo que cargaste intacto para publicar -- nunca se pierde la
+      // intención ni lo escrito.
+      if (!businessId) {
+        window.location.href = `/empresa/login?next=${encodeURIComponent("/empresa/busquedas/nueva")}`;
+        return;
+      }
+
       // El plan gratis solo puede tener 1 búsqueda activa a la vez, Multi-
       // sucursal hasta 10, y Pro sin límite -- esa es la razón real para
       // subir de plan, no un tope arbitrario. Chequeamos acá (no solo con

@@ -9,17 +9,22 @@ import { JobPostSellingPoints } from "@/components/empresa/JobPostSellingPoints"
 
 export default function NuevaBusquedaPage() {
   const router = useRouter();
-  const { isValid, business, role } = useBusinessAuth();
+  // redirectIfLoggedOut:false a propósito -> el formulario se puede COMPLETAR
+  // sin cuenta (fill-first). El login/registro se pide recién al "Publicar"
+  // (ver JobPostForm.handleSubmit), y se vuelve acá con el draft intacto. Así
+  // el CTA "Publicar búsqueda gratis" nunca pierde la intención ni termina en
+  // un panel vacío.
+  const { isAuthenticated, business, role } = useBusinessAuth({ redirectIfLoggedOut: false });
 
-  // Crear/editar búsquedas es exclusivo de quien puede gestionar búsquedas
-  // (hoy solo el dueño; ver canManageJobs). Un colaborador que llegue directo
-  // a esta URL no puede hacer nada útil acá (la regla de PocketBase igual
-  // rechazaría el create), mejor mandarlo de vuelta.
+  // Un colaborador logueado que NO puede gestionar búsquedas (hoy solo el
+  // dueño; ver canManageJobs) no tiene nada que hacer acá -> al panel. Un
+  // visitante sin cuenta SÍ puede cargar (recién al publicar se le pide login).
+  const isBlockedCollaborator = isAuthenticated && !!business && !!role && !canManageJobs(role);
   useEffect(() => {
-    if (isValid && role && !canManageJobs(role)) router.replace("/empresa/panel");
-  }, [isValid, role, router]);
+    if (isBlockedCollaborator) router.replace("/empresa/panel");
+  }, [isBlockedCollaborator, router]);
 
-  if (!isValid || !business || !canManageJobs(role)) return null;
+  if (isBlockedCollaborator) return null;
 
   return (
     <main className="flex-1 px-4 py-10 sm:py-14">
@@ -30,13 +35,15 @@ export default function NuevaBusquedaPage() {
             Vas a recibir postulantes ordenados en tu panel, sin CVs sueltos por mail.
           </p>
           <JobPostForm
-            businessId={business.id}
-            businessName={business.business_name}
-            businessPlan={business.plan}
+            // Sin negocio todavía (visitante fill-first): businessId vacío. El
+            // submit detecta esto y manda a login antes de crear nada.
+            businessId={business?.id ?? ""}
+            businessName={business?.business_name ?? ""}
+            businessPlan={business?.plan ?? "free"}
             // Vía el proxy same-origin (no la URL directa de pb.tucv.ar):
             // esa no tiene headers CORS y el <canvas> de la plantilla
             // imprimible no puede leerla sin eso.
-            businessLogoUrl={business.logoUrl ? `/api/business-logo/${business.id}` : null}
+            businessLogoUrl={business?.logoUrl ? `/api/business-logo/${business.id}` : null}
           />
         </div>
 

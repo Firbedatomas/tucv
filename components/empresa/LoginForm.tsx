@@ -23,7 +23,18 @@ export function LoginForm() {
       if (googleName) stashGoogleProfile({ name: googleName });
       const userId = client.authStore.record?.id;
       const access = userId ? await resolveBusinessAccess(client, userId) : null;
-      router.push(access ? "/empresa/panel" : "/empresa/registro");
+      // `next` = a dónde volver tras loguear (ej. el formulario de crear
+      // búsqueda que la empresa empezó sin cuenta). Solo rutas internas
+      // (empieza con "/") para no habilitar open-redirect. Si ya tiene
+      // negocio, va directo a `next`; si no, pasa por registro llevándose el
+      // `next` para volver al final.
+      const rawNext = new URLSearchParams(window.location.search).get("next");
+      const next = rawNext && rawNext.startsWith("/") ? rawNext : null;
+      if (access) {
+        router.push(next || "/empresa/panel");
+      } else {
+        router.push(next ? `/empresa/registro?next=${encodeURIComponent(next)}` : "/empresa/registro");
+      }
     } catch {
       setError("No pudimos iniciar sesión con Google. Probá de nuevo.");
       setSubmitting(false);

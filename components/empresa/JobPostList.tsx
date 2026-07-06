@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useState, type ReactNode } from "react";
 import { pb } from "@/lib/pocketbase";
 import { Card } from "@/components/ui/Card";
 import { LinkButton } from "@/components/ui/Button";
@@ -96,17 +96,33 @@ export function JobPostList({
   }
 
   if (state.status === "empty") {
+    if (readOnly) {
+      return (
+        <Card className="text-center">
+          <h2 className="font-bold mb-2">Todavía no hay ninguna búsqueda</h2>
+        </Card>
+      );
+    }
+    // Activación de empresa nueva: los 4 pasos para arrancar. El paso 1 es la
+    // acción primaria; el QR y el WhatsApp quedan como próximos pasos (se
+    // desbloquean al publicar); "ver candidatos" ya está disponible. Esto
+    // reemplaza el panel vacío sin norte.
     return (
-      <Card className="text-center">
-        <h2 className="font-bold mb-2">Todavía no {readOnly ? "hay" : "creaste"} ninguna búsqueda</h2>
-        {!readOnly && (
-          <>
-            <p className="text-sm mb-4" style={{ color: "var(--tucv-muted)" }}>
-              Creá una búsqueda, generá el QR y empezá a recibir postulantes ordenados.
-            </p>
-            <LinkButton href="/empresa/busquedas/nueva">Crear búsqueda</LinkButton>
-          </>
-        )}
+      <Card>
+        <h2 className="font-bold text-lg mb-1">Poné tu primera búsqueda a trabajar</h2>
+        <p className="text-sm mb-5" style={{ color: "var(--tucv-muted)" }}>
+          4 pasos para empezar a recibir postulantes de tu zona:
+        </p>
+        <ActivationStep n={1} active title="Publicá tu primera búsqueda" hint="Gratis, en 2 minutos.">
+          <LinkButton href="/empresa/busquedas/nueva">Publicar búsqueda</LinkButton>
+        </ActivationStep>
+        <ActivationStep n={2} title="Imprimí el QR y pegalo en la vidriera" hint="Se genera solo al publicar." />
+        <ActivationStep n={3} title="Compartilo por WhatsApp" hint="A tus contactos y grupos del barrio." />
+        <ActivationStep n={4} title="Mirá los candidatos de tu zona" hint="Ya hay gente cerca tuyo.">
+          <LinkButton href="/empresa/candidatos" variant="secondary">
+            Ver candidatos cerca
+          </LinkButton>
+        </ActivationStep>
       </Card>
     );
   }
@@ -123,6 +139,53 @@ export function JobPostList({
       businessLogoUrl={businessLogoUrl}
       readOnly={readOnly}
     />
+  );
+}
+
+// Un paso de la activación de empresa nueva. `active` = el paso accionable
+// ahora (número resaltado, título a contraste pleno); los pendientes van
+// apagados (número en outline, título en muted) para que la jerarquía empuje
+// al paso 1 sin ruido.
+function ActivationStep({
+  n,
+  title,
+  hint,
+  active = false,
+  children,
+}: {
+  n: number;
+  title: string;
+  hint: string;
+  active?: boolean;
+  children?: ReactNode;
+}) {
+  return (
+    <div
+      className="flex gap-3 py-3"
+      style={{ borderTop: n > 1 ? "1px solid var(--tucv-border)" : undefined }}
+    >
+      <div
+        className="shrink-0 flex items-center justify-center text-sm font-bold rounded-full"
+        style={{
+          width: 28,
+          height: 28,
+          backgroundColor: active ? "var(--tucv-primary)" : "transparent",
+          color: active ? "var(--tucv-primary-text)" : "var(--tucv-muted)",
+          border: active ? "none" : "1.5px solid var(--tucv-border)",
+        }}
+      >
+        {n}
+      </div>
+      <div className="min-w-0 flex-1">
+        <p className="font-semibold text-sm" style={{ color: active ? "var(--tucv-text)" : "var(--tucv-muted)" }}>
+          {title}
+        </p>
+        <p className="text-xs" style={{ color: "var(--tucv-muted)", marginBottom: children ? 8 : 0 }}>
+          {hint}
+        </p>
+        {children}
+      </div>
+    </div>
   );
 }
 

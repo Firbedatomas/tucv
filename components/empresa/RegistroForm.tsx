@@ -46,8 +46,10 @@ export function RegistroForm() {
     if (!userId) return;
     resolveBusinessAccess(pb(), userId)
       .then((access) => {
-        if (access) router.replace("/empresa/panel");
-        else setCheckingExisting(false);
+        if (access) {
+          const rawNext = new URLSearchParams(window.location.search).get("next");
+          router.replace(rawNext && rawNext.startsWith("/") ? rawNext : "/empresa/panel");
+        } else setCheckingExisting(false);
       })
       .catch(() => setCheckingExisting(false));
   }, [userId, router]);
@@ -115,6 +117,11 @@ export function RegistroForm() {
       await pb().collection("business_accounts").create(formData);
       trackEvent("Empresa: registro completado");
       emitConversion("company_registered");
+      // `next` = a dónde volver tras registrarse (ej. el formulario de crear
+      // búsqueda que empezó sin cuenta). Solo rutas internas. Sin `next`, al
+      // panel como siempre.
+      const rawNext = new URLSearchParams(window.location.search).get("next");
+      const next = rawNext && rawNext.startsWith("/") ? rawNext : null;
       // Recarga dura a propósito (no router.push): el Navbar ya está montado
       // desde antes de crear el negocio, con isAuthenticated=true pero sin
       // business_accounts todavía. Su chequeo de "hasBusiness" solo corre
@@ -122,7 +129,7 @@ export function RegistroForm() {
       // nunca se entera de que el negocio se acaba de crear y se queda
       // mostrando el nav de postulante hasta un reload. Es la única
       // transición del flujo donde vale la pena perder la navegación SPA.
-      window.location.href = "/empresa/panel";
+      window.location.href = next || "/empresa/panel";
       return;
     } catch {
       setSubmitError("No pudimos guardar los datos de tu negocio. Probá de nuevo.");
