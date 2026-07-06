@@ -64,9 +64,9 @@ export default async function OportunidadesPage() {
                         )}
                       </div>
                       <div className="min-w-0 flex-1">
-                        <p className="font-bold truncate">{o.role}</p>
+                        <p className="font-bold truncate">{o.businessName}</p>
                         <p className="text-sm truncate" style={{ color: "var(--tucv-muted)" }}>
-                          {o.businessName}
+                          {o.role}
                           {o.rubro ? ` · ${o.rubro}` : ""}
                         </p>
                       </div>
