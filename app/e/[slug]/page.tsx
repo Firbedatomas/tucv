@@ -73,11 +73,7 @@ export default async function SourcedBusinessPage({ params }: { params: Promise<
           >
             <strong>Perfil no verificado.</strong> Lo armamos a partir de {sourceLabel} para conectar a esta
             empresa con candidatos de su zona. ¿Sos el dueño?{" "}
-            <a
-              href={`/empresa/login?next=${encodeURIComponent(`/e/${biz.slug}`)}`}
-              className="font-bold underline"
-              style={{ color: "var(--tucv-text)" }}
-            >
+            <a href={`/e/${biz.slug}/reclamar`} className="font-bold underline" style={{ color: "var(--tucv-text)" }}>
               Reclamá tu página gratis
             </a>
             .
