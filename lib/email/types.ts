@@ -14,7 +14,8 @@ export type EmailType =
   | "candidate_invitation"
   | "contact_request"
   | "candidate_match_digest"
-  | "team_invite";
+  | "team_invite"
+  | "campaign";
 
 export type EmailStatus =
   | "queued"

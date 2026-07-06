@@ -75,9 +75,12 @@ export default async function AdminCorreoPage({
     <div>
       <div className="flex items-center justify-between mb-4">
         <h1 className="text-2xl font-bold">Correo</h1>
-        <LinkButton href="/admin/correo/plantillas" variant="secondary">
-          Plantillas
-        </LinkButton>
+        <div className="flex gap-2">
+          <LinkButton href="/admin/correo/campanas">Nueva campaña</LinkButton>
+          <LinkButton href="/admin/correo/plantillas" variant="secondary">
+            Plantillas
+          </LinkButton>
+        </div>
       </div>
 
       <div className="flex flex-wrap gap-2 mb-6">

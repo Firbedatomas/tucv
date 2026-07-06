@@ -33,6 +33,10 @@ const GATES: Partial<Record<EmailType, (prefs: NotificationPreferences) => boole
   // apagó no recibe este tampoco).
   candidate_match_digest: (prefs) =>
     prefs.companyDigestFrequency === "daily" || prefs.applicationsFrequency === "daily",
+  // Campañas (envío masivo desde /admin/correo): son marketing puro -> solo
+  // salen si el usuario NO se dio de baja de marketing. La supresión y el
+  // unsubscribe se chequean además al encolar.
+  campaign: (prefs) => prefs.marketing,
 };
 
 export type SendResult = {

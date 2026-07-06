@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { deliverEmail } from "@/lib/email/send";
-import { listDueEmails, removeFromQueue } from "@/lib/email/queue";
+import { listDueEmails, removeFromQueue, rescheduleEmail } from "@/lib/email/queue";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 
@@ -19,12 +19,14 @@ export async function POST(req: Request) {
   // pega seguido, así una cola grande se drena en varias corridas.
   const BATCH_LIMIT = 100;
   const RATE_DELAY_MS = 120;
+  const MAX_ATTEMPTS = 4; // total de intentos antes de rendirse
   const sleep = (ms: number) => new Promise((r) => setTimeout(r, ms));
 
   const now = new Date();
   const due = await listDueEmails(now, BATCH_LIMIT);
   let sent = 0;
-  let failed = 0;
+  let retried = 0;
+  let gaveUp = 0;
 
   for (let i = 0; i < due.length; i++) {
     const email = due[i];
@@ -37,18 +39,31 @@ export async function POST(req: Request) {
       rendered: email.rendered,
       unsubscribeUrl: email.unsubscribeUrl,
     });
-    if (result.sent) sent += 1;
-    else if (result.reason === "error") failed += 1;
-    // Se saca de la cola pase lo que pase (enviado, suprimido, o error de
-    // Resend): sin campo de reintentos, dejarlo reintentando lo atascaría para
-    // siempre. El evento en email_events ya deja registro. (El reintento con
-    // backoff acotado queda para la fase de campañas, que suma `attempts`.)
-    await removeFromQueue(email.id);
+    if (result.sent) {
+      sent += 1;
+      await removeFromQueue(email.id);
+    } else if (result.reason === "error") {
+      // Error TRANSITORIO de Resend: reintentar con backoff creciente en vez de
+      // perder el email. Tras MAX_ATTEMPTS se descarta (el evento en
+      // email_events ya deja registro de cada intento fallido).
+      const nextAttempts = email.attempts + 1;
+      if (nextAttempts < MAX_ATTEMPTS) {
+        retried += 1;
+        const backoffMin = Math.min(nextAttempts * 20, 240);
+        await rescheduleEmail(email.id, nextAttempts, new Date(now.getTime() + backoffMin * 60000));
+      } else {
+        gaveUp += 1;
+        await removeFromQueue(email.id);
+      }
+    } else {
+      // suppressed / preference / no_client: permanente, no tiene sentido reintentar.
+      await removeFromQueue(email.id);
+    }
     if (i < due.length - 1) await sleep(RATE_DELAY_MS);
   }
 
   return NextResponse.json({
     ok: true,
-    summary: { processed: due.length, sent, failed, batchLimit: BATCH_LIMIT, moreLikely: due.length === BATCH_LIMIT },
+    summary: { processed: due.length, sent, retried, gaveUp, batchLimit: BATCH_LIMIT, moreLikely: due.length === BATCH_LIMIT },
   });
 }

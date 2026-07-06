@@ -9,6 +9,7 @@ export type QueuedEmail = {
   to: string;
   rendered: RenderedEmail;
   unsubscribeUrl?: string;
+  attempts: number;
 };
 
 export async function enqueueEmail(params: {
@@ -47,10 +48,21 @@ export async function listDueEmails(now: Date, limit = 200): Promise<QueuedEmail
     to: r.to as string,
     rendered: { subject: r.subject as string, html: r.html as string, text: (r.text_body as string) || "" },
     unsubscribeUrl: (r.unsubscribe_url as string) || undefined,
+    attempts: (r.attempts as number) || 0,
   }));
 }
 
 export async function removeFromQueue(id: string): Promise<void> {
   const admin = await pbAdmin();
   await admin.collection("email_queue").delete(id).catch(() => null);
+}
+
+// Reintento con backoff ante error transitorio: sube attempts y reprograma el
+// envío para más adelante. El flush lo vuelve a tomar cuando scheduled_for pase.
+export async function rescheduleEmail(id: string, attempts: number, nextAt: Date): Promise<void> {
+  const admin = await pbAdmin();
+  await admin
+    .collection("email_queue")
+    .update(id, { attempts, scheduled_for: nextAt.toISOString() })
+    .catch(() => null);
 }
