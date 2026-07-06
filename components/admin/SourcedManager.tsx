@@ -21,6 +21,7 @@ export type SourcedRow = {
   jobCount: number;
   interestCount: number;
   roleExample: string;
+  logoUrl: string;
 };
 
 const STATUS_LABEL: Record<string, { label: string; color: string }> = {
@@ -48,6 +49,17 @@ export function SourcedManager({ rows }: { rows: SourcedRow[] }) {
   const [showForm, setShowForm] = useState(false);
   const [outreachId, setOutreachId] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [logoEditId, setLogoEditId] = useState<string | null>(null);
+
+  async function setLogo(id: string, url: string) {
+    await fetch(`/api/admin/sourced/${id}`, {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ logoUrl: url }),
+    });
+    setLogoEditId(null);
+    router.refresh();
+  }
 
   const totals = {
     detected: rows.filter((r) => r.status === "detected").length,
@@ -117,7 +129,22 @@ export function SourcedManager({ rows }: { rows: SourcedRow[] }) {
             return (
               <div key={r.id} style={{ borderTop: i > 0 ? "1px solid var(--tucv-border)" : undefined }}>
                 <div className="flex items-center justify-between gap-3 px-4 py-3 flex-wrap">
-                  <div className="min-w-0">
+                  <div className="flex items-center gap-3 min-w-0">
+                    <button
+                      type="button"
+                      onClick={() => setLogoEditId(logoEditId === r.id ? null : r.id)}
+                      title="Editar logo"
+                      className="shrink-0 w-10 h-10 rounded-[var(--tucv-radius)] flex items-center justify-center text-sm font-bold overflow-hidden"
+                      style={{ backgroundColor: "var(--tucv-bg)", border: r.logoUrl ? "1.5px solid var(--tucv-border)" : "1.5px dashed var(--tucv-border)", color: "var(--tucv-muted)" }}
+                    >
+                      {r.logoUrl ? (
+                        // eslint-disable-next-line @next/next/no-img-element
+                        <img src={r.logoUrl} alt="" className="w-full h-full" style={{ objectFit: "contain" }} />
+                      ) : (
+                        "+"
+                      )}
+                    </button>
+                    <div className="min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="font-bold truncate">{r.name}</span>
                       <span className="text-xs font-semibold" style={{ color: st.color }}>{st.label}</span>
@@ -127,6 +154,7 @@ export function SourcedManager({ rows }: { rows: SourcedRow[] }) {
                       <strong style={{ color: r.interestCount > 0 ? "var(--tucv-text)" : "var(--tucv-muted)" }}>
                         {r.interestCount} interesado{r.interestCount !== 1 ? "s" : ""}
                       </strong>
+                    </div>
                     </div>
                   </div>
                   <div className="flex gap-1.5 flex-wrap">
@@ -146,6 +174,12 @@ export function SourcedManager({ rows }: { rows: SourcedRow[] }) {
                     </button>
                   </div>
                 </div>
+
+                {logoEditId === r.id && (
+                  <div className="px-4 pb-4">
+                    <LogoEditor current={r.logoUrl} onSave={(url) => setLogo(r.id, url)} onCancel={() => setLogoEditId(null)} />
+                  </div>
+                )}
 
                 {outreachId === r.id && (
                   <div className="px-4 pb-4">
@@ -252,5 +286,31 @@ function SeedForm({ onDone }: { onDone: () => void }) {
         <Button type="submit" disabled={busy}>{busy ? "Guardando..." : "Sembrar empresa"}</Button>
       </form>
     </Card>
+  );
+}
+
+function LogoEditor({ current, onSave, onCancel }: { current: string; onSave: (url: string) => void; onCancel: () => void }) {
+  const [url, setUrl] = useState(current);
+  return (
+    <div className="flex gap-2 items-center flex-wrap">
+      <input
+        className={inputClass}
+        style={{ ...inputStyle, maxWidth: 360 }}
+        placeholder="URL del logo (https://...)"
+        value={url}
+        onChange={(e) => setUrl(e.target.value)}
+      />
+      <button
+        type="button"
+        onClick={() => onSave(url.trim())}
+        className="text-sm font-semibold px-3 py-2 rounded-[var(--tucv-radius)]"
+        style={{ backgroundColor: "var(--tucv-accent)", border: "1.5px solid var(--tucv-border)" }}
+      >
+        Guardar
+      </button>
+      <button type="button" onClick={onCancel} className="text-sm px-3 py-2 rounded-[var(--tucv-radius)]" style={{ color: "var(--tucv-muted)" }}>
+        Cancelar
+      </button>
+    </div>
   );
 }

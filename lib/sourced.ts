@@ -12,6 +12,7 @@ export type SourcedJobPublic = {
   rubro: string;
   snippet: string;
   detectedAt: string;
+  interestCount: number;
 };
 export type SourcedBusinessPublic = {
   id: string;
@@ -20,9 +21,13 @@ export type SourcedBusinessPublic = {
   rubro: string;
   cityZone: string;
   sourceType: string;
+  sourceUrl: string;
+  website: string;
+  instagram: string;
   detectedAt: string;
   claimed: boolean;
   logoUrl: string;
+  totalInterest: number;
   jobs: SourcedJobPublic[];
 };
 
@@ -46,6 +51,30 @@ export async function getSourcedBusinessBySlug(slug: string): Promise<SourcedBus
     })
     .catch(() => []);
 
+  // Interés por búsqueda (prueba social). Traemos todos los intereses de las
+  // búsquedas de esta empresa de una y contamos en memoria.
+  const interestByJob = new Map<string, number>();
+  if (jobRows.length) {
+    const or = jobRows.map((j) => `sourced_job = "${j.id}"`).join(" || ");
+    const interests = await admin
+      .collection("candidate_interest")
+      .getFullList({ filter: or, requestKey: null })
+      .catch(() => []);
+    for (const it of interests) {
+      const k = it.sourced_job as string;
+      interestByJob.set(k, (interestByJob.get(k) ?? 0) + 1);
+    }
+  }
+
+  const jobs = jobRows.map((j) => ({
+    id: j.id as string,
+    role: j.role as string,
+    rubro: (j.rubro as string) || "",
+    snippet: (j.description_snippet as string) || "",
+    detectedAt: j.created as string,
+    interestCount: interestByJob.get(j.id) ?? 0,
+  }));
+
   return {
     id: biz.id as string,
     slug: biz.public_slug as string,
@@ -53,16 +82,14 @@ export async function getSourcedBusinessBySlug(slug: string): Promise<SourcedBus
     rubro: (biz.rubro as string) || "",
     cityZone: (biz.city_zone as string) || "",
     sourceType: (biz.source_type as string) || "",
+    sourceUrl: (biz.source_url as string) || "",
+    website: (biz.website as string) || "",
+    instagram: (biz.instagram as string) || "",
     detectedAt: biz.created as string,
     claimed: Boolean(biz.claimed_business),
     logoUrl: (biz.logo_url as string) || "",
-    jobs: jobRows.map((j) => ({
-      id: j.id as string,
-      role: j.role as string,
-      rubro: (j.rubro as string) || "",
-      snippet: (j.description_snippet as string) || "",
-      detectedAt: j.created as string,
-    })),
+    totalInterest: jobs.reduce((s, j) => s + j.interestCount, 0),
+    jobs,
   };
 }
 

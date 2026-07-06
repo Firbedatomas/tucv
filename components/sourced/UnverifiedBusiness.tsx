@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { pb } from "@/lib/pocketbase";
 
-type Job = { id: string; role: string; rubro: string; snippet: string; detectedAt: string };
+type Job = { id: string; role: string; rubro: string; snippet: string; detectedAt: string; interestCount: number };
 
 export function UnverifiedBusiness({
   businessName,
@@ -61,7 +61,17 @@ export function UnverifiedBusiness({
             className="rounded-[var(--tucv-radius)] p-4"
             style={{ border: "2px solid var(--tucv-border)", backgroundColor: "var(--tucv-surface)" }}
           >
-            <p className="font-bold">{job.role}</p>
+            <div className="flex items-center justify-between gap-2">
+              <p className="font-bold">{job.role}</p>
+              {(() => {
+                const n = job.interestCount + (done ? 1 : 0);
+                return n > 0 ? (
+                  <span className="shrink-0 text-xs font-semibold" style={{ color: "#128C4A" }}>
+                    {n} interesado{n !== 1 ? "s" : ""}
+                  </span>
+                ) : null;
+              })()}
+            </div>
             {(job.rubro || job.snippet) && (
               <p className="text-sm mt-0.5" style={{ color: "var(--tucv-muted)" }}>
                 {job.snippet || job.rubro}

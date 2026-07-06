@@ -16,6 +16,11 @@ export async function PATCH(req: Request, { params }: { params: Promise<{ id: st
   const patch: Record<string, unknown> = {};
   if (typeof body?.status === "string" && STATUSES.includes(body.status)) patch.status = body.status;
   if (typeof body?.notes === "string") patch.notes = body.notes.slice(0, 1000);
+  // logo_url: solo aceptamos http(s) (evita javascript:/data: en un src público).
+  if (typeof body?.logoUrl === "string") {
+    const u = body.logoUrl.trim();
+    if (u === "" || /^https?:\/\//i.test(u)) patch.logo_url = u.slice(0, 500);
+  }
   if (Object.keys(patch).length === 0) return NextResponse.json({ error: "Nada para actualizar." }, { status: 400 });
 
   const admin = await pbAdmin();

@@ -34,6 +34,7 @@ export default async function AdminCaptacionPage() {
       jobCount: bizJobs.length,
       interestCount,
       roleExample: (bizJobs[0]?.role as string) || "",
+      logoUrl: (b.logo_url as string) || "",
     };
   });
 

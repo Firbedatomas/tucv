@@ -61,15 +61,18 @@ function validPhone(d) {
 function extract(html, pageUrl) {
   const out = { name: "", email: "", whatsapp: "", roles: [], logo: "" };
 
-  // Logo / imagen oficial: preferimos un <img> con "logo" en src/alt/class; si no,
-  // og:image (suele ser el logo o una imagen de marca). Se resuelve a absoluta.
+  // Logo / imagen oficial, en orden de preferencia. Se resuelve a URL absoluta.
+  // Con los fallbacks (apple-touch-icon / favicon) casi ningún sitio queda sin
+  // imagen -- todos tienen al menos un favicon.
   let logo = "";
-  const logoImg = html.match(/<img[^>]*\b(?:class|alt|id)=["'][^"']*logo[^"']*["'][^>]*>/i) || html.match(/<img[^>]*\bsrc=["'][^"']*logo[^"']*["'][^>]*>/i);
-  if (logoImg) { const s = logoImg[0].match(/\bsrc=["']([^"']+)["']/i); if (s) logo = s[1]; }
-  if (!logo) {
-    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
-    if (og) logo = og[1];
-  }
+  const tryers = [
+    () => (html.match(/<img[^>]*\b(?:class|alt|id)=["'][^"']*logo[^"']*["'][^>]*>/i) || html.match(/<img[^>]*\bsrc=["'][^"']*logo[^"']*["'][^>]*>/i))?.[0].match(/\bsrc=["']([^"']+)["']/i)?.[1],
+    () => html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i)?.[1] || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i)?.[1],
+    () => html.match(/<meta[^>]+name=["']twitter:image["'][^>]+content=["']([^"']+)["']/i)?.[1],
+    () => html.match(/<link[^>]+rel=["'][^"']*apple-touch-icon[^"']*["'][^>]+href=["']([^"']+)["']/i)?.[1] || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'][^"']*apple-touch-icon[^"']*["']/i)?.[1],
+    () => html.match(/<link[^>]+rel=["'](?:shortcut )?icon["'][^>]+href=["']([^"']+)["']/i)?.[1] || html.match(/<link[^>]+href=["']([^"']+)["'][^>]+rel=["'](?:shortcut )?icon["']/i)?.[1],
+  ];
+  for (const t of tryers) { const v = t(); if (v) { logo = v; break; } }
   if (logo) { try { out.logo = new URL(logo, pageUrl).href.slice(0, 500); } catch {} }
 
   // schema.org (Organization + JobPosting) en JSON-LD
