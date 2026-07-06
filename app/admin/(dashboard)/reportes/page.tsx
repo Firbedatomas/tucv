@@ -1,4 +1,5 @@
 import { pbAdmin } from "@/lib/pocketbase-admin";
+import { Card } from "@/components/ui/Card";
 import { DataTable } from "@/components/admin/DataTable";
 import { ModerateControls } from "@/components/admin/ModerateControls";
 
@@ -113,6 +114,15 @@ export default async function AdminReportesPage() {
           {profileReports.totalItems + businessReports.totalItems + contentReports.totalItems} en total
         </span>
       </div>
+
+      {profileReports.totalItems + businessReports.totalItems + contentReports.totalItems === 0 && (
+        <Card>
+          <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
+            No hay reportes pendientes de moderación. Cuando alguien reporte un perfil, una búsqueda,
+            una referencia o una recomendación, aparece acá.
+          </p>
+        </Card>
+      )}
 
       <h2 className="text-sm font-bold uppercase tracking-wide mb-2" style={{ color: "var(--tucv-muted)" }}>
         Perfiles de postulantes

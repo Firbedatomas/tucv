@@ -96,18 +96,23 @@ export async function getGoalCounts(
   goals: string[],
   dateRange: string | [string, string] = "30d"
 ): Promise<GoalCounts | null> {
+  // Consultamos por `event:name` en vez de `event:goal`: contar un custom event
+  // por goal EXIGE que el goal esté dado de alta en Plausible (Site Settings ->
+  // Goals), y si falta uno la Stats API tira 400 y se cae TODO el embudo. Por
+  // `event:name` se cuenta el evento tal cual se manda, sin registrarlo -> robusto
+  // y sin config manual. Los que no tengan datos quedan en 0 (no rompen).
   const data = await queryPlausible({
     metrics: ["visitors", "events"],
-    dimensions: ["event:goal"],
+    dimensions: ["event:name"],
     date_range: dateRange,
-    filters: [["is", "event:goal", goals]],
+    filters: [["is", "event:name", goals]],
   });
   if (!data) return null;
   const byGoal: GoalCounts = {};
   for (const goal of goals) byGoal[goal] = { visitors: 0, events: 0 };
   for (const row of data.results) {
-    const [goal] = row.dimensions;
-    byGoal[goal] = { visitors: row.metrics[0] ?? 0, events: row.metrics[1] ?? 0 };
+    const [name] = row.dimensions;
+    byGoal[name] = { visitors: row.metrics[0] ?? 0, events: row.metrics[1] ?? 0 };
   }
   return byGoal;
 }

@@ -8,6 +8,13 @@ const GOALS = [
   "Postulante: registro completado",
   "Postulante: postulacion enviada",
   "Pago aprobado",
+  // Embudo recruiter (panel /empresa/candidatos) -- instrumentado para medir
+  // cuánto tarda un dueño en contactar y dónde abandona.
+  "recruiter_panel",
+  "recruiter_abrir_perfil",
+  "recruiter_marcar_visto",
+  "recruiter_guardar",
+  "recruiter_contactar",
 ] as const;
 
 export default async function AdminEmbudoPage() {
@@ -63,6 +70,22 @@ export default async function AdminEmbudoPage() {
                 { label: "Visitas", value: visits.visitors },
                 { label: "Registro completado", value: goals["Postulante: registro completado"].visitors },
                 { label: "Envió una postulación", value: goals["Postulante: postulacion enviada"].visitors },
+              ]}
+            />
+          </Card>
+          <Card>
+            <h2 className="font-semibold mb-4">Recruiter (panel de candidatos)</h2>
+            <p className="text-xs mb-3" style={{ color: "var(--tucv-muted)" }}>
+              Del panel al contacto -- dónde se cae el dueño antes de contactar. Cada paso es
+              visitantes únicos que dispararon ese evento.
+            </p>
+            <FunnelBar
+              steps={[
+                { label: "Entró al panel", value: goals["recruiter_panel"].visitors },
+                { label: "Abrió un perfil", value: goals["recruiter_abrir_perfil"].visitors },
+                { label: "Marcó visto", value: goals["recruiter_marcar_visto"].visitors },
+                { label: "Guardó", value: goals["recruiter_guardar"].visitors },
+                { label: "Contactó", value: goals["recruiter_contactar"].visitors },
               ]}
             />
           </Card>
