@@ -382,8 +382,8 @@ export function Navbar() {
         ) : (
           <>
             <div className="flex sm:hidden items-center gap-2">
-              <Link href="/postulantes" className="text-xs font-semibold" style={{ color: "var(--tucv-text)" }}>
-                Postulantes
+              <Link href="/oportunidades" className="text-xs font-semibold" style={{ color: "var(--tucv-text)" }}>
+                Oportunidades
               </Link>
               <Link href="/postulante/login" className="text-xs font-semibold" style={{ color: "var(--tucv-text)" }}>
                 Busco trabajo
@@ -403,6 +403,9 @@ export function Navbar() {
               </Link>
             </div>
             <div className="hidden sm:flex items-center gap-4">
+              <Link href="/oportunidades" className={linkClass} style={{ color: "var(--tucv-text)" }}>
+                Oportunidades
+              </Link>
               <Link href="/postulantes" className={linkClass} style={{ color: "var(--tucv-text)" }}>
                 Postulantes
               </Link>
