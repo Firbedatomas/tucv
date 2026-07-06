@@ -32,20 +32,28 @@ export async function POST(req: Request) {
     const email = due[i];
     // deliverEmail NO reevalúa gates ni quiet-hours (ya pasaron al encolar)
     // pero sí rechequea supresión -- por eso no pasamos skipSuppressionCheck.
-    const result = await deliverEmail({
-      type: email.type,
-      to: email.to,
-      userId: email.userId,
-      rendered: email.rendered,
-      unsubscribeUrl: email.unsubscribeUrl,
-    });
+    // Envuelto en try/catch: un throw inesperado de UN email (red, PB, etc.) no
+    // debe voltear todo el batch (500) ni dejar el email atascado reenviándose
+    // -- se trata como error transitorio y se reintenta con backoff.
+    let result: { sent: boolean; reason?: string };
+    try {
+      result = await deliverEmail({
+        type: email.type,
+        to: email.to,
+        userId: email.userId,
+        rendered: email.rendered,
+        unsubscribeUrl: email.unsubscribeUrl,
+      });
+    } catch (err) {
+      console.error(`[flush] deliverEmail tiró para ${email.to}:`, err instanceof Error ? err.message : err);
+      result = { sent: false, reason: "error" };
+    }
     if (result.sent) {
       sent += 1;
       await removeFromQueue(email.id);
     } else if (result.reason === "error") {
-      // Error TRANSITORIO de Resend: reintentar con backoff creciente en vez de
-      // perder el email. Tras MAX_ATTEMPTS se descarta (el evento en
-      // email_events ya deja registro de cada intento fallido).
+      // Error TRANSITORIO: reintentar con backoff creciente en vez de perder el
+      // email. Tras MAX_ATTEMPTS se descarta.
       const nextAttempts = email.attempts + 1;
       if (nextAttempts < MAX_ATTEMPTS) {
         retried += 1;
