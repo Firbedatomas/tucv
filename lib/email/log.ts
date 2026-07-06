@@ -35,6 +35,22 @@ export async function logEmailEvent(input: {
   }
 }
 
+// Cuántos emails se ENVIARON hoy (para respetar la quota diaria del proveedor).
+// Cuenta email_events con status=sent creados desde las 00:00 UTC de hoy.
+export async function countSentToday(): Promise<number> {
+  const admin = await pbAdmin();
+  const start = new Date();
+  start.setUTCHours(0, 0, 0, 0);
+  const res = await admin
+    .collection("email_events")
+    .getList(1, 1, {
+      filter: admin.filter("status = 'sent' && created >= {:since}", { since: start.toISOString() }),
+      requestKey: null,
+    })
+    .catch(() => null);
+  return res?.totalItems ?? 0;
+}
+
 export async function updateEmailEventStatusByProviderMessageId(
   providerMessageId: string,
   status: EmailStatus,

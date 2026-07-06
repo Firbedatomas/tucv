@@ -1,8 +1,14 @@
 import { NextResponse } from "next/server";
 import { deliverEmail } from "@/lib/email/send";
 import { listDueEmails, removeFromQueue, rescheduleEmail } from "@/lib/email/queue";
+import { countSentToday } from "@/lib/email/log";
 
 const CRON_SECRET = process.env.CRON_SECRET;
+// Tope diario de envíos: dejamos headroom bajo la quota del proveedor (Resend
+// free = 100/día) para que un envío grande (ej. la campaña semanal) no la reviente
+// ni bloquee los mails transaccionales. Lo que pasa el tope se reprograma para
+// mañana. Configurable por env; default conservador.
+const DAILY_SEND_CAP = Number(process.env.EMAIL_DAILY_CAP) || 90;
 
 // Vacía la cola de emails diferidos por horario silencioso (ver
 // lib/email/send.ts). La pega un cron externo, idealmente cada hora (así un
@@ -27,9 +33,23 @@ export async function POST(req: Request) {
   let sent = 0;
   let retried = 0;
   let gaveUp = 0;
+  let deferred = 0;
+
+  // Cuánto queda del tope diario, y a dónde diferir lo que sobre (mañana 10:00).
+  const sentToday = await countSentToday();
+  const tomorrow = new Date(now);
+  tomorrow.setUTCDate(tomorrow.getUTCDate() + 1);
+  tomorrow.setUTCHours(10, 0, 0, 0);
 
   for (let i = 0; i < due.length; i++) {
     const email = due[i];
+    // Tope diario alcanzado -> el resto se REPROGRAMA para mañana (no es un
+    // error, así que no consume intentos). Protege la quota del proveedor.
+    if (sentToday + sent >= DAILY_SEND_CAP) {
+      await rescheduleEmail(email.id, email.attempts, tomorrow);
+      deferred += 1;
+      continue;
+    }
     // deliverEmail NO reevalúa gates ni quiet-hours (ya pasaron al encolar)
     // pero sí rechequea supresión -- por eso no pasamos skipSuppressionCheck.
     // Envuelto en try/catch: un throw inesperado de UN email (red, PB, etc.) no
@@ -72,6 +92,6 @@ export async function POST(req: Request) {
 
   return NextResponse.json({
     ok: true,
-    summary: { processed: due.length, sent, retried, gaveUp, batchLimit: BATCH_LIMIT, moreLikely: due.length === BATCH_LIMIT },
+    summary: { processed: due.length, sent, retried, gaveUp, deferred, dailyCap: DAILY_SEND_CAP, sentTodayBefore: sentToday, moreLikely: due.length === BATCH_LIMIT },
   });
 }
