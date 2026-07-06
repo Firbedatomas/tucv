@@ -1,0 +1,40 @@
+# Tanda piloto TuCV — URLs verificadas por los buscadores
+# Formato: URL | rubro | zona | nombre
+# --- GBA / cadenas nacionales (buscador 3) ---
+https://www.coto.com.ar/empleos/ | Retail | GBA/CABA | Coto
+https://empleos.supermercadosdia.com.ar/ | Retail | GBA/CABA | Supermercados Dia
+https://supertodo.com.ar/trabaja-con-nosotros/ | Retail | GBA | Supermercados TODO
+https://www.vital.com.ar/trabaja-con-nosotros/ | Retail | GBA | Supermayorista Vital
+https://www.farmacity.com/Farmacity/Trabaja-con-Nosotros | Farmacia | GBA/CABA | Farmacity
+https://videocv.mostazaweb.com.ar/ | Gastronomía | GBA/CABA | Mostaza
+https://www.bigpons.com.ar/trabaja-con-nosotros | Gastronomía | GBA/CABA | BigPons
+https://argentina.gridohelado.com/trabajo-con-nosotros/ | Gastronomía | GBA | Grido
+https://ar.freddo.com/contacto/ | Gastronomía | GBA/CABA | Freddo
+https://vacalin.com.ar/trabaja-con-nosotros | Gastronomía | GBA | Vacalin
+https://heladosdaniel.com/trabaja-con-nosotros/ | Gastronomía | GBA/CABA | Helados Daniel
+https://laveneciana.com.ar/sumate-a-nuestro-equipo/ | Gastronomía | CABA/GBA | La Veneciana
+https://www.heladoslaabuela.com/trabaja-con-nosotros/ | Gastronomía | GBA | Helados La Abuela
+https://www.ver.com.ar/contactotrabajo/ | Retail | GBA/CABA | Ver
+https://www.dexter.com.ar/cvs-page.html | Retail | GBA/CABA | Dexter
+https://www.topper.com.ar/trabaja-en-nuestro-equipo | Retail | Nacional | Topper
+https://empleos.kevingston.com/ | Retail | GBA/CABA | Kevingston
+https://trabajar.ypf.com/ | Servicios | GBA | YPF
+# --- Córdoba + Mar del Plata (buscador 2, nuevas) ---
+https://panaderiadelpilar.ar/sumate-al-equipo-rrhh/ | Gastronomía | Córdoba | Panadería Del Pilar
+https://leroma.com.ar/trabaja-con-nosotros/ | Gastronomía | Córdoba | Leroma
+https://www.indonesiashop.com.ar/trabaja-con-nosotros/ | Comercio | Córdoba | Indonesia Shop
+https://uthgramardelplata.com.ar/trabaja-con-nosotros/ | Hotelería | Mar del Plata | Hotel UTHGRA Presidente Perón
+https://www.hotelaomamdplata.com.ar/es/empleo.html | Hotelería | Mar del Plata | Hotel AOMA
+https://www.hoteldenver.com.ar/trabaja-con-nosotros | Hotelería | Mar del Plata | Hotel Denver
+https://www.authogar.com/trabaja-con-nosotros | Comercio | Mar del Plata | Authogar
+https://lafontedoro.com/yo-me-sumo/ | Gastronomía | Mar del Plata | La Fonte D'Oro
+# --- La Plata + CABA (buscador 1, nuevas) ---
+https://tiendadecafe.com.ar/trabaja-en-tdc/ | Gastronomía | CABA | Tienda de Café
+https://maricafe.com.ar/empleos/ | Gastronomía | CABA | Maricafé
+https://ar.juanvaldez.com/trabaja-con-nosotros/ | Gastronomía | CABA | Juan Valdez Café
+https://www.sushiclub.com.ar/unite_staff.php | Gastronomía | CABA | SushiClub
+https://eldesembarco.com/trabaja-con-nosotros/ | Gastronomía | CABA | El Desembarco
+https://www.idclp.com.ar/contacto/trabajo/ | Salud | La Plata | Instituto del Diagnóstico La Plata
+https://unionplatense.com.ar/sumate.html | Servicios | La Plata | Unión Platense
+https://www.institutomedicoplatense.com/reclutar.html | Salud | La Plata | Instituto Médico Platense
+https://www.nini.com.ar/trabaja | Comercio | La Plata | NINI Mayorista

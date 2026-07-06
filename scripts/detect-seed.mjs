@@ -50,6 +50,14 @@ function slugify(s) {
 }
 const rand = () => Math.random().toString(36).slice(2, 7).replace(/[^a-z0-9]/g, "x");
 
+// Un número AR plausible: 10-13 dígitos, ni todos iguales ni un placeholder.
+function validPhone(d) {
+  if (!d || d.length < 10 || d.length > 13) return false;
+  if (/^(\d)\1+$/.test(d)) return false;
+  if (/1234567|1112345/.test(d)) return false;
+  return true;
+}
+
 function extract(html) {
   const out = { name: "", email: "", whatsapp: "", roles: [] };
 
@@ -74,14 +82,22 @@ function extract(html) {
     out.name = (og?.[1] || title?.[1] || "").split(/[|\-–—]/)[0].trim();
   }
 
-  // contacto -- filtramos falsos positivos tipo "logo@2x.png" (assets retina)
-  // y otras extensiones de archivo que matchean el patrón de email.
+  // Email: filtramos falsos positivos tipo "logo@2x.png" (assets retina) y otras
+  // extensiones de archivo que matchean el patrón de email.
   const email = [...html.matchAll(/[a-z0-9._%+-]+@[a-z0-9.-]+\.[a-z]{2,}/gi)]
     .map((x) => x[0])
     .filter((e) => !/\.(png|jpe?g|svg|webp|gif|css|js|mjs|woff2?|ico|mp4|pdf)$/i.test(e));
   out.email = email.find((e) => /rrhh|capital|empleo|trabajo|talento|contacto|recursos|hr/i.test(e)) || email[0] || "";
-  const wa = html.match(/wa\.me\/(\d{8,15})/i) || html.match(/(?:\+?54\s*9?\s*)(\d[\d\s-]{7,13}\d)/);
-  if (wa) out.whatsapp = (wa[1] || wa[0]).replace(/[\s-]/g, "");
+
+  // WhatsApp: CONSERVADOR. Solo de links wa.me / tel: / api.whatsapp (contexto
+  // explícito), nunca de dígitos sueltos en la página (dan short-codes y
+  // placeholders como 80002 / 1112345678). Mejor vacío que un número equivocado.
+  const cands = [
+    ...[...html.matchAll(/wa\.me\/(\d{10,15})/gi)].map((m) => m[1]),
+    ...[...html.matchAll(/api\.whatsapp\.com\/send\?phone=(\d{10,15})/gi)].map((m) => m[1]),
+    ...[...html.matchAll(/tel:\+?(54\d{9,12})/gi)].map((m) => m[1]),
+  ];
+  out.whatsapp = cands.find(validPhone) || "";
 
   return out;
 }
@@ -95,7 +111,9 @@ async function main() {
   }
   const html = await res.text();
   const d = extract(html);
-  const name = d.name;
+  // Si nos pasan --nombre (ej. el que ya verificó el buscador), lo usamos: es más
+  // confiable que el <title> de la página (que suele ser "Trabajá con nosotros").
+  const name = opt("nombre") || d.name;
   const rubro = opt("rubro");
   const zona = opt("zona");
   if (!name) {
