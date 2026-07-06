@@ -284,7 +284,12 @@ export function Navbar() {
         </Link>
       )}
     </>
-  ) : null;
+  ) : (
+    // Postulante / visitante: descubrir oportunidades detectadas cerca suyo.
+    <Link href="/oportunidades" className={linkClass} style={{ color: "var(--tucv-text)" }} onClick={() => setMenuOpen(false)}>
+      Oportunidades
+    </Link>
+  );
 
   const identity = isAdmin ? (
     <IdentityDropdown

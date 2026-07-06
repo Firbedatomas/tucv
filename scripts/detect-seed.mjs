@@ -58,8 +58,19 @@ function validPhone(d) {
   return true;
 }
 
-function extract(html) {
-  const out = { name: "", email: "", whatsapp: "", roles: [] };
+function extract(html, pageUrl) {
+  const out = { name: "", email: "", whatsapp: "", roles: [], logo: "" };
+
+  // Logo / imagen oficial: preferimos un <img> con "logo" en src/alt/class; si no,
+  // og:image (suele ser el logo o una imagen de marca). Se resuelve a absoluta.
+  let logo = "";
+  const logoImg = html.match(/<img[^>]*\b(?:class|alt|id)=["'][^"']*logo[^"']*["'][^>]*>/i) || html.match(/<img[^>]*\bsrc=["'][^"']*logo[^"']*["'][^>]*>/i);
+  if (logoImg) { const s = logoImg[0].match(/\bsrc=["']([^"']+)["']/i); if (s) logo = s[1]; }
+  if (!logo) {
+    const og = html.match(/<meta[^>]+property=["']og:image["'][^>]+content=["']([^"']+)["']/i) || html.match(/<meta[^>]+content=["']([^"']+)["'][^>]+property=["']og:image["']/i);
+    if (og) logo = og[1];
+  }
+  if (logo) { try { out.logo = new URL(logo, pageUrl).href.slice(0, 500); } catch {} }
 
   // schema.org (Organization + JobPosting) en JSON-LD
   const ld = [...html.matchAll(/<script[^>]+application\/ld\+json[^>]*>([\s\S]*?)<\/script>/gi)];
@@ -110,7 +121,7 @@ async function main() {
     process.exit(1);
   }
   const html = await res.text();
-  const d = extract(html);
+  const d = extract(html, url);
   // Si nos pasan --nombre (ej. el que ya verificó el buscador), lo usamos: es más
   // confiable que el <title> de la página (que suele ser "Trabajá con nosotros").
   const name = opt("nombre") || d.name;
@@ -128,6 +139,7 @@ async function main() {
   console.log(`  Zona:     ${zona || "(no seteada — pasá --zona)"}`);
   console.log(`  Email:    ${d.email || "—"}`);
   console.log(`  WhatsApp: ${d.whatsapp || "—"}`);
+  console.log(`  Logo:     ${d.logo || "—"}`);
   console.log(`  Búsquedas: ${roles.join(" · ")}`);
 
   if (DRY) { console.log("\n(--dry: no siembra)"); return; }
@@ -141,16 +153,25 @@ async function main() {
   if (!token) { console.error("No pude autenticarme al PB."); process.exit(1); }
   const H = { "Content-Type": "application/json", Authorization: token };
 
-  // dedup por source_url
+  // dedup por source_url -- si ya existía pero sin logo, lo backfilleamos.
   const dup = await fetch(`${PB}/api/collections/sourced_businesses/records?perPage=1&filter=${encodeURIComponent(`source_url="${url}"`)}`, { headers: H }).then((r) => r.json());
-  if (dup?.totalItems > 0) { console.log(`\nYa estaba sembrada (source_url repetido). id=${dup.items[0].id}`); return; }
+  if (dup?.totalItems > 0) {
+    const ex = dup.items[0];
+    if (d.logo && !ex.logo_url) {
+      await fetch(`${PB}/api/collections/sourced_businesses/records/${ex.id}`, { method: "PATCH", headers: H, body: JSON.stringify({ logo_url: d.logo }) }).catch(() => {});
+      console.log(`\nYa estaba sembrada — logo backfilleado. id=${ex.id}`);
+    } else {
+      console.log(`\nYa estaba sembrada (source_url repetido). id=${ex.id}`);
+    }
+    return;
+  }
 
   const slug = `${slugify(name) || "empresa"}-${rand()}`;
   const biz = await fetch(`${PB}/api/collections/sourced_businesses/records`, {
     method: "POST", headers: H,
     body: JSON.stringify({
       name, rubro, city_zone: zona, contact_email: d.email, contact_phone: d.whatsapp,
-      source_type: "website", source_url: url, evidence: `Detectado en ${url}`,
+      logo_url: d.logo, source_type: "website", source_url: url, evidence: `Detectado en ${url}`,
       region: "cordoba", status: "detected", public_slug: slug,
     }),
   }).then((r) => r.json());

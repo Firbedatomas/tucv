@@ -45,11 +45,16 @@ export default async function SourcedBusinessPage({ params }: { params: Promise<
         {/* Encabezado del negocio */}
         <div className="flex items-center gap-3 mb-3">
           <div
-            className="shrink-0 w-12 h-12 rounded-[var(--tucv-radius)] flex items-center justify-center text-lg font-bold"
+            className="shrink-0 w-12 h-12 rounded-[var(--tucv-radius)] flex items-center justify-center text-lg font-bold overflow-hidden"
             style={{ backgroundColor: "var(--tucv-bg)", border: "2px solid var(--tucv-border)", color: "var(--tucv-muted)" }}
             aria-hidden
           >
-            {biz.name.charAt(0).toUpperCase()}
+            {biz.logoUrl ? (
+              // eslint-disable-next-line @next/next/no-img-element
+              <img src={biz.logoUrl} alt="" className="w-full h-full" style={{ objectFit: "contain" }} />
+            ) : (
+              biz.name.charAt(0).toUpperCase()
+            )}
           </div>
           <div className="min-w-0">
             <h1 className="text-xl sm:text-2xl font-bold truncate">{biz.name}</h1>

@@ -22,6 +22,7 @@ export type SourcedBusinessPublic = {
   sourceType: string;
   detectedAt: string;
   claimed: boolean;
+  logoUrl: string;
   jobs: SourcedJobPublic[];
 };
 
@@ -54,6 +55,7 @@ export async function getSourcedBusinessBySlug(slug: string): Promise<SourcedBus
     sourceType: (biz.source_type as string) || "",
     detectedAt: biz.created as string,
     claimed: Boolean(biz.claimed_business),
+    logoUrl: (biz.logo_url as string) || "",
     jobs: jobRows.map((j) => ({
       id: j.id as string,
       role: j.role as string,
@@ -90,6 +92,52 @@ export async function recordInterest(sourcedJobId: string, token?: string | null
     .create({ sourced_job: sourcedJobId, candidate: candidateId })
     .catch(() => null); // duplicado (mismo candidato) o carrera -> se ignora
   return "ok";
+}
+
+// Lista PÚBLICA de oportunidades detectadas (para que los candidatos las
+// descubran). Solo empresas NO reclamadas y NO dadas de baja, con búsquedas
+// activas. Proyección segura: nombre, rubro, zona, puesto y el slug para ir a
+// la página -- nada de contacto/evidence interno.
+export type DetectedOpportunity = {
+  jobId: string;
+  role: string;
+  rubro: string;
+  businessName: string;
+  businessSlug: string;
+  cityZone: string;
+  sourceType: string;
+  logoUrl: string;
+};
+
+export async function listDetectedOpportunities(limit = 200): Promise<DetectedOpportunity[]> {
+  const admin = await pbAdmin();
+  const jobs = await admin
+    .collection("sourced_jobs")
+    .getFullList({
+      filter: admin.filter("status = {:s}", { s: "detected" }),
+      expand: "sourced_business",
+      sort: "-created",
+      requestKey: null,
+    })
+    .catch(() => []);
+
+  const out: DetectedOpportunity[] = [];
+  for (const j of jobs) {
+    const b = (j.expand as { sourced_business?: Record<string, unknown> } | undefined)?.sourced_business;
+    if (!b || b.status === "opted_out" || b.claimed_business) continue;
+    out.push({
+      jobId: j.id as string,
+      role: j.role as string,
+      rubro: (j.rubro as string) || (b.rubro as string) || "",
+      businessName: b.name as string,
+      businessSlug: (b.public_slug as string) || "",
+      cityZone: (b.city_zone as string) || "",
+      sourceType: (b.source_type as string) || "",
+      logoUrl: (b.logo_url as string) || "",
+    });
+    if (out.length >= limit) break;
+  }
+  return out;
 }
 
 export async function countInterest(sourcedJobId: string): Promise<number> {
