@@ -23,7 +23,9 @@ export type CampaignInput = {
 export type CampaignResult = {
   total: number; // destinatarios que matchean el segmento
   enqueued: number; // encolados de verdad (0 en dryRun)
-  skipped: { marketing: number; suppressed: number; noEmail: number };
+  // optedOut = apagó "avisos de oportunidades" (Opción B). Antes se chequeaba
+  // `marketing`, que es opt-in y saltaba a casi todos -- el bug de esta fase.
+  skipped: { optedOut: number; suppressed: number; noEmail: number };
   capped: boolean; // se alcanzó MAX_RECIPIENTS
 };
 
@@ -83,7 +85,7 @@ export async function runCampaign(input: CampaignInput): Promise<CampaignResult>
   const result: CampaignResult = {
     total: recipients.length,
     enqueued: 0,
-    skipped: { marketing: 0, suppressed: 0, noEmail: 0 },
+    skipped: { optedOut: 0, suppressed: 0, noEmail: 0 },
     capped: recipients.length >= MAX_RECIPIENTS,
   };
 
@@ -97,8 +99,8 @@ export async function runCampaign(input: CampaignInput): Promise<CampaignResult>
     let unsubscribeToken = "";
     if (r.userId) {
       const prefs = await getOrCreatePreferences(r.userId).catch(() => null);
-      if (prefs && !prefs.marketing) {
-        result.skipped.marketing += 1;
+      if (prefs && !prefs.opportunityAlerts) {
+        result.skipped.optedOut += 1;
         continue;
       }
       unsubscribeToken = prefs?.unsubscribeToken || "";

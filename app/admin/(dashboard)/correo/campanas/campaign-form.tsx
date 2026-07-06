@@ -9,7 +9,7 @@ import { inputClass, inputStyle } from "@/components/ui/Field";
 type Result = {
   total: number;
   enqueued: number;
-  skipped: { marketing: number; suppressed: number; noEmail: number };
+  skipped: { optedOut: number; suppressed: number; noEmail: number };
   capped: boolean;
 };
 
@@ -119,17 +119,17 @@ export function CampaignForm() {
         <Card>
           <p className="font-bold mb-1">{preview.total} destinatarios en el segmento</p>
           <p className="text-sm" style={{ color: "var(--tucv-muted)" }}>
-            Se saltean: {preview.skipped.marketing} dados de baja de marketing · {preview.skipped.suppressed} suprimidos ·{" "}
+            Se saltean: {preview.skipped.optedOut} sin avisos de oportunidades · {preview.skipped.suppressed} suprimidos ·{" "}
             {preview.skipped.noEmail} sin email.{preview.capped ? " (tope de 1000 alcanzado)" : ""}
           </p>
           <p className="text-sm mt-2 mb-3">
-            Se van a encolar aprox. <strong>{preview.total - preview.skipped.marketing - preview.skipped.suppressed - preview.skipped.noEmail}</strong> emails. El envío
+            Se van a encolar aprox. <strong>{preview.total - preview.skipped.optedOut - preview.skipped.suppressed - preview.skipped.noEmail}</strong> emails. El envío
             lo hace la cola (rate-limit + reintentos), no de golpe.
           </p>
           <Button
             type="button"
             onClick={() => {
-              if (confirm(`¿Enviar la campaña a ~${preview.total - preview.skipped.marketing - preview.skipped.suppressed - preview.skipped.noEmail} destinatarios?`)) run(false);
+              if (confirm(`¿Enviar la campaña a ~${preview.total - preview.skipped.optedOut - preview.skipped.suppressed - preview.skipped.noEmail} destinatarios?`)) run(false);
             }}
             disabled={busy || !subject.trim() || !body.trim()}
           >
@@ -143,7 +143,7 @@ export function CampaignForm() {
           <p className="font-bold" style={{ color: "#128C4A" }}>Campaña encolada ✓</p>
           <p className="text-sm mt-1">
             {sent.enqueued} emails encolados. Se van enviando por la cola (podés ver el estado en la corrida del
-            cron de emails). Saltados: {sent.skipped.marketing} baja marketing · {sent.skipped.suppressed} suprimidos ·{" "}
+            cron de emails). Saltados: {sent.skipped.optedOut} sin avisos oportunidades · {sent.skipped.suppressed} suprimidos ·{" "}
             {sent.skipped.noEmail} sin email.
           </p>
         </Card>
