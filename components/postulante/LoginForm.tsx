@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { pb } from "@/lib/pocketbase";
 import { stashGoogleProfile } from "@/lib/google-profile-stash";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { trySetAdminSession } from "@/lib/admin-login-check";
 import { GoogleButton } from "@/components/ui/GoogleButton";
 import { Card } from "@/components/ui/Card";
 
@@ -23,6 +24,12 @@ export function LoginForm({ next }: { next?: string }) {
       const googleAvatar = authData?.meta?.avatarURL as string | undefined;
       if (googleName || googleAvatar) {
         stashGoogleProfile({ name: googleName, avatarUrl: googleAvatar });
+      }
+
+      // Si es el admin, entra directo al panel de admin desde cualquier login.
+      if (await trySetAdminSession(client.authStore.token)) {
+        window.location.href = "/admin";
+        return;
       }
 
       // safeNextPath bloquea open-redirect (//evil.com, javascript:, etc.).

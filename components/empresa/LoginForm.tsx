@@ -6,6 +6,7 @@ import { pb } from "@/lib/pocketbase";
 import { stashGoogleProfile } from "@/lib/google-profile-stash";
 import { resolveBusinessAccess } from "@/lib/business-access";
 import { safeNextPath } from "@/lib/safe-next-path";
+import { trySetAdminSession } from "@/lib/admin-login-check";
 import { GoogleButton } from "@/components/ui/GoogleButton";
 import { Card } from "@/components/ui/Card";
 
@@ -22,6 +23,13 @@ export function LoginForm() {
       const authData = await client.collection("users").authWithOAuth2({ provider: "google" });
       const googleName = authData?.meta?.name as string | undefined;
       if (googleName) stashGoogleProfile({ name: googleName });
+
+      // Si es el admin, entra directo al panel de admin desde cualquier login.
+      if (await trySetAdminSession(client.authStore.token)) {
+        window.location.href = "/admin";
+        return;
+      }
+
       const userId = client.authStore.record?.id;
       const access = userId ? await resolveBusinessAccess(client, userId) : null;
       // `next` = a dónde volver tras loguear (ej. el formulario de crear
