@@ -431,15 +431,19 @@ export default function PublicProfilePage({ params }: { params: Promise<{ slug: 
           <RecommendButton candidateId={profile.id} isOwnProfile={isOwnProfile} />
 
           <div className="flex flex-wrap gap-3 mt-2">
-            <a
-              href={waLink(profile.whatsapp, `Hola ${profile.name}, te contacto por tu perfil en TuCV.`)}
-              target="_blank"
-              rel="noopener noreferrer"
-              className="text-sm font-semibold px-5 py-3 rounded-[var(--tucv-radius)]"
-              style={{ backgroundColor: "#128C4A", color: "#fff" }}
-            >
-              Contactar por WhatsApp
-            </a>
+            {/* Solo si el candidato habilitó contacto por WhatsApp (consent_contact);
+                si no, la API no manda el número y no mostramos el botón. */}
+            {profile.whatsapp && (
+              <a
+                href={waLink(profile.whatsapp, `Hola ${profile.name}, te contacto por tu perfil en TuCV.`)}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="text-sm font-semibold px-5 py-3 rounded-[var(--tucv-radius)]"
+                style={{ backgroundColor: "#128C4A", color: "#fff" }}
+              >
+                Contactar por WhatsApp
+              </a>
+            )}
             {profile.cvUrl && (
               <a
                 href={profile.cvUrl}

@@ -628,6 +628,18 @@ onRecordUpdateRequest((e) => {
   e.next()
 }, "job_posts")
 
+// Fuerza el estado inicial de una postulación: el candidato NO puede crear una
+// application con status="contratado"/"entrevista"/etc. a mano (escritura
+// directa a la API) para figurar como avanzada en el panel de la empresa.
+// Siempre arranca en "nuevo"; los estados los mueve la empresa desde su panel.
+// Superusuario (aceptar invitación vía pbAdmin) mantiene el status que setea.
+onRecordCreateRequest((e) => {
+  if (!e.hasSuperuserAuth()) {
+    e.record.set("status", "nuevo")
+  }
+  e.next()
+}, "applications")
+
 // Aviso al admin de nueva búsqueda por Telegram. afterCreateSuccess: ya pasó
 // los límites de plan (onRecordCreateRequest de arriba) y quedó persistida.
 onRecordAfterCreateSuccess((e) => {

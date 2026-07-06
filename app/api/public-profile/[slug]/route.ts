@@ -74,7 +74,13 @@ export async function GET(_req: Request, { params }: { params: Promise<{ slug: s
       // Nunca la fecha de nacimiento completa en público (Ley 25.326): solo la
       // edad derivada. El slug es adivinable y el endpoint no exige auth.
       age: calculateAge(record.birth_date as string, record.age_manual as number),
-      whatsapp: record.whatsapp,
+      // WhatsApp SOLO si el candidato activó "que me escriban por WhatsApp
+      // directo desde mi perfil" (consent_contact). Sin ese opt-in, el whatsapp
+      // NO se expone -- antes se devolvía siempre, para cualquier slug adivinable
+      // y sin auth, contradiciendo NEVER_PUBLIC_FIELDS y lo que promete la
+      // pantalla de privacidad ("si no lo activás, ven tu perfil pero no tu
+      // teléfono"). Fuga de dato personal (Ley 25.326) corregida acá.
+      whatsapp: record.consent_contact ? record.whatsapp : "",
       categories: record.categories,
       category_other: record.category_other,
       category_experience: publicSafeExperience(record.category_experience),
