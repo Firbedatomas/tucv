@@ -21,6 +21,7 @@ async function unsubscribeAll(token: string): Promise<boolean> {
     profile_views_frequency: "never",
     profile_tips: false,
     marketing: false,
+    job_opportunities: false,
   });
   return true;
 }

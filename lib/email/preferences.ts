@@ -9,6 +9,9 @@ export type NotificationPreferences = {
   profileViewsFrequency: "weekly" | "never";
   profileTips: boolean;
   marketing: boolean;
+  // Avisos de oportunidades laborales (Opción B): servicio, no marketing. Default
+  // ON -- null/ausente se interpreta como true (los perfiles viejos quedan opt-in).
+  opportunityAlerts: boolean;
   quietHoursStart: number | null;
   quietHoursEnd: number | null;
   unsubscribeToken: string;
@@ -23,6 +26,7 @@ function mapRecord(record: Record<string, unknown>): NotificationPreferences {
     profileViewsFrequency: (record.profile_views_frequency as NotificationPreferences["profileViewsFrequency"]) || "weekly",
     profileTips: record.profile_tips !== false,
     marketing: record.marketing === true,
+    opportunityAlerts: record.job_opportunities !== false,
     quietHoursStart: typeof record.quiet_hours_start === "number" ? record.quiet_hours_start : null,
     quietHoursEnd: typeof record.quiet_hours_end === "number" ? record.quiet_hours_end : null,
     unsubscribeToken: record.unsubscribe_token as string,
@@ -50,6 +54,7 @@ export async function getOrCreatePreferences(userId: string): Promise<Notificati
     profile_views_frequency: "weekly",
     profile_tips: true,
     marketing: false,
+    job_opportunities: true,
   });
   return mapRecord(created as unknown as Record<string, unknown>);
 }

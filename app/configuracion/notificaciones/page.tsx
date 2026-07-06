@@ -14,6 +14,7 @@ type Prefs = {
   profileViewsFrequency: "weekly" | "never";
   profileTips: boolean;
   marketing: boolean;
+  opportunityAlerts: boolean;
   quietHoursEnabled: boolean;
   quietHoursStart: number;
   quietHoursEnd: number;
@@ -42,6 +43,7 @@ export default function NotificacionesPage() {
           profileViewsFrequency: record.profile_views_frequency || "weekly",
           profileTips: record.profile_tips !== false,
           marketing: record.marketing === true,
+          opportunityAlerts: record.job_opportunities !== false,
           quietHoursEnabled: typeof record.quiet_hours_start === "number" && typeof record.quiet_hours_end === "number",
           quietHoursStart: typeof record.quiet_hours_start === "number" ? record.quiet_hours_start : 20,
           quietHoursEnd: typeof record.quiet_hours_end === "number" ? record.quiet_hours_end : 8,
@@ -65,6 +67,7 @@ export default function NotificacionesPage() {
               profileViewsFrequency: record.profileViewsFrequency,
               profileTips: record.profileTips,
               marketing: record.marketing,
+              opportunityAlerts: record.opportunityAlerts !== false,
               quietHoursEnabled:
                 typeof record.quietHoursStart === "number" && typeof record.quietHoursEnd === "number",
               quietHoursStart: typeof record.quietHoursStart === "number" ? record.quietHoursStart : 20,
@@ -86,6 +89,7 @@ export default function NotificacionesPage() {
         profile_views_frequency: next.profileViewsFrequency,
         profile_tips: next.profileTips,
         marketing: next.marketing,
+        job_opportunities: next.opportunityAlerts,
         // Ambos en null = horario silencioso apagado (así lo lee
         // isWithinQuietHours en lib/email/quiet-hours.ts).
         quiet_hours_start: next.quietHoursEnabled ? next.quietHoursStart : null,
@@ -158,6 +162,10 @@ export default function NotificacionesPage() {
           </Field>
 
           <label className="flex items-center gap-2 text-sm mt-2">
+            <input type="checkbox" checked={prefs.opportunityAlerts} onChange={(e) => save({ ...prefs, opportunityAlerts: e.target.checked })} />
+            Avisos de oportunidades de trabajo cerca mío
+          </label>
+          <label className="flex items-center gap-2 text-sm">
             <input type="checkbox" checked={prefs.profileTips} onChange={(e) => save({ ...prefs, profileTips: e.target.checked })} />
             Consejos para mejorar mi perfil
           </label>
