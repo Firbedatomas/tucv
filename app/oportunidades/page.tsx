@@ -3,6 +3,7 @@ import Link from "next/link";
 import { listDetectedOpportunities } from "@/lib/sourced";
 import { LinkButton } from "@/components/ui/Button";
 import { LogoImg } from "@/components/sourced/LogoImg";
+import { TrackView } from "@/components/TrackView";
 
 export const metadata: Metadata = {
   title: "Oportunidades cerca tuyo — TuCV",
@@ -26,6 +27,7 @@ export default async function OportunidadesPage() {
 
   return (
     <main className="flex-1 px-4 py-8 sm:py-12">
+      <TrackView event="oportunidades_ver" />
       <div className="max-w-2xl mx-auto">
         <h1 className="text-2xl sm:text-3xl font-bold mb-1">Oportunidades cerca tuyo</h1>
         <p className="text-sm mb-2" style={{ color: "var(--tucv-muted)" }}>

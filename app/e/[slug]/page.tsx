@@ -4,6 +4,7 @@ import { getSourcedBusinessBySlug } from "@/lib/sourced";
 import { UnverifiedBusiness } from "@/components/sourced/UnverifiedBusiness";
 import { ShareRow } from "@/components/sourced/ShareRow";
 import { LogoImg } from "@/components/sourced/LogoImg";
+import { TrackView } from "@/components/TrackView";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
 
@@ -47,6 +48,7 @@ export default async function SourcedBusinessPage({ params }: { params: Promise<
 
   return (
     <main className="flex-1 px-4 py-8 sm:py-12">
+      <TrackView event="sourced_ver" />
       <div className="max-w-lg mx-auto">
         {/* Header */}
         <div className="flex items-center gap-4 mb-4">

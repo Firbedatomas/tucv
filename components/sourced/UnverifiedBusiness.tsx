@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { pb } from "@/lib/pocketbase";
+import { trackEvent } from "@/lib/track";
 
 type Job = { id: string; role: string; rubro: string; snippet: string; detectedAt: string; interestCount: number };
 
@@ -29,7 +30,10 @@ export function UnverifiedBusiness({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ jobId, token }),
       });
-      if (res.ok) setInterested((s) => new Set(s).add(jobId));
+      if (res.ok) {
+        setInterested((s) => new Set(s).add(jobId));
+        trackEvent("sourced_me_interesa", { logueado: pb().authStore.isValid ? "si" : "no" });
+      }
     } catch {
       // silencioso: reintentar con otro click
     } finally {

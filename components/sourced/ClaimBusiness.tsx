@@ -2,6 +2,7 @@
 
 import { useEffect, useState } from "react";
 import { pb } from "@/lib/pocketbase";
+import { trackEvent } from "@/lib/track";
 import { resolveBusinessAccess } from "@/lib/business-access";
 import { trySetAdminSession } from "@/lib/admin-login-check";
 import { GoogleButton } from "@/components/ui/GoogleButton";
@@ -62,6 +63,7 @@ export function ClaimBusiness({
         window.location.href = "/admin";
         return;
       }
+      trackEvent("sourced_reclamar_login");
       await refresh();
     } catch {
       setError("No pudimos iniciar sesión. Probá de nuevo.");
@@ -79,6 +81,7 @@ export function ClaimBusiness({
     const data = await res.json().catch(() => ({}));
     if (!res.ok) throw new Error(data.error || "No pudimos completar el reclamo.");
     setAscended(data.ascended ?? 0);
+    trackEvent("sourced_reclamar_ok", { via: existingBiz ? "cuenta_existente" : "cuenta_nueva" });
     setStep("done");
   }
 

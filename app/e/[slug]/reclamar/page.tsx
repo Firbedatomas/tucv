@@ -2,6 +2,7 @@ import { notFound } from "next/navigation";
 import { getSourcedBusinessBySlug } from "@/lib/sourced";
 import { ClaimBusiness } from "@/components/sourced/ClaimBusiness";
 import { LinkButton } from "@/components/ui/Button";
+import { TrackView } from "@/components/TrackView";
 
 export const metadata = { robots: { index: false, follow: false } };
 
@@ -12,6 +13,7 @@ export default async function ClaimPage({ params }: { params: Promise<{ slug: st
 
   return (
     <main className="flex-1 px-4 py-8 sm:py-12">
+      <TrackView event="sourced_reclamar_ver" />
       <div className="max-w-md mx-auto">
         <h1 className="text-2xl font-bold mb-1">Reclamá tu empresa</h1>
         <p className="text-sm mb-6" style={{ color: "var(--tucv-muted)" }}>

@@ -15,6 +15,14 @@ const GOALS = [
   "recruiter_marcar_visto",
   "recruiter_guardar",
   "recruiter_contactar",
+  // Embudo de captación de empresas (piloto): del descubrimiento del candidato
+  // al reclamo de la empresa. Mide dónde se cae cada lado.
+  "oportunidades_ver",
+  "sourced_ver",
+  "sourced_me_interesa",
+  "sourced_reclamar_ver",
+  "sourced_reclamar_login",
+  "sourced_reclamar_ok",
 ] as const;
 
 export default async function AdminEmbudoPage() {
@@ -86,6 +94,33 @@ export default async function AdminEmbudoPage() {
                 { label: "Marcó visto", value: goals["recruiter_marcar_visto"].visitors },
                 { label: "Guardó", value: goals["recruiter_guardar"].visitors },
                 { label: "Contactó", value: goals["recruiter_contactar"].visitors },
+              ]}
+            />
+          </Card>
+          <Card>
+            <h2 className="font-semibold mb-4">Captación — lado candidato</h2>
+            <p className="text-xs mb-3" style={{ color: "var(--tucv-muted)" }}>
+              Del descubrimiento de oportunidades a mostrar interés en una empresa detectada.
+            </p>
+            <FunnelBar
+              steps={[
+                { label: "Vio oportunidades", value: goals["oportunidades_ver"].visitors },
+                { label: "Abrió una empresa", value: goals["sourced_ver"].visitors },
+                { label: "Marcó interés", value: goals["sourced_me_interesa"].visitors },
+              ]}
+            />
+          </Card>
+          <Card>
+            <h2 className="font-semibold mb-4">Captación — lado empresa</h2>
+            <p className="text-xs mb-3" style={{ color: "var(--tucv-muted)" }}>
+              Desde que la empresa entra a su página detectada hasta que la reclama. Dónde se cae.
+            </p>
+            <FunnelBar
+              steps={[
+                { label: "Vio su página", value: goals["sourced_ver"].visitors },
+                { label: "Entró a reclamar", value: goals["sourced_reclamar_ver"].visitors },
+                { label: "Inició sesión", value: goals["sourced_reclamar_login"].visitors },
+                { label: "Reclamó", value: goals["sourced_reclamar_ok"].visitors },
               ]}
             />
           </Card>
