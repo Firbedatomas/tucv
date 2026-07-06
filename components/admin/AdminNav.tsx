@@ -8,6 +8,7 @@ import { buttonBaseClass } from "@/components/ui/Button";
 const NAV_ITEMS = [
   { href: "/admin", label: "Resumen" },
   { href: "/admin/negocios", label: "Negocios" },
+  { href: "/admin/captacion", label: "Captación" },
   { href: "/admin/postulantes", label: "Postulantes" },
   { href: "/admin/pagos", label: "Pagos" },
   { href: "/admin/reportes", label: "Reportes" },
