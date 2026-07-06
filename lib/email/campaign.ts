@@ -17,6 +17,8 @@ export type CampaignInput = {
   zona?: string; // substring sobre city_zone
   subject: string;
   body: string; // texto plano; \n\n = párrafo; admite {nombre}
+  ctaLabel?: string; // botón opcional (ej. "Ver oportunidades")
+  ctaHref?: string;
   dryRun?: boolean; // true = solo contar destinatarios (previsualización)
 };
 
@@ -59,7 +61,13 @@ async function resolveRecipients(input: CampaignInput): Promise<Recipient[]> {
   });
 }
 
-function buildRendered(subject: string, body: string, name: string, unsubscribeHref: string) {
+export function renderCampaignEmail(
+  subject: string,
+  body: string,
+  name: string,
+  unsubscribeHref: string,
+  cta?: { label?: string; href?: string },
+) {
   const p = (s: string) => s.replace(/\{nombre\}/g, name || "");
   const finalSubject = p(subject);
   const bodyHtml = p(body)
@@ -70,6 +78,8 @@ function buildRendered(subject: string, body: string, name: string, unsubscribeH
   const html = renderEmailLayout({
     heading: finalSubject,
     bodyHtml,
+    ctaLabel: cta?.label,
+    ctaHref: cta?.href,
     preferencesHref: `${BASE_URL}/configuracion/notificaciones`,
     unsubscribeHref,
   });
@@ -112,7 +122,10 @@ export async function runCampaign(input: CampaignInput): Promise<CampaignResult>
     if (input.dryRun) continue;
 
     const unsubscribeHref = unsubscribeToken ? `${BASE_URL}/api/email/unsubscribe?token=${unsubscribeToken}` : "";
-    const rendered = buildRendered(input.subject, input.body, r.name, unsubscribeHref);
+    const rendered = renderCampaignEmail(input.subject, input.body, r.name, unsubscribeHref, {
+      label: input.ctaLabel,
+      href: input.ctaHref,
+    });
     // Se ENCOLA (scheduled_for = ahora); el cron flush lo manda con rate-limit y
     // reintentos. Así una campaña grande no se envía toda de golpe ni bloquea.
     await enqueueEmail({
