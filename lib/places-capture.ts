@@ -31,7 +31,7 @@ export const CAPTURE_RUBROS = [
   ["gimnasio", "Servicios"],
 ];
 
-type Place = { name: string; placeId: string; address: string };
+type Place = { name: string; placeId: string; address: string; photoRef: string };
 
 async function textSearch(query: string): Promise<Place[]> {
   const url = `https://maps.googleapis.com/maps/api/place/textsearch/json?query=${encodeURIComponent(query)}&region=ar&key=${KEY}`;
@@ -41,7 +41,26 @@ async function textSearch(query: string): Promise<Place[]> {
     name: (x.name as string) || "",
     placeId: (x.place_id as string) || "",
     address: (x.formatted_address as string) || "",
+    photoRef: ((x.photos as { photo_reference?: string }[] | undefined)?.[0]?.photo_reference) || "",
   }));
+}
+
+// Resuelve la foto REAL del negocio (Google Places Photo). La API redirige a una
+// URL de googleusercontent SIN key -> la guardamos esa (no exponemos la API key
+// ni gastamos quota en cada vista). Es la imagen del negocio (cartel/local/logo),
+// mucho mejor que el favicon genérico de Instagram.
+async function resolvePhotoUrl(photoRef: string): Promise<string> {
+  if (!photoRef) return "";
+  const api = `https://maps.googleapis.com/maps/api/place/photo?maxwidth=400&photo_reference=${photoRef}&key=${KEY}`;
+  const res = await fetch(api, { redirect: "manual", cache: "no-store" }).catch(() => null);
+  const loc = res?.headers.get("location") || "";
+  return loc.startsWith("http") ? loc.slice(0, 500) : "";
+}
+
+// Un favicon de red social es genérico (el ícono de IG/FB), NO el logo del
+// negocio -> no sirve como logo.
+function isGenericFavicon(url: string): boolean {
+  return /instagram\.com|facebook\.com|fbcdn/i.test(url);
 }
 
 async function placeDetails(placeId: string): Promise<{ phone: string; website: string }> {
@@ -59,17 +78,45 @@ function slugify(s: string): string {
 }
 const rand = () => Math.random().toString(36).slice(2, 7).replace(/[^a-z0-9]/g, "x");
 
-// Corre una tanda: rota combos por número de día, siembra hasta `limit` nuevas
-// (dedup por place_id vía source_url). Devuelve cuántas sembró.
+function zoneMatches(hay: string, zone: string): boolean {
+  if (zone === "CABA") return /caba|capital federal|ciudad aut[oó]noma/.test(hay) || (/\bbuenos aires\b/.test(hay) && !/provincia|province|gba/.test(hay));
+  return hay.includes(zone.toLowerCase());
+}
+
+// Ordena las zonas de captura por VOLUMEN de candidatos (leyendo de dónde son los
+// perfiles) -> cada corrida siembra más negocios donde hay más demanda. Las zonas
+// sin candidatos quedan al final (igual se cubren, pero después).
+async function zonesByCandidateVolume(admin: Awaited<ReturnType<typeof pbAdmin>>): Promise<string[]> {
+  const profiles = await admin
+    .collection("candidate_profiles")
+    .getFullList({ fields: "city,city_zone", requestKey: null })
+    .catch(() => []);
+  const count = new Map<string, number>(CAPTURE_ZONES.map((z) => [z, 0]));
+  for (const p of profiles) {
+    const hay = `${(p.city as string) || ""} ${(p.city_zone as string) || ""}`.toLowerCase();
+    for (const z of CAPTURE_ZONES) {
+      if (zoneMatches(hay, z)) {
+        count.set(z, (count.get(z) || 0) + 1);
+        break;
+      }
+    }
+  }
+  return [...CAPTURE_ZONES].sort((a, b) => (count.get(b) || 0) - (count.get(a) || 0));
+}
+
+// Corre una tanda: prioriza zonas por volumen de candidatos, rota rubros por día,
+// y siembra hasta `limit` nuevas (dedup por place_id). Devuelve cuántas sembró.
 export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ seeded: number; combosUsed: string[] }> {
   if (!KEY) return { seeded: 0, combosUsed: [] };
   const admin = await pbAdmin();
 
-  const combos: [string, string, string][] = [];
-  for (const [rubro, cat] of CAPTURE_RUBROS) for (const zona of CAPTURE_ZONES) combos.push([rubro, cat, zona]);
-  // arranca en un offset distinto cada día
-  const start = (dayNumber * 5) % combos.length;
-  const ordered = [...combos.slice(start), ...combos.slice(0, start)];
+  const zonesOrdered = await zonesByCandidateVolume(admin);
+  // rubros rotados por día para no re-consultar los mismos combos cada corrida
+  const rStart = (dayNumber * 3) % CAPTURE_RUBROS.length;
+  const rubrosOrdered = [...CAPTURE_RUBROS.slice(rStart), ...CAPTURE_RUBROS.slice(0, rStart)];
+  // combos: zona (por volumen) primero -> se llena antes donde hay más candidatos
+  const ordered: [string, string, string][] = [];
+  for (const zona of zonesOrdered) for (const [rubro, cat] of rubrosOrdered) ordered.push([rubro, cat, zona]);
 
   let seeded = 0;
   const combosUsed: string[] = [];
@@ -87,6 +134,15 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
       if (dup) continue;
 
       const det = await placeDetails(p.placeId);
+      // Logo: primero la FOTO real del negocio (Google Places); si no hay, el
+      // favicon del sitio SOLO si es un dominio propio (no Instagram/Facebook,
+      // que darían el ícono genérico de la red). Si nada sirve, vacío -> inicial.
+      let logo = await resolvePhotoUrl(p.photoRef);
+      if (!logo && det.website && !isGenericFavicon(det.website)) {
+        try {
+          logo = `https://www.google.com/s2/favicons?domain=${new URL(det.website).hostname}&sz=128`;
+        } catch {}
+      }
       const slug = `${slugify(p.name) || "empresa"}-${rand()}`;
       const biz = await admin
         .collection("sourced_businesses")
@@ -97,7 +153,7 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
           address: p.address.slice(0, 250),
           contact_phone: det.phone,
           website: det.website.slice(0, 300),
-          logo_url: det.website ? `https://www.google.com/s2/favicons?domain=${(() => { try { return new URL(det.website).hostname; } catch { return ""; } })()}&sz=128` : "",
+          logo_url: logo,
           source_type: "gmaps",
           source_url: sourceUrl,
           evidence: `Detectado en Google Maps (${rubro} en ${zona})`,

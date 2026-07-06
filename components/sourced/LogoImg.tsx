@@ -16,7 +16,11 @@ export function LogoImg({
   size?: number;
 }) {
   const [failed, setFailed] = useState(false);
-  const showImg = Boolean(src) && !failed;
+  // Un favicon de Instagram/Facebook es el ícono genérico de la red, NO el logo
+  // del negocio -> lo tratamos como "sin logo" y mostramos la inicial (más
+  // prolijo que un ícono de IG repetido en todas las empresas).
+  const generic = Boolean(src) && /instagram\.com|facebook\.com|fbcdn|s2\/favicons\?domain=(?:www\.)?(?:instagram|facebook)/i.test(src || "");
+  const showImg = Boolean(src) && !failed && !generic;
   const pad = size >= 56 ? 8 : 5;
 
   return (
