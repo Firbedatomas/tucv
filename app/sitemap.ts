@@ -1,5 +1,5 @@
 import type { MetadataRoute } from "next";
-import { RUTAS_ESTATICAS, busquedasIndexables } from "@/lib/indexable-urls";
+import { RUTAS_ESTATICAS, busquedasIndexables, paginasLocales } from "@/lib/indexable-urls";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -20,12 +20,23 @@ export default async function sitemap(): Promise<MetadataRoute.Sitemap> {
     priority: r.priority,
   }));
 
-  const jobEntries: MetadataRoute.Sitemap = (await busquedasIndexables()).map((b) => ({
+  const [busquedas, locales] = await Promise.all([busquedasIndexables(), paginasLocales()]);
+
+  const jobEntries: MetadataRoute.Sitemap = busquedas.map((b) => ({
     url: `${BASE_URL}${b.path}`,
     lastModified: b.actualizada,
     changeFrequency: "daily" as const,
     priority: 0.9,
   }));
 
-  return [...staticEntries, ...jobEntries];
+  // Páginas locales por ciudad y rubro: son las que apuntan a las consultas
+  // que la gente escribe de verdad ("trabajo en Córdoba"). Solo entran las
+  // que tienen al menos una búsqueda activa detrás -- ver paginasLocales().
+  const localEntries: MetadataRoute.Sitemap = locales.map((l) => ({
+    url: `${BASE_URL}${l.path}`,
+    changeFrequency: "daily" as const,
+    priority: l.prioridad,
+  }));
+
+  return [...staticEntries, ...jobEntries, ...localEntries];
 }

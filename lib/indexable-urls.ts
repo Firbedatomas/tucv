@@ -1,6 +1,7 @@
 import "server-only";
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { businessSlugFor } from "@/lib/slug";
+import { localidadesDeZona, slugDeLocalidad } from "@/lib/seo-localities";
 
 // Fuente única de "qué URLs de TuCV vale la pena indexar". La consumen el
 // sitemap (app/sitemap.ts) y el barrido diario de IndexNow
@@ -82,11 +83,74 @@ export async function busquedasIndexables(): Promise<BusquedaIndexable[]> {
   }
 }
 
-/** Todas las URLs absolutas indexables: estáticas + búsquedas activas. */
+export type PaginaLocal = { path: string; prioridad: number };
+
+/**
+ * Páginas locales (/trabajo/[city], /trabajo/[city]/[category],
+ * /postulantes/[city]) para las localidades donde REALMENTE hay búsquedas
+ * activas.
+ *
+ * Estas rutas aceptan cualquier slug y devuelven 200 con lista vacía, así que
+ * el sitemap no puede enumerar ciudades a mano: publicaría decenas de páginas
+ * sin contenido, que es lo que Google castiga como thin content. La lista sale
+ * de los datos: si no hay una búsqueda activa en esa localidad, la página no
+ * entra.
+ *
+ * Corolario: son las páginas que apuntan a las consultas que la gente
+ * realmente busca ("trabajo en Córdoba", "trabajo de gastronomía en Córdoba"),
+ * pero solo valen si abajo hay avisos. Se vuelven más fuertes solas a medida
+ * que se publican más búsquedas.
+ */
+export async function paginasLocales(): Promise<PaginaLocal[]> {
+  try {
+    const client = await pbAdmin();
+    const jobs = await client.collection("job_posts").getFullList<{
+      address_zone?: string;
+      category?: string;
+    }>({
+      filter: "active = true",
+      fields: "address_zone,category",
+      requestKey: null,
+    });
+
+    const ciudades = new Set<string>();
+    const ciudadRubro = new Set<string>();
+
+    for (const job of jobs) {
+      const locs = localidadesDeZona(job.address_zone ?? "");
+      for (const loc of locs) {
+        const slug = slugDeLocalidad(loc);
+        if (!slug) continue;
+        ciudades.add(slug);
+        if (job.category) {
+          const cat = slugDeLocalidad(job.category);
+          if (cat) ciudadRubro.add(`${slug}/${cat}`);
+        }
+      }
+    }
+
+    const out: PaginaLocal[] = [];
+    for (const c of ciudades) {
+      // Prioridad por debajo de una búsqueda concreta (0.9): la página local
+      // es un listado, el aviso es el contenido.
+      out.push({ path: `/trabajo/${c}`, prioridad: 0.8 });
+      out.push({ path: `/postulantes/${c}`, prioridad: 0.6 });
+    }
+    for (const cr of ciudadRubro) {
+      out.push({ path: `/trabajo/${cr}`, prioridad: 0.7 });
+    }
+    return out;
+  } catch {
+    return [];
+  }
+}
+
+/** Todas las URLs absolutas indexables: estáticas + búsquedas activas + locales. */
 export async function todasLasUrlsIndexables(): Promise<string[]> {
-  const busquedas = await busquedasIndexables();
+  const [busquedas, locales] = await Promise.all([busquedasIndexables(), paginasLocales()]);
   return [
     ...RUTAS_ESTATICAS.map((r) => `${BASE_URL}${r.path}`),
     ...busquedas.map((b) => `${BASE_URL}${b.path}`),
+    ...locales.map((l) => `${BASE_URL}${l.path}`),
   ];
 }
