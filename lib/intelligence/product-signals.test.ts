@@ -1,0 +1,123 @@
+import { describe, it, expect } from "vitest";
+import { detectarSenales, caidaEntre, MIN_UNIDADES, type Evidencia } from "./product-signals";
+
+const base: Evidencia = {
+  negocios: { total: 100, sinPublicarNunca: 0, unaSolaVezYNoVolvieron: 0, enPlanPago: 0 },
+  busquedas: { activas: 10, vencidasRecientes: 0, vencidasSinPostulaciones: 0 },
+  postulantes: { total: 100, incompletos: 0 },
+  objetivos: null,
+};
+const con = (over: Partial<Evidencia>): Evidencia => ({ ...base, ...over });
+
+describe("caidaEntre", () => {
+  it("calcula el porcentaje perdido", () => {
+    expect(caidaEntre(100, 20)).toBe(80);
+  });
+
+  // Sin piso, 1 de 2 casos parece "50% de caída" y dispara alarmas falsas.
+  it("devuelve null por debajo del piso de evidencia", () => {
+    expect(caidaEntre(MIN_UNIDADES - 1, 0)).toBeNull();
+  });
+
+  it("no rompe con cero", () => {
+    expect(caidaEntre(0, 0)).toBeNull();
+  });
+});
+
+describe("detectarSenales", () => {
+  it("sin problemas, no inventa hallazgos", () => {
+    expect(detectarSenales(base)).toEqual([]);
+  });
+
+  it("detecta empresas que se registran y nunca publican", () => {
+    const r = detectarSenales(con({ negocios: { ...base.negocios, sinPublicarNunca: 65 } }));
+    expect(r.map((h) => h.id)).toContain("empresas-sin-activar");
+    expect(r[0].severidad).toBe("alta");
+    expect(r[0].evidencia).toContain("65 de 100");
+  });
+
+  it("baja la severidad cuando el problema es moderado", () => {
+    const r = detectarSenales(con({ negocios: { ...base.negocios, sinPublicarNunca: 45 } }));
+    expect(r.find((h) => h.id === "empresas-sin-activar")?.severidad).toBe("media");
+  });
+
+  it("no dispara por debajo del umbral", () => {
+    const r = detectarSenales(con({ negocios: { ...base.negocios, sinPublicarNunca: 30 } }));
+    expect(r.map((h) => h.id)).not.toContain("empresas-sin-activar");
+  });
+
+  // El piso importa más que el umbral: con 3 negocios cualquier porcentaje
+  // es ruido, por más alto que sea.
+  it("respeta el piso de evidencia aunque el porcentaje sea altísimo", () => {
+    const r = detectarSenales(
+      con({ negocios: { total: 3, sinPublicarNunca: 3, unaSolaVezYNoVolvieron: 3, enPlanPago: 0 } }),
+    );
+    expect(r).toEqual([]);
+  });
+
+  it("detecta empresas que no vuelven", () => {
+    const r = detectarSenales(con({ negocios: { ...base.negocios, unaSolaVezYNoVolvieron: 55 } }));
+    const h = r.find((x) => x.id === "empresas-no-vuelven");
+    expect(h?.severidad).toBe("alta");
+  });
+
+  it("detecta búsquedas que vencen sin postulaciones", () => {
+    const r = detectarSenales(
+      con({ busquedas: { activas: 5, vencidasRecientes: 20, vencidasSinPostulaciones: 12 } }),
+    );
+    const h = r.find((x) => x.id === "busquedas-sin-postulaciones");
+    expect(h?.severidad).toBe("alta");
+    expect(h?.evidencia).toContain("12 de 20");
+  });
+
+  it("detecta perfiles incompletos como señal del lado postulante", () => {
+    const r = detectarSenales(con({ postulantes: { total: 100, incompletos: 60 } }));
+    const h = r.find((x) => x.id === "perfiles-incompletos");
+    expect(h?.lado).toBe("postulante");
+  });
+
+  it("detecta la caída del embudo de reclutador", () => {
+    const r = detectarSenales(con({ objetivos: { recruiter_panel: 100, recruiter_contactar: 5 } }));
+    const h = r.find((x) => x.id === "embudo-recruiter");
+    expect(h?.severidad).toBe("alta");
+    expect(h?.evidencia).toContain("95%");
+  });
+
+  it("no dispara el embudo de reclutador si la conversión es sana", () => {
+    const r = detectarSenales(con({ objetivos: { recruiter_panel: 100, recruiter_contactar: 50 } }));
+    expect(r.map((h) => h.id)).not.toContain("embudo-recruiter");
+  });
+
+  it("detecta que la captación de empresas no cierra", () => {
+    const r = detectarSenales(con({ objetivos: { sourced_ver: 200, sourced_reclamar_ok: 1 } }));
+    expect(r.find((x) => x.id === "embudo-sourced")?.severidad).toBe("alta");
+  });
+
+  it("tolera que Plausible no esté configurado", () => {
+    expect(() => detectarSenales(con({ objetivos: null }))).not.toThrow();
+  });
+
+  it("tolera objetivos ausentes sin romper", () => {
+    expect(detectarSenales(con({ objetivos: {} }))).toEqual([]);
+  });
+
+  it("ordena por severidad, alta primero", () => {
+    const r = detectarSenales(
+      con({
+        negocios: { total: 100, sinPublicarNunca: 65, unaSolaVezYNoVolvieron: 35, enPlanPago: 0 },
+        postulantes: { total: 100, incompletos: 35 },
+      }),
+    );
+    const sev = r.map((h) => h.severidad);
+    expect(sev).toEqual([...sev].sort((a, b) => ({ alta: 0, media: 1, baja: 2 })[a] - ({ alta: 0, media: 1, baja: 2 })[b]));
+    expect(r[0].severidad).toBe("alta");
+  });
+
+  it("todo hallazgo trae evidencia numérica, no una opinión", () => {
+    const r = detectarSenales(
+      con({ negocios: { total: 100, sinPublicarNunca: 65, unaSolaVezYNoVolvieron: 55, enPlanPago: 0 } }),
+    );
+    expect(r.length).toBeGreaterThan(0);
+    for (const h of r) expect(h.evidencia).toMatch(/\d/);
+  });
+});
