@@ -81,3 +81,4 @@ Lo que se mira hoy:
   arreglar, porque el interés del candidato ya existe.
 - Los otros dos hallazgos quedan en observación hasta tener más volumen: con 5
   negocios no se puede distinguir un problema de producto de la casualidad.
+
