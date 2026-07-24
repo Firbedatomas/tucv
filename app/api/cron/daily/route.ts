@@ -7,6 +7,8 @@ import { buildJobDeactivatedSummaryEmail } from "@/lib/email/templates/job-deact
 import { buildCompanyDailyJobDigestEmail } from "@/lib/email/templates/company-daily-job-digest";
 import { buildCandidateMatchDigestEmail } from "@/lib/email/templates/candidate-match-digest";
 import { buildProfileStartedEmail } from "@/lib/email/templates/profile-started";
+import { rutaDeBusqueda } from "@/lib/indexable-urls";
+import { notificarAGoogle } from "@/lib/google-indexing";
 
 const CRON_SECRET = process.env.CRON_SECRET;
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
@@ -30,7 +32,7 @@ export async function POST(req: Request) {
 
   const admin = await pbAdmin();
   const now = new Date();
-  const summary = { jobExpiring: 0, jobDeactivated: 0, companyDigests: 0, candidateDigests: 0, profileStarted: 0 };
+  const summary = { jobExpiring: 0, jobDeactivated: 0, companyDigests: 0, candidateDigests: 0, profileStarted: 0, googleDeletions: 0 };
 
   // 1. Búsquedas por vencer (dentro de los próximos 2 días, todavía activas
   // y no avisadas ya para este ciclo -- ver expiring_notified/pb_hooks).
@@ -104,6 +106,22 @@ export async function POST(req: Request) {
     }
     await admin.collection("job_posts").update(job.id, { expired_notified: true });
     summary.jobDeactivated += 1;
+
+    // Avisarle a Google que la búsqueda ya no está disponible. La Indexing API
+    // acepta URL_DELETED justamente para esto, y a un JobPosting vencido le
+    // corresponde salir del índice: dejar avisos muertos en resultados es
+    // exactamente lo que Google penaliza en sitios de empleo.
+    // Best-effort: no puede afectar el resto del cron.
+    const businessName = (job.expand?.business as { business_name?: string } | undefined)?.business_name;
+    const path = rutaDeBusqueda({
+      slug: job.slug as string | undefined,
+      short_code: job.short_code as string | undefined,
+      businessName,
+    });
+    if (path) {
+      const r = await notificarAGoogle(`${BASE_URL}${path}`, "URL_DELETED");
+      if (r.ok) summary.googleDeletions += 1;
+    }
   }
 
   // 3. Impacto diario: postulaciones nuevas (últimas 24hs) agrupadas por
