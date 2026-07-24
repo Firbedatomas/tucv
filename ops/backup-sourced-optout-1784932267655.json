@@ -1,0 +1,524 @@
+[
+  {
+    "id": "sazl1zdxz62t4u0",
+    "name": "Coto",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "bveugbq7m03rjuv",
+    "name": "Supermercados Dia",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "jg10xse12o7k4vu",
+    "name": "Supermayorista Vital",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "zk58wpabtqioso1",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "bubjm06w5k0z80h",
+    "name": "Mostaza",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "zqwotrchs5l9d1v",
+    "name": "Grido",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "0vxpbeslpa7tt45",
+    "name": "Freddo",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "lr0gg2b0w7nfdp3",
+    "name": "Dexter",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "m11v2fnwv83dyo5",
+    "name": "Topper",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "lf8ofg32l93vffb",
+    "name": "Kevingston",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "9f17ucbf6bbcm6x",
+    "name": "YPF",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "dj0t71q9ou56urb",
+    "name": "Tienda de Café",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "w43e46efbovpgfj",
+    "name": "Juan Valdez Café",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "3exvjewz9nlfhvr",
+    "name": "47 STREET La Plata",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "y05kgwkgawnoxyg",
+    "name": "Kentucky",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "0u73jallv1p9vuu",
+    "name": "Kentucky",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "w09yc93kfpw40vp",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "zhwkr2zqnc1tom4",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "6ezt3w2a8ah4lri",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "fawyv6b62gowhp0",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "xzc5i5mmy6meavn",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "6asxmzd0fpi6pyo",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "aop72pfzx5y046x",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "cbhgvjuds0rai6z",
+    "name": "Farmacity Santa Fe",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "ndqhdcltwz6h38u",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "h665a2dbzldo5fe",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "5df6jpdcd8mmv0a",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "lddte1m2idvf7pp",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "w7uisgj2v6nikvd",
+    "name": "Gimnasio Smart Fit - Microcentro",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "ef1vn5pqo71xdhm",
+    "name": "Smart Fit",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "26ktlq9tz4qtp9y",
+    "name": "Gimnasio Smart Fit - Barrio Norte",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "1gdzmzxb2dr8v52",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "mnyrk7hxx3whw2a",
+    "name": "Café Martinez Av Corrientes",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "dld268vh3sx2fij",
+    "name": "Openfarma Plaza Italia",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "lvq1lxkr2ndxovw",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "cotnsevmu7tec3h",
+    "name": "SportClub Congreso",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "urdx6dbp7666lm3",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "ezi4bnvws3i3mus",
+    "name": "Freddo",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "5vn3sawcbomibkb",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "ks6msvzxw5rvmmh",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "cgne0tw81ta43p9",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "2uovuna436emi6m",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "h3jvhhpsz0j8gpr",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "fcb8li7c4p6xmpo",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "d7lrqlaku4djuhw",
+    "name": "MEGATLON [Córdoba – Barrio Jardín] | Gimnasios Argentinos S.A.",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "t5o8o8equb7ssdr",
+    "name": "BARBERIA POPULAR (BP) [Paseo Libertad General Paz]",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "t4cs84fawdva72o",
+    "name": "Openfarma Martínez",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "b33n4wpsl6reeaa",
+    "name": "Farmacity",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "wzwhojj9znr0uwk",
+    "name": "SportClub Estrada 24 hs.",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "mudrbpbv3zxyy5c",
+    "name": "Freddo",
+    "statusAnterior": "detected",
+    "motivo": "cadena conocida"
+  },
+  {
+    "id": "5l5rt8lb3ueffh2",
+    "name": "VER",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Ver\")"
+  },
+  {
+    "id": "u10x3kxpbdtsgi5",
+    "name": "Noa indumentaria",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Noa Indumentaria\")"
+  },
+  {
+    "id": "kenoy9ibc4dyted",
+    "name": "Noa Indumentaria",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Noa Indumentaria\")"
+  },
+  {
+    "id": "5gujnklfehag4gf",
+    "name": "Panaderías Del Pueblo",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Panaderías del Pueblo\")"
+  },
+  {
+    "id": "20zffjoxlfjfx1f",
+    "name": "Artiaga",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Artiaga\")"
+  },
+  {
+    "id": "46rwrcpob0995lf",
+    "name": "Rapanui",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Rapanui\")"
+  },
+  {
+    "id": "25we1qhcyegw03k",
+    "name": "Rapanui",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Rapanui\")"
+  },
+  {
+    "id": "gmps3y9yrq2ohtc",
+    "name": "Rapanui",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Rapanui\")"
+  },
+  {
+    "id": "64l3zh0h8yhw3g9",
+    "name": "Helados Italia",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Helados Italia\")"
+  },
+  {
+    "id": "mns7mduxkadx3jz",
+    "name": "Lucciano's",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Lucciano's\")"
+  },
+  {
+    "id": "tapcl29jvlrke9s",
+    "name": "Los Inmortales",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Los Inmortales\")"
+  },
+  {
+    "id": "zwjkjghhxnpb4iv",
+    "name": "Kiosco 24hs",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Kiosco 24hs\")"
+  },
+  {
+    "id": "lo2vvcbj383zpww",
+    "name": "Verduleria",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Verduleria\")"
+  },
+  {
+    "id": "dq4g9uzndixcpnm",
+    "name": "roho",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"roho\")"
+  },
+  {
+    "id": "8b8y0dpxcy7hhjd",
+    "name": "Vipentto",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Vipentto\")"
+  },
+  {
+    "id": "3uhjvzqgqgg0bh5",
+    "name": "Vipentto",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Vipentto\")"
+  },
+  {
+    "id": "44j2g0wesls2skm",
+    "name": "Artesian Helados",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Artesian Helados\")"
+  },
+  {
+    "id": "u2guktr0prsmmg7",
+    "name": "El Mercadito Natural",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"El Mercadito Natural\")"
+  },
+  {
+    "id": "x6kpybjykuo720z",
+    "name": "BARBARO'S | Barbería & Amigos",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"BARBARO'S | Barbería & Amigos\")"
+  },
+  {
+    "id": "8s6ui7tto1g5fto",
+    "name": "OPEN 25 HS!",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"OPEN 25 HS!\")"
+  },
+  {
+    "id": "2jwfytrizmzpv7y",
+    "name": "OPEN 25 HS!",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"OPEN 25 HS!\")"
+  },
+  {
+    "id": "qo429j0fosmf5j4",
+    "name": "Best Club",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Best Club\")"
+  },
+  {
+    "id": "hdmvt7d8dcrzxwn",
+    "name": "Best Club",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Best Club\")"
+  },
+  {
+    "id": "528dfmpf2orzauy",
+    "name": "Effort Gym",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Effort Gym\")"
+  },
+  {
+    "id": "ks3gxbkpyp1xzwm",
+    "name": "Gym Club de Amigos",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Gym Club de Amigos\")"
+  },
+  {
+    "id": "kcn1ccnkqv0af1v",
+    "name": "Café de Barrio - Café de Especialidad",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Café de Barrio - Café de Especialidad\")"
+  },
+  {
+    "id": "qttadpre8zllzgc",
+    "name": "Café de Barrio - Café de Especialidad",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Café de Barrio - Café de Especialidad\")"
+  },
+  {
+    "id": "gdttlk2mno90jit",
+    "name": "Café de Barrio - Café de Especialidad",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Café de Barrio - Café de Especialidad\")"
+  },
+  {
+    "id": "44oyyhzzflq8n91",
+    "name": "Café de Barrio - Café de Especialidad",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Café de Barrio - Café de Especialidad\")"
+  },
+  {
+    "id": "weobmgv8oi9e2z9",
+    "name": "Café de Barrio - Café de Especialidad",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Café de Barrio - Café de Especialidad\")"
+  },
+  {
+    "id": "5gjpxhw6frbzj3l",
+    "name": "Café de Barrio - Café de Especialidad",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Café de Barrio - Café de Especialidad\")"
+  },
+  {
+    "id": "fmk2ejgetg6uoux",
+    "name": "Green House - Más que una dietética",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Green House - Más que una dietética\")"
+  },
+  {
+    "id": "tuqdtovtytpvxoj",
+    "name": "Wako Mercado Natural Dietetica",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Wako Mercado Natural Dietetica\")"
+  },
+  {
+    "id": "g1hk54ti386udmg",
+    "name": "Wako Mercado Natural Dietetica",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Wako Mercado Natural Dietetica\")"
+  },
+  {
+    "id": "do3n5vfy7b4xofm",
+    "name": "Wako Mercado Natural Dietetica",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Wako Mercado Natural Dietetica\")"
+  },
+  {
+    "id": "550r2f45p6cya8a",
+    "name": "Wako Mercado Natural Dietetica",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Wako Mercado Natural Dietetica\")"
+  },
+  {
+    "id": "0o3n880mxgf4gi2",
+    "name": "Wako Mercado Natural Dietetica",
+    "statusAnterior": "detected",
+    "motivo": "sucursal repetida (se conserva \"Wako Mercado Natural Dietetica\")"
+  }
+]

@@ -81,9 +81,14 @@ export async function recolectarEvidencia(ahora = new Date()): Promise<Evidencia
     const b = negocioDeJob.get(i.sourced_job);
     if (b) sembradosConInteres.add(b);
   }
-  // "detected" es el estado inicial del cron de captación: todo lo que salió
-  // de ahí es que alguien lo tocó.
-  const contactados = sembrados.filter((b) => b.status && b.status !== "detected").length;
+  // Solo cuenta como contactado el que efectivamente se contactó o reclamó.
+  //
+  // Ojo con el error obvio acá: "todo lo que salió de detected" NO sirve,
+  // porque `opted_out` (descartado) también sale de detected. El 2026-07-24 se
+  // dieron de baja 87 cadenas y la señal `captacion-sin-contactar` se apagó
+  // sola, como si el problema estuviera resuelto -- cuando en realidad seguían
+  // siendo 0 los contactados. Descartar no es contactar.
+  const contactados = sembrados.filter((b) => b.status === "contacted" || b.status === "claimed").length;
 
   // Búsquedas por negocio, para activación y retención.
   const porNegocio = new Map<string, { total: number; ultima: string }>();
