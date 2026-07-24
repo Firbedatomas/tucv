@@ -49,4 +49,35 @@ Lo que se mira hoy:
 - [baja] **Perfiles de postulante que quedan a medio completar** (postulante) — 39 de 100 perfiles (39%) están incompletos. → Un perfil incompleto no le sirve a la empresa que busca, así que resta de los dos lados. Ver en qué campo se abandona.
 
 **Qué se hizo con esto**
-- (a completar: qué se probó, qué funcionó, qué NO funcionó)
+- Primera corrida del loop. NO se tocó producto: se corrigió el DETECTOR.
+- **Qué no funcionó:** marcó tres hallazgos como severidad "alta" sobre muestras
+  de 5 negocios y 7 visitas. El piso de evidencia (5) filtraba lo absurdo pero
+  dejaba pasar lo anecdótico como si fuera concluyente. Se agregó un tope: por
+  debajo de 20 unidades nada llega a "alta" y se marca `muestraChica`.
+- Se verificó que los conteos no estén truncados por paginación (100 perfiles es
+  el total real, contrastado contra PocketBase).
+
+## 2026-07-24
+**Evidencia**
+- Negocios: 5 total · 3 nunca publicaron · 0 publicaron una vez y no volvieron · 1 en plan pago
+- Búsquedas: 2 activas · 2 vencidas (30d) · 2 de esas sin ninguna postulación
+- Postulantes: 100 total · 39 incompletos
+- Objetivos (30d): recruiter_panel=7, sourced_me_interesa=8, sourced_reclamar_ver=1, sourced_ver=39
+
+**Hallazgos**
+- [alta] **La captación de empresas no cierra el círculo** (empresa) — 39 vistas de empresas sembradas y solo 0 reclamos completados (se pierde el 100%). → Este es el mecanismo pensado para resolver el cuello del negocio (conseguir empresas). Si no convierte, es la palanca más importante para arreglar antes que cualquier otra cosa.
+- [media] **Negocios que se registran y nunca publican** (empresa) — 3 de 5 negocios (60%) se registraron hace más de 7 días y nunca publicaron una búsqueda. _(muestra chica: cualitativo, no estadístico)_ → Mirar dónde abandonan en /empresa/busquedas/nueva. Es el paso donde se pierde el usuario que YA decidió entrar -- el más caro de recuperar y el más barato de arreglar.
+- [media] **El reclutador entra al panel de candidatos pero no contacta** (empresa) — 7 entraron a /empresa/candidatos y solo 0 contactaron a alguien (se pierde el 100%). _(muestra chica: cualitativo, no estadístico)_ → Mirar los pasos intermedios (abrir perfil, marcar visto, guardar) para ubicar en cuál se corta. Contactar es el momento en que TuCV entrega su valor: si no pasa, nada más importa.
+- [baja] **Perfiles de postulante que quedan a medio completar** (postulante) — 39 de 100 perfiles (39%) están incompletos. → Un perfil incompleto no le sirve a la empresa que busca, así que resta de los dos lados. Ver en qué campo se abandona.
+
+**Qué se hizo con esto**
+- Corrida posterior al arreglo del detector. Queda UN hallazgo con muestra
+  suficiente: el embudo de captación (39 vistas → 0 reclamos completados).
+- Ese es el que importa: es el mecanismo pensado para resolver el cuello real
+  del negocio (conseguir empresas) y hoy no cierra el círculo. De 39 vistas, 8
+  marcaron "me interesa", 1 llegó a la pantalla de reclamo y 0 lo completaron.
+- **Próxima acción sugerida:** entender la caída entre `sourced_me_interesa` (8)
+  y `sourced_reclamar_ver` (1). Ahí se pierde el 87% y es el paso más barato de
+  arreglar, porque el interés del candidato ya existe.
+- Los otros dos hallazgos quedan en observación hasta tener más volumen: con 5
+  negocios no se puede distinguir un problema de producto de la casualidad.
