@@ -15,6 +15,7 @@ export type EmailType =
   | "contact_request"
   | "candidate_match_digest"
   | "team_invite"
+  | "sourced_interest_outreach"
   | "campaign";
 
 export type EmailStatus =

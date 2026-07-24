@@ -1,5 +1,7 @@
 import "server-only";
 import { pbAdmin } from "@/lib/pocketbase-admin";
+import { notifyTelegram } from "@/lib/telegram";
+import { waLink } from "@/lib/whatsapp";
 import { resolveUserIdFromToken } from "@/lib/candidate-session";
 
 // Proyección PÚBLICA de una empresa detectada. Expone SOLO lo mostrable: nombre,
@@ -114,11 +116,78 @@ export async function recordInterest(sourcedJobId: string, token?: string | null
     }
   }
 
-  await admin
+  const creado = await admin
     .collection("candidate_interest")
     .create({ sourced_job: sourcedJobId, candidate: candidateId })
     .catch(() => null); // duplicado (mismo candidato) o carrera -> se ignora
+
+  // Aviso inmediato: este es el lead más caliente que existe acá -- alguien
+  // quiere trabajar en un negocio que ni siquiera está en TuCV. Hasta ahora
+  // quedaba en una tabla que nadie miraba (medido el 2026-07-24: 19 negocios
+  // con interés acumulado y CERO contactados), y un lead se enfría en horas.
+  // Solo se avisa del interés nuevo, no de un duplicado ignorado.
+  if (creado) {
+    void avisarLeadCaliente(admin, job.sourced_business as string).catch(() => {});
+  }
   return "ok";
+}
+
+// Best-effort y fuera del camino de la request: si Telegram falla, el interés
+// ya quedó registrado igual.
+async function avisarLeadCaliente(
+  admin: Awaited<ReturnType<typeof pbAdmin>>,
+  sourcedBusinessId: string,
+): Promise<void> {
+  if (!sourcedBusinessId) return;
+  const biz = await admin
+    .collection("sourced_businesses")
+    .getOne(sourcedBusinessId, { requestKey: null })
+    .catch(() => null);
+  if (!biz || biz.status === "opted_out" || biz.claimed_business) return;
+
+  const total = await contarInteresDeNegocio(admin, sourcedBusinessId);
+  const nombre = (biz.name as string) || "un negocio";
+  const zona = (biz.city_zone as string) || "";
+  const tel = (biz.contact_phone as string) || "";
+  const base = process.env.NEXT_PUBLIC_BASE_URL || "https://tucv.ar";
+
+  const lineas = [
+    `Lead caliente: ${total} ${total === 1 ? "persona quiere" : "personas quieren"} trabajar en ${nombre}${zona ? ` (${zona})` : ""}.`,
+    tel ? `WhatsApp: ${waLink(tel, mensajeOutreach(nombre, total))}` : "Sin teléfono cargado.",
+    `Cola: ${base}/admin/captacion`,
+  ];
+  await notifyTelegram(lineas.join("\n"));
+}
+
+async function contarInteresDeNegocio(
+  admin: Awaited<ReturnType<typeof pbAdmin>>,
+  sourcedBusinessId: string,
+): Promise<number> {
+  const jobs = await admin
+    .collection("sourced_jobs")
+    .getFullList<{ id: string }>({
+      filter: admin.filter("sourced_business = {:b}", { b: sourcedBusinessId }),
+      fields: "id",
+      requestKey: null,
+    })
+    .catch(() => []);
+  if (!jobs.length) return 0;
+  const filtro = jobs.map((j) => `sourced_job = "${j.id}"`).join(" || ");
+  const { totalItems } = await admin
+    .collection("candidate_interest")
+    .getList(1, 1, { filter: filtro, requestKey: null })
+    .catch(() => ({ totalItems: 0 }));
+  return totalItems;
+}
+
+/** Mensaje de outreach, compartido entre el aviso de Telegram y el panel. */
+export function mensajeOutreach(nombre: string, interesados: number): string {
+  const gente = interesados === 1 ? "1 persona de tu zona quiere" : `${interesados} personas de tu zona quieren`;
+  return (
+    `Hola! Soy de TuCV. ${gente} trabajar en ${nombre}. ` +
+    `Les armamos un perfil gratis para que puedas verlos y contactarlos, sin costo y sin vueltas. ` +
+    `¿Te paso el link?`
+  );
 }
 
 // Lista PÚBLICA de oportunidades detectadas (para que los candidatos las
