@@ -5,6 +5,7 @@ const base: Evidencia = {
   negocios: { total: 100, sinPublicarNunca: 0, unaSolaVezYNoVolvieron: 0, enPlanPago: 0 },
   busquedas: { activas: 10, vencidasRecientes: 0, vencidasSinPostulaciones: 0 },
   postulantes: { total: 100, incompletos: 0 },
+  captacion: { sembrados: 0, conInteres: 0, contactados: 0 },
   objetivos: null,
 };
 const con = (over: Partial<Evidencia>): Evidencia => ({ ...base, ...over });
@@ -21,6 +22,38 @@ describe("caidaEntre", () => {
 
   it("no rompe con cero", () => {
     expect(caidaEntre(0, 0)).toBeNull();
+  });
+});
+
+describe("detectarSenales — captación", () => {
+  // Regresión del caso real (2026-07-24): 986 negocios sembrados, 11 con
+  // candidatos interesados, 0 contactados. El embudo no se cortaba por un
+  // problema de UX sino porque el paso siguiente es manual y nadie lo daba.
+  it("avisa cuando hay interés y nadie contactó a ningún negocio", () => {
+    const r = detectarSenales(con({ captacion: { sembrados: 986, conInteres: 11, contactados: 0 } }));
+    const h = r.find((x) => x.id === "captacion-sin-contactar");
+    expect(h?.severidad).toBe("alta");
+    expect(h?.evidencia).toContain("11");
+    expect(h?.evidencia).toContain("986");
+  });
+
+  // Es un conteo de oportunidades sin usar, no un porcentaje: no se le aplica
+  // el tope de muestra chica.
+  it("con un solo negocio interesado ya avisa, y en alta", () => {
+    const r = detectarSenales(con({ captacion: { sembrados: 50, conInteres: 1, contactados: 0 } }));
+    const h = r.find((x) => x.id === "captacion-sin-contactar");
+    expect(h?.severidad).toBe("alta");
+    expect(h?.muestraChica).toBe(false);
+  });
+
+  it("deja de avisar apenas se contactó a alguien", () => {
+    const r = detectarSenales(con({ captacion: { sembrados: 986, conInteres: 11, contactados: 1 } }));
+    expect(r.map((h) => h.id)).not.toContain("captacion-sin-contactar");
+  });
+
+  it("no avisa si no hay interés de nadie", () => {
+    const r = detectarSenales(con({ captacion: { sembrados: 986, conInteres: 0, contactados: 0 } }));
+    expect(r.map((h) => h.id)).not.toContain("captacion-sin-contactar");
   });
 });
 

@@ -39,7 +39,7 @@ export async function recolectarEvidencia(ahora = new Date()): Promise<Evidencia
   const haceUnMes = new Date(ahora.getTime() - DIAS_PARA_VOLVER * 86400000).toISOString();
   const ahoraISO = ahora.toISOString();
 
-  const [negocios, jobs, candidatos, activas] = await Promise.all([
+  const [negocios, jobs, candidatos, activas, sembrados, sembradosJobs, intereses] = await Promise.all([
     admin.collection("business_accounts").getFullList<{ id: string; created: string; plan?: string }>({
       fields: "id,created,plan",
       requestKey: null,
@@ -58,7 +58,32 @@ export async function recolectarEvidencia(ahora = new Date()): Promise<Evidencia
       filter: admin.filter("active = true && expires_at > {:now}", { now: ahoraISO }),
       requestKey: null,
     }),
+    admin.collection("sourced_businesses").getFullList<{ id: string; status?: string }>({
+      fields: "id,status",
+      requestKey: null,
+    }),
+    admin.collection("sourced_jobs").getFullList<{ id: string; sourced_business: string }>({
+      fields: "id,sourced_business",
+      requestKey: null,
+    }),
+    admin.collection("candidate_interest").getFullList<{ sourced_job: string }>({
+      fields: "sourced_job",
+      requestKey: null,
+    }),
   ]);
+
+  // Captación: qué negocios sembrados tienen interés real y cuántos se
+  // contactaron. El interés cuelga de sourced_jobs, no del negocio, así que
+  // hay que resolver el salto.
+  const negocioDeJob = new Map(sembradosJobs.map((j) => [j.id, j.sourced_business]));
+  const sembradosConInteres = new Set<string>();
+  for (const i of intereses) {
+    const b = negocioDeJob.get(i.sourced_job);
+    if (b) sembradosConInteres.add(b);
+  }
+  // "detected" es el estado inicial del cron de captación: todo lo que salió
+  // de ahí es que alguien lo tocó.
+  const contactados = sembrados.filter((b) => b.status && b.status !== "detected").length;
 
   // Búsquedas por negocio, para activación y retención.
   const porNegocio = new Map<string, { total: number; ultima: string }>();
@@ -130,6 +155,11 @@ export async function recolectarEvidencia(ahora = new Date()): Promise<Evidencia
     postulantes: {
       total: breakdown.total,
       incompletos: breakdown.incompletos,
+    },
+    captacion: {
+      sembrados: sembrados.length,
+      conInteres: sembradosConInteres.size,
+      contactados,
     },
     objetivos,
   };

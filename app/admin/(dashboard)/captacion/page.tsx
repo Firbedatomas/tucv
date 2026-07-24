@@ -1,5 +1,6 @@
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { SourcedManager, type SourcedRow } from "@/components/admin/SourcedManager";
+import { ordenarPorPrioridad } from "@/lib/sourced-priority";
 
 // Panel de captación: sembrar empresas detectadas (piloto Córdoba), ver el
 // interés real de candidatos por cada una (el gancho de outreach) y disparar el
@@ -45,7 +46,7 @@ export default async function AdminCaptacionPage() {
         Piloto Córdoba. Sembrá empresas detectadas públicamente, mirá cuántos candidatos ya se
         interesaron, y contactalas con ese gancho.
       </p>
-      <SourcedManager rows={rows} />
+      <SourcedManager rows={ordenarPorPrioridad(rows)} />
     </div>
   );
 }

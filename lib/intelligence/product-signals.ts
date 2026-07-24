@@ -69,6 +69,14 @@ export type Evidencia = {
     /** Perfiles empezados pero nunca completados. */
     incompletos: number;
   };
+  captacion: {
+    /** Negocios sembrados por el cron de captación. */
+    sembrados: number;
+    /** De esos, cuántos tienen al menos un candidato interesado. */
+    conInteres: number;
+    /** Cuántos salieron alguna vez del estado "detected". */
+    contactados: number;
+  };
   /** Conteo por objetivo de Plausible (30 días). null si Plausible no está configurado. */
   objetivos: Record<string, number> | null;
 };
@@ -157,6 +165,29 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
           "Un perfil incompleto no le sirve a la empresa que busca, así que resta de los dos lados. Ver en qué campo se abandona.",
       });
     }
+  }
+
+  // --- Interés caliente que nadie contactó ---
+  //
+  // Esta regla no mide una caída de UX: mide que el paso siguiente lo tiene
+  // que dar una PERSONA y no lo está dando. Un candidato marcó "me interesa"
+  // en un negocio que ni siquiera está en TuCV -- es el lead más caliente que
+  // existe acá, y se enfría solo mientras nadie lo use.
+  if (e.captacion.conInteres >= 1 && e.captacion.contactados === 0) {
+    out.push({
+      id: "captacion-sin-contactar",
+      lado: "empresa",
+      // A propósito NO pasa por `ajustar`: no es un porcentaje sobre una
+      // muestra, es un conteo absoluto de oportunidades sin usar. Un solo
+      // negocio con interés y sin contactar ya es accionable.
+      severidad: "alta",
+      muestra: e.captacion.conInteres,
+      muestraChica: false,
+      titulo: "Hay interés de candidatos que nadie usó para contactar al negocio",
+      evidencia: `${e.captacion.conInteres} negocios sembrados tienen candidatos interesados y NINGUNO de los ${e.captacion.sembrados} sembrados fue contactado (todos siguen en "detected").`,
+      sugerencia:
+        "El embudo no se corta por un problema de producto: el paso de contactar es manual y no se está haciendo. Está en /admin/captacion, que ya trae el mensaje y el link de WhatsApp listos.",
+    });
   }
 
   // --- Embudos de Plausible ---
