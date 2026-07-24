@@ -25,11 +25,28 @@ export type Hallazgo = {
   evidencia: string;
   /** Qué habría que mirar o probar. No es una orden: el loop está en observación. */
   sugerencia: string;
+  /** Sobre cuántas unidades se calculó. Expuesto para poder discutir el hallazgo. */
+  muestra: number;
+  /** true si la muestra es chica: el hallazgo es cualitativo, no estadístico. */
+  muestraChica: boolean;
 };
 
 // Piso de evidencia: por debajo de esto los porcentajes son ruido. Es la misma
 // lección del detector de SEO -- sin piso, 1 de 2 casos parece "50% de caída".
 export const MIN_UNIDADES = 5;
+
+// Por encima del piso pero por debajo de esto, el hallazgo se reporta pero NUNCA
+// como "alta": con 5 negocios, "el 60% no activó" son 3 casos -- puede ser real
+// o puede ser casualidad, y no hay forma de distinguirlo. Sin este tope la
+// primera corrida real reportó tres "alta" sobre muestras de 5 y 7 (2026-07-24),
+// que es exactamente el falso positivo que el piso pretendía evitar.
+export const MIN_PARA_ALTA = 20;
+
+function ajustar(severidad: Severidad, muestra: number): { severidad: Severidad; muestraChica: boolean } {
+  const chica = muestra < MIN_PARA_ALTA;
+  if (chica && severidad === "alta") return { severidad: "media", muestraChica: true };
+  return { severidad, muestraChica: chica };
+}
 
 export type Evidencia = {
   negocios: {
@@ -81,7 +98,8 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
       out.push({
         id: "empresas-sin-activar",
         lado: "empresa",
-        severidad: p >= 60 ? "alta" : "media",
+        ...ajustar(p >= 60 ? "alta" : "media", e.negocios.total),
+        muestra: e.negocios.total,
         titulo: "Negocios que se registran y nunca publican",
         evidencia: `${e.negocios.sinPublicarNunca} de ${e.negocios.total} negocios (${p}%) se registraron hace más de 7 días y nunca publicaron una búsqueda.`,
         sugerencia:
@@ -97,7 +115,8 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
       out.push({
         id: "empresas-no-vuelven",
         lado: "empresa",
-        severidad: p >= 50 ? "alta" : "media",
+        ...ajustar(p >= 50 ? "alta" : "media", e.negocios.total),
+        muestra: e.negocios.total,
         titulo: "Negocios que publicaron una vez y no volvieron",
         evidencia: `${e.negocios.unaSolaVezYNoVolvieron} de ${e.negocios.total} negocios (${p}%) publicaron una sola búsqueda hace más de 30 días y no volvieron a publicar.`,
         sugerencia:
@@ -113,7 +132,8 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
       out.push({
         id: "busquedas-sin-postulaciones",
         lado: "empresa",
-        severidad: p >= 50 ? "alta" : "media",
+        ...ajustar(p >= 50 ? "alta" : "media", e.busquedas.vencidasRecientes),
+        muestra: e.busquedas.vencidasRecientes,
         titulo: "Búsquedas que vencen sin ninguna postulación",
         evidencia: `${e.busquedas.vencidasSinPostulaciones} de ${e.busquedas.vencidasRecientes} búsquedas vencidas en los últimos 30 días (${p}%) no recibieron ni una postulación.`,
         sugerencia:
@@ -129,7 +149,8 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
       out.push({
         id: "perfiles-incompletos",
         lado: "postulante",
-        severidad: p >= 50 ? "media" : "baja",
+        ...ajustar(p >= 50 ? "media" : "baja", e.postulantes.total),
+        muestra: e.postulantes.total,
         titulo: "Perfiles de postulante que quedan a medio completar",
         evidencia: `${e.postulantes.incompletos} de ${e.postulantes.total} perfiles (${p}%) están incompletos.`,
         sugerencia:
@@ -150,7 +171,8 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
       out.push({
         id: "embudo-recruiter",
         lado: "empresa",
-        severidad: caidaRecruiter >= 85 ? "alta" : "media",
+        ...ajustar(caidaRecruiter >= 85 ? "alta" : "media", panel),
+        muestra: panel,
         titulo: "El reclutador entra al panel de candidatos pero no contacta",
         evidencia: `${panel} entraron a /empresa/candidatos y solo ${contactar} contactaron a alguien (se pierde el ${caidaRecruiter}%).`,
         sugerencia:
@@ -167,7 +189,8 @@ export function detectarSenales(e: Evidencia): Hallazgo[] {
       out.push({
         id: "embudo-sourced",
         lado: "empresa",
-        severidad: "alta",
+        ...ajustar("alta", sourcedVer),
+        muestra: sourcedVer,
         titulo: "La captación de empresas no cierra el círculo",
         evidencia: `${sourcedVer} vistas de empresas sembradas y solo ${reclamarOk} reclamos completados (se pierde el ${caidaSourced}%).`,
         sugerencia:

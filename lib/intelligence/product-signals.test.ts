@@ -34,6 +34,33 @@ describe("detectarSenales", () => {
     expect(r.map((h) => h.id)).toContain("empresas-sin-activar");
     expect(r[0].severidad).toBe("alta");
     expect(r[0].evidencia).toContain("65 de 100");
+    expect(r[0].muestraChica).toBe(false);
+  });
+
+  // Regresión de la primera corrida real (2026-07-24): con 5 negocios el
+  // detector reportó "alta" por 3 casos. Sobre el piso pero sin significado.
+  it("nunca marca alta con muestra chica, por más extremo que sea el porcentaje", () => {
+    const r = detectarSenales(
+      con({ negocios: { total: 5, sinPublicarNunca: 5, unaSolaVezYNoVolvieron: 0, enPlanPago: 0 } }),
+    );
+    const h = r.find((x) => x.id === "empresas-sin-activar");
+    expect(h?.severidad).toBe("media");
+    expect(h?.muestraChica).toBe(true);
+    expect(h?.muestra).toBe(5);
+  });
+
+  it("un embudo con muestra chica tampoco llega a alta", () => {
+    const r = detectarSenales(con({ objetivos: { recruiter_panel: 7, recruiter_contactar: 0 } }));
+    const h = r.find((x) => x.id === "embudo-recruiter");
+    expect(h?.severidad).toBe("media");
+    expect(h?.muestraChica).toBe(true);
+  });
+
+  it("con muestra grande sí llega a alta", () => {
+    const r = detectarSenales(con({ objetivos: { sourced_ver: 200, sourced_reclamar_ok: 0 } }));
+    const h = r.find((x) => x.id === "embudo-sourced");
+    expect(h?.severidad).toBe("alta");
+    expect(h?.muestraChica).toBe(false);
   });
 
   it("baja la severidad cuando el problema es moderado", () => {

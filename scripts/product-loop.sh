@@ -78,7 +78,8 @@ if not hs:
     lineas.append("- Ninguno por encima del piso de evidencia.\n")
 else:
     for h in hs:
-        lineas.append(f"- [{h['severidad']}] **{h['titulo']}** ({h['lado']}) — {h['evidencia']} → {h['sugerencia']}\n")
+        nota = " _(muestra chica: cualitativo, no estadístico)_" if h.get("muestraChica") else ""
+        lineas.append(f"- [{h['severidad']}] **{h['titulo']}** ({h['lado']}) — {h['evidencia']}{nota} → {h['sugerencia']}\n")
 
 lineas.append("\n**Qué se hizo con esto**\n")
 lineas.append("- (a completar: qué se probó, qué funcionó, qué NO funcionó)\n")
@@ -90,7 +91,8 @@ with io.open(ruta, "a", encoding="utf-8") as f:
 if hs:
     partes = [f"{len(hs)} hallazgo(s) de producto:"]
     for h in hs[:3]:
-        partes.append(f"• [{h['severidad']}] {h['titulo']} — {h['evidencia']}")
+        nota = " (muestra chica)" if h.get("muestraChica") else ""
+        partes.append(f"• [{h['severidad']}]{nota} {h['titulo']} — {h['evidencia']}")
     print("\n".join(partes))
 else:
     print(f"Sin hallazgos sobre el piso. Negocios: {ev['negocios']['total']}, "
