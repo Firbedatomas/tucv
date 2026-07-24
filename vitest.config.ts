@@ -11,6 +11,10 @@ export default defineConfig({
   test: {
     environment: "node",
     include: ["**/*.test.ts"],
-    exclude: ["node_modules/**", ".next/**"],
+    // Los patrones tienen que ser `**/` y no solo la raíz: los worktrees de
+    // .claude/ traen su propio node_modules, y sin esto vitest levantaba los
+    // tests de dependencias (svix, @stablelib, ...) y la suite daba 48
+    // archivos en rojo por tests que no son nuestros.
+    exclude: ["**/node_modules/**", "**/.next/**", ".claude/worktrees/**"],
   },
 });

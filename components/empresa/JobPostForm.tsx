@@ -48,6 +48,7 @@ import { suggestProgramsForZone, programById, PROGRAMS_DISCLAIMER } from "@/lib/
 import { RichTextEditor } from "@/components/ui/RichTextEditor";
 import { sanitizeVisibleMessage } from "@/lib/sanitize-html";
 import { OnboardingCompany } from "@/components/onboarding/OnboardingCompany";
+import { pingIndexNow } from "@/lib/ping-indexnow";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -306,6 +307,7 @@ export function JobPostForm({
         // manejan las acciones del panel (pausar, reactivar, promocionar,
         // marcar cubierta), no el formulario de datos de la búsqueda.
         await client.collection("job_posts").update(mode.jobId, payload);
+        pingIndexNow(mode.jobId);
         setSaved(true);
         setSubmitting(false);
         try {
@@ -393,6 +395,7 @@ export function JobPostForm({
       });
       trackEvent("Empresa: aviso publicado");
       emitActivity("job_created", { jobId: record.id });
+      pingIndexNow(record.id);
       try {
         window.localStorage.removeItem(draftKey(mode));
       } catch {

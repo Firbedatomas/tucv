@@ -7,7 +7,7 @@
 set -euo pipefail
 cd "$(dirname "$0")/.."
 
-ENDPOINT="${1:?uso: run-cron.sh <daily|weekly|flush-email-queue>}"
+ENDPOINT="${1:?uso: run-cron.sh <daily|weekly|flush-email-queue|capture-businesses|weekly-opportunities|indexnow>}"
 BASE_URL="${NEXT_PUBLIC_BASE_URL:-https://tucv.ar}"
 
 # CRON_SECRET sale del mismo .env que consume el contenedor (env_file en
