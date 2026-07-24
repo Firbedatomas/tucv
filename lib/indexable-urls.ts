@@ -122,9 +122,14 @@ export async function paginasLocales(): Promise<PaginaLocal[]> {
         const slug = slugDeLocalidad(loc);
         if (!slug) continue;
         ciudades.add(slug);
-        if (job.category) {
-          const cat = slugDeLocalidad(job.category);
-          if (cat) ciudadRubro.add(`${slug}/${cat}`);
+        // El rubro va CRUDO, sin slugificar: la ruta compara contra el value
+        // de CATEGORIES (`j.category === category`), que usa guión bajo
+        // ("moza_mozo"). Slugificarlo a "moza-mozo" da una página que
+        // responde 200 pero sin ningún aviso y con el slug crudo de título
+        // -- comprobado en producción el 2026-07-24, publicó 4 URLs vacías.
+        // Los values ya son seguros para URL (minúsculas y guión bajo).
+        if (job.category && /^[a-z0-9_]+$/.test(job.category)) {
+          ciudadRubro.add(`${slug}/${job.category}`);
         }
       }
     }
