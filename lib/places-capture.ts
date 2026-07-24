@@ -1,5 +1,6 @@
 import "server-only";
 import { pbAdmin } from "@/lib/pocketbase-admin";
+import { esCadenaConocida } from "@/lib/chain-detection";
 
 // Captura de PYMES / comercio de barrio desde Google Places (Text Search +
 // Details). Fuente estructurada donde SÍ está el comercio local (que no tiene
@@ -106,8 +107,8 @@ async function zonesByCandidateVolume(admin: Awaited<ReturnType<typeof pbAdmin>>
 
 // Corre una tanda: prioriza zonas por volumen de candidatos, rota rubros por día,
 // y siembra hasta `limit` nuevas (dedup por place_id). Devuelve cuántas sembró.
-export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ seeded: number; combosUsed: string[] }> {
-  if (!KEY) return { seeded: 0, combosUsed: [] };
+export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ seeded: number; descartadasPorCadena: number; combosUsed: string[] }> {
+  if (!KEY) return { seeded: 0, descartadasPorCadena: 0, combosUsed: [] };
   const admin = await pbAdmin();
 
   const zonesOrdered = await zonesByCandidateVolume(admin);
@@ -119,6 +120,7 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
   for (const zona of zonesOrdered) for (const [rubro, cat] of rubrosOrdered) ordered.push([rubro, cat, zona]);
 
   let seeded = 0;
+  let descartadasPorCadena = 0;
   const combosUsed: string[] = [];
   for (const [rubro, cat, zona] of ordered) {
     if (seeded >= limit) break;
@@ -128,10 +130,34 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
     for (const p of places) {
       if (seeded >= limit) break;
       if (!p.placeId || !p.name) continue;
+
+      // Google Places devuelve primero lo más prominente, así que "cafetería en
+      // Córdoba" trae Starbucks antes que la cafetería del barrio. El cliente de
+      // TuCV es el comercio local: una cadena tiene RRHH centralizado, no va a
+      // reclamar su perfil, y sembrarla gasta cuota de API y ensucia la cola de
+      // captación (medido el 2026-07-24: la mayoría de los sembrados con
+      // candidatos interesados eran cadenas y ninguno convirtió).
+      if (esCadenaConocida(p.name)) {
+        descartadasPorCadena += 1;
+        continue;
+      }
+
       const sourceUrl = `https://www.google.com/maps/place/?q=place_id:${p.placeId}`;
       // dedup por place_id
       const dup = await admin.collection("sourced_businesses").getFirstListItem(admin.filter("source_url = {:u}", { u: sourceUrl }), { requestKey: null }).catch(() => null);
       if (dup) continue;
+
+      // Cadena que no está en la lista: si ya sembramos un negocio con el
+      // MISMO nombre exacto (otra sucursal, otro place_id), es multi-local.
+      // Complementa la lista curada sin tener que preverlo todo.
+      const mismoNombre = await admin
+        .collection("sourced_businesses")
+        .getFirstListItem(admin.filter("name = {:n}", { n: p.name.slice(0, 200) }), { requestKey: null })
+        .catch(() => null);
+      if (mismoNombre) {
+        descartadasPorCadena += 1;
+        continue;
+      }
 
       const det = await placeDetails(p.placeId);
       // Logo: primero la FOTO real del negocio (Google Places); si no hay, el
@@ -170,5 +196,5 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
       seeded += 1;
     }
   }
-  return { seeded, combosUsed };
+  return { seeded, descartadasPorCadena, combosUsed };
 }
