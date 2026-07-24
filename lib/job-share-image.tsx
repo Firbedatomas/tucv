@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getPublicJob } from "@/lib/public-job";
 import { JobShareCard } from "@/lib/job-share-card";
+import { withContentLength } from "@/lib/share-image-response";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -28,36 +29,40 @@ export async function renderJobShareImage({
   canonicalPath: string;
   variant: "landscape" | "portrait";
   size: { width: number; height: number };
-}): Promise<ImageResponse> {
+}): Promise<Response> {
   const job = await getPublicJob(identifier);
 
   // Búsqueda no encontrada/vencida -- fondo de marca liso en vez de romper
   // el fetch (de la Twitter Card o del Web Share de Instagram) con un 404.
   if (!job) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#FBF3E3",
-            fontSize: 56,
-            fontWeight: 800,
-            color: "#151515",
-          }}
-        >
-          TuCV
-        </div>
+    return withContentLength(
+      new ImageResponse(
+        (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#FBF3E3",
+              fontSize: 56,
+              fontWeight: 800,
+              color: "#151515",
+            }}
+          >
+            TuCV
+          </div>
+        ),
+        { ...size, headers: SHARE_IMAGE_HEADERS },
       ),
-      { ...size, headers: SHARE_IMAGE_HEADERS },
     );
   }
 
-  return new ImageResponse(<JobShareCard job={job} url={`${BASE_URL}${canonicalPath}`} variant={variant} />, {
-    ...size,
-    headers: SHARE_IMAGE_HEADERS,
-  });
+  return withContentLength(
+    new ImageResponse(<JobShareCard job={job} url={`${BASE_URL}${canonicalPath}`} variant={variant} />, {
+      ...size,
+      headers: SHARE_IMAGE_HEADERS,
+    }),
+  );
 }

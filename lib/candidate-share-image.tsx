@@ -1,6 +1,7 @@
 import { ImageResponse } from "next/og";
 import { getPublicCandidateCard } from "@/lib/public-candidates-list";
 import { CandidateShareCard } from "@/lib/candidate-share-card";
+import { withContentLength } from "@/lib/share-image-response";
 
 const BASE_URL = process.env.NEXT_PUBLIC_BASE_URL || "http://localhost:3000";
 
@@ -25,34 +26,38 @@ export async function renderCandidateShareImage({
   slug: string;
   variant: "landscape" | "portrait";
   size: { width: number; height: number };
-}): Promise<ImageResponse> {
+}): Promise<Response> {
   const candidate = await getPublicCandidateCard(slug);
 
   if (!candidate) {
-    return new ImageResponse(
-      (
-        <div
-          style={{
-            width: "100%",
-            height: "100%",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            backgroundColor: "#FBF3E3",
-            fontSize: 56,
-            fontWeight: 800,
-            color: "#151515",
-          }}
-        >
-          TuCV
-        </div>
+    return withContentLength(
+      new ImageResponse(
+        (
+          <div
+            style={{
+              width: "100%",
+              height: "100%",
+              display: "flex",
+              alignItems: "center",
+              justifyContent: "center",
+              backgroundColor: "#FBF3E3",
+              fontSize: 56,
+              fontWeight: 800,
+              color: "#151515",
+            }}
+          >
+            TuCV
+          </div>
+        ),
+        { ...size, headers: SHARE_IMAGE_HEADERS },
       ),
-      { ...size, headers: SHARE_IMAGE_HEADERS },
     );
   }
 
-  return new ImageResponse(
-    <CandidateShareCard candidate={candidate} url={`${BASE_URL}/p/${slug}`} variant={variant} />,
-    { ...size, headers: SHARE_IMAGE_HEADERS },
+  return withContentLength(
+    new ImageResponse(
+      <CandidateShareCard candidate={candidate} url={`${BASE_URL}/p/${slug}`} variant={variant} />,
+      { ...size, headers: SHARE_IMAGE_HEADERS },
+    ),
   );
 }
