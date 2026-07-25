@@ -1,6 +1,7 @@
 import "server-only";
 import { pbAdmin } from "@/lib/pocketbase-admin";
 import { esCadenaConocida } from "@/lib/chain-detection";
+import { extraerEmail } from "@/lib/email-extraction";
 
 // Captura de PYMES / comercio de barrio desde Google Places (Text Search +
 // Details). Fuente estructurada donde SÍ está el comercio local (que no tiene
@@ -13,23 +14,49 @@ const KEY = process.env.GOOGLE_MAPS_API_KEY || "";
 // Zonas donde están los candidatos (ver geo de los perfiles) + rubros locales de
 // alta rotación. El cron rota por (rubro x zona) según el día -> cada día cubre
 // combos distintos y va avanzando.
-export const CAPTURE_ZONES = ["La Plata", "CABA", "Córdoba", "Mar del Plata", "San Martín", "Quilmes"];
+export const CAPTURE_ZONES = [
+  // Se ordenan en runtime por volumen de candidatos (zonesByCandidateVolume),
+  // así que la lista puede crecer sin que se desperdicie cuota: primero se
+  // llena donde hay gente buscando trabajo.
+  "Córdoba", "CABA", "La Plata", "Mar del Plata", "San Martín", "Quilmes",
+  "Rosario", "Villa Allende", "Río Cuarto", "Mendoza", "Tucumán", "Salta",
+  "Santa Fe", "Neuquén", "Bahía Blanca", "Avellaneda", "Lomas de Zamora",
+  "Morón", "Tigre", "San Isidro",
+];
 export const CAPTURE_RUBROS = [
   ["peluquería", "Belleza / estética"],
   ["barbería", "Belleza / estética"],
+  ["centro de estética", "Belleza / estética"],
   ["cafetería", "Gastronomía"],
   ["restaurante", "Gastronomía"],
   ["panadería", "Gastronomía"],
   ["rotisería", "Gastronomía"],
   ["heladería", "Gastronomía"],
   ["pizzería", "Gastronomía"],
+  ["casa de empanadas", "Gastronomía"],
+  ["cervecería", "Gastronomía"],
+  ["casa de pastas", "Gastronomía"],
   ["kiosco", "Comercio"],
   ["dietética", "Comercio"],
   ["indumentaria", "Comercio"],
   ["ferretería", "Comercio"],
   ["verdulería", "Comercio"],
+  ["carnicería", "Comercio"],
+  ["librería", "Comercio"],
+  ["pinturería", "Comercio"],
+  ["mueblería", "Comercio"],
+  ["vivero", "Comercio"],
+  ["pet shop", "Comercio"],
   ["farmacia", "Salud"],
+  ["óptica", "Salud"],
+  ["veterinaria", "Salud"],
   ["gimnasio", "Servicios"],
+  ["lavadero de autos", "Servicios"],
+  ["taller mecánico", "Servicios"],
+  ["lubricentro", "Servicios"],
+  ["cerrajería", "Servicios"],
+  ["tintorería", "Servicios"],
+  ["bicicletería", "Servicios"],
 ];
 
 type Place = { name: string; placeId: string; address: string; photoRef: string };
@@ -74,6 +101,36 @@ async function placeDetails(placeId: string): Promise<{ phone: string; website: 
   };
 }
 
+// Busca el email en el sitio del negocio. Places NO devuelve email (no existe
+// el campo): medido el 2026-07-25, de 950 negocios capturados por Places 0
+// tenían email. El sitio propio es la única fuente a escala, y el negocio lo
+// publica justamente para que lo contacten.
+//
+// Rinde ~18% sobre los que tienen sitio. Timeout corto: muchos comercios
+// chicos tienen la web caída y no vamos a esperarlos.
+async function emailDesdeSitio(sitio: string): Promise<string> {
+  if (!sitio) return "";
+  let url: URL;
+  try {
+    url = new URL(sitio.startsWith("http") ? sitio : `https://${sitio}`);
+  } catch {
+    return "";
+  }
+  try {
+    const res = await fetch(url, {
+      redirect: "follow",
+      signal: AbortSignal.timeout(8000),
+      headers: { "User-Agent": "TuCV-bot/1.0 (+https://tucv.ar)" },
+    });
+    if (!res.ok) return "";
+    if (!(res.headers.get("content-type") || "").includes("text/html")) return "";
+    const html = (await res.text()).slice(0, 400_000);
+    return extraerEmail(html, url.hostname) || "";
+  } catch {
+    return "";
+  }
+}
+
 function slugify(s: string): string {
   return (s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-").replace(/(^-|-$)/g, "").slice(0, 60);
 }
@@ -107,8 +164,14 @@ async function zonesByCandidateVolume(admin: Awaited<ReturnType<typeof pbAdmin>>
 
 // Corre una tanda: prioriza zonas por volumen de candidatos, rota rubros por día,
 // y siembra hasta `limit` nuevas (dedup por place_id). Devuelve cuántas sembró.
-export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ seeded: number; descartadasPorCadena: number; combosUsed: string[] }> {
-  if (!KEY) return { seeded: 0, descartadasPorCadena: 0, combosUsed: [] };
+export async function runDailyCapture(
+  dayNumber: number,
+  limit = 50,
+  opts: { requireEmail?: boolean; maxEscaneos?: number } = {},
+): Promise<{ seeded: number; descartadasPorCadena: number; sinEmail: number; escaneados: number; combosUsed: string[] }> {
+  const requireEmail = opts.requireEmail ?? true;
+  const maxEscaneos = opts.maxEscaneos ?? 2000;
+  if (!KEY) return { seeded: 0, descartadasPorCadena: 0, sinEmail: 0, escaneados: 0, combosUsed: [] };
   const admin = await pbAdmin();
 
   const zonesOrdered = await zonesByCandidateVolume(admin);
@@ -121,14 +184,16 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
 
   let seeded = 0;
   let descartadasPorCadena = 0;
+  let sinEmail = 0;
+  let escaneados = 0;
   const combosUsed: string[] = [];
   for (const [rubro, cat, zona] of ordered) {
-    if (seeded >= limit) break;
+    if (seeded >= limit || escaneados >= maxEscaneos) break;
     const places = await textSearch(`${rubro} en ${zona} Argentina`);
     if (!places.length) continue;
     combosUsed.push(`${rubro}/${zona}`);
     for (const p of places) {
-      if (seeded >= limit) break;
+      if (seeded >= limit || escaneados >= maxEscaneos) break;
       if (!p.placeId || !p.name) continue;
 
       // Google Places devuelve primero lo más prominente, así que "cafetería en
@@ -159,7 +224,18 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
         continue;
       }
 
+      escaneados += 1;
       const det = await placeDetails(p.placeId);
+
+      // Solo se guardan negocios con email: es el canal que se quiere usar, y
+      // una ficha sin forma de contacto es una fila que nadie va a poder usar.
+      // Ojo con el costo: rinde ~18% sobre los que tienen sitio, y ~2 de cada
+      // 3 tienen sitio -> hacen falta ~9 escaneos por cada negocio guardado.
+      const email = await emailDesdeSitio(det.website);
+      if (requireEmail && !email) {
+        sinEmail += 1;
+        continue;
+      }
       // Logo: primero la FOTO real del negocio (Google Places); si no hay, el
       // favicon del sitio SOLO si es un dominio propio (no Instagram/Facebook,
       // que darían el ícono genérico de la red). Si nada sirve, vacío -> inicial.
@@ -178,6 +254,7 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
           city_zone: zona,
           address: p.address.slice(0, 250),
           contact_phone: det.phone,
+          contact_email: email,
           website: det.website.slice(0, 300),
           logo_url: logo,
           source_type: "gmaps",
@@ -196,5 +273,5 @@ export async function runDailyCapture(dayNumber: number, limit = 50): Promise<{ 
       seeded += 1;
     }
   }
-  return { seeded, descartadasPorCadena, combosUsed };
+  return { seeded, descartadasPorCadena, sinEmail, escaneados, combosUsed };
 }
