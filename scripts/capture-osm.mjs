@@ -123,6 +123,7 @@ let totalSembrados = 0;
 let totalCadenas = 0;
 let totalSinEmail = 0;
 let totalDup = 0;
+let totalFallidos = 0;
 
 for (const zona of ZONAS_OSM.slice(0, N_ZONAS)) {
   const data = await overpass(consultaOverpass(zona.bbox));
@@ -160,13 +161,15 @@ for (const zona of ZONAS_OSM.slice(0, N_ZONAS)) {
     }
     emailsUsados.add(email);
     existentes.add(n.nombre.trim().toLowerCase());
-    sembradosZona++;
-    totalSembrados++;
-    console.log(`  ${email}  <-  ${n.nombre} (${zona.nombre})`);
 
-    if (!APLICAR) continue;
+    if (!APLICAR) {
+      sembradosZona++;
+      totalSembrados++;
+      console.log(`  ${email}  <-  ${n.nombre} (${zona.nombre})`);
+      continue;
+    }
 
-    const biz = await fetch(`${PB}/api/collections/sourced_businesses/records`, {
+    const res = await fetch(`${PB}/api/collections/sourced_businesses/records`, {
       method: "POST",
       headers: { ...H, "Content-Type": "application/json" },
       body: JSON.stringify({
@@ -184,7 +187,22 @@ for (const zona of ZONAS_OSM.slice(0, N_ZONAS)) {
         status: "detected",
         public_slug: `${slugify(n.nombre) || "empresa"}-${rand()}`,
       }),
-    }).then((r) => (r.ok ? r.json() : null));
+    });
+
+    // El contador va DESPUÉS de confirmar el write, no antes. En la primera
+    // corrida contaba la intención: reportó "450 guardados" cuando PocketBase
+    // había rechazado los 450 (source_type "osm" no estaba en el select) y no
+    // se guardó ni uno. Un script que dice "listo" sin haber hecho nada es
+    // peor que uno que explota.
+    if (!res.ok) {
+      totalFallidos++;
+      if (totalFallidos <= 3) console.log(`  FALLO ${res.status}: ${(await res.text()).slice(0, 160)}`);
+      continue;
+    }
+    const biz = await res.json();
+    sembradosZona++;
+    totalSembrados++;
+    console.log(`  ${email}  <-  ${n.nombre} (${zona.nombre})`);
 
     if (biz) {
       await fetch(`${PB}/api/collections/sourced_jobs/records`, {
@@ -206,6 +224,6 @@ for (const zona of ZONAS_OSM.slice(0, N_ZONAS)) {
   await espera(PAUSA_MS);
 }
 
-console.log(`\ntotal con email: ${totalSembrados}`);
+console.log(`\ntotal guardado: ${totalSembrados}${totalFallidos ? ` | FALLIDOS: ${totalFallidos}` : ""}`);
 console.log(`descartados -> cadenas: ${totalCadenas} | ya existían: ${totalDup} | sin email: ${totalSinEmail}`);
 console.log(APLICAR ? "guardados en PocketBase" : "DRY-RUN: no se guardó nada (--apply)");
