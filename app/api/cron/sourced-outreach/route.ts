@@ -45,39 +45,27 @@ export async function POST(req: Request) {
   }
   const dry = new URL(req.url).searchParams.get("dry") === "1";
 
-  // FRENO: este endpoint NO puede enviar todavía.
-  //
-  // Faltan dos cambios de esquema en PocketBase, y sin ellos el envío sería
-  // spam de verdad, no un tecnicismo:
-  //
-  //   1. `email_events.type` es un select cerrado que no incluye
-  //      "sourced_interest_outreach". El log del envío falla en silencio (ver
-  //      lib/email/log.ts, que se traga el error a propósito para no romper la
-  //      cola) -> no queda registro de a quién se le escribió.
-  //   2. `sourced_businesses` no tiene `last_outreach_at`, que es el otro
-  //      lugar donde se podría anotar.
-  //
-  // Sin ninguno de los dos, el filtro de "no escribirle dos veces en 30 días"
-  // no tiene contra qué comparar: le mandaría el mismo mail a la misma empresa
-  // todas las semanas.
-  //
-  // Las migraciones las aprueba una persona (ver lib/intelligence/policy.ts).
-  // El dry-run sí funciona y sirve para ver a quién se le escribiría.
+  const admin = await pbAdmin();
+
+  // El envío depende de poder anotar a quién se le escribió: sin eso, el
+  // filtro de "no escribirle dos veces en 30 días" no tiene contra qué
+  // comparar y le mandaría el mismo mail a la misma empresa todas las semanas.
+  // Ese registro lo habilita scripts/pb-migrate-sourced-outreach.mjs
+  // (last_outreach_at en sourced_businesses). Si el campo no está, no se manda.
   if (!dry) {
-    return NextResponse.json(
-      {
-        ok: false,
-        error: "bloqueado: faltan las migraciones de esquema para poder no repetir envíos",
-        necesita: [
-          'agregar "sourced_interest_outreach" a los valores de email_events.type',
-          "agregar el campo last_outreach_at (date) a sourced_businesses",
-        ],
-      },
-      { status: 503 },
-    );
+    const soporta = await admin
+      .collection("sourced_businesses")
+      .getList(1, 1, { fields: "id,last_outreach_at", requestKey: null })
+      .then(() => true)
+      .catch(() => false);
+    if (!soporta) {
+      return NextResponse.json(
+        { ok: false, error: "falta la migración: node scripts/pb-migrate-sourced-outreach.mjs" },
+        { status: 503 },
+      );
+    }
   }
 
-  const admin = await pbAdmin();
   const [negocios, jobs, intereses] = await Promise.all([
     admin.collection("sourced_businesses").getFullList<{
       id: string;
