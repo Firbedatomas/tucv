@@ -52,20 +52,22 @@ const H = { Authorization: auth.token };
 // de Places (una sucursal más de una marca que ya tenemos no aporta).
 let page = 1;
 const existentes = new Set();
+const emailsUsados = new Set();
 for (;;) {
   const r = await (
-    await fetch(`${PB}/api/collections/sourced_businesses/records?perPage=500&page=${page}&fields=name,source_url`, {
+    await fetch(`${PB}/api/collections/sourced_businesses/records?perPage=500&page=${page}&fields=name,source_url,contact_email`, {
       headers: H,
     })
   ).json();
   for (const b of r.items || []) {
     if (b.name) existentes.add(b.name.trim().toLowerCase());
     if (b.source_url) existentes.add(b.source_url);
+    if (b.contact_email) emailsUsados.add(b.contact_email.trim().toLowerCase());
   }
   if (page >= (r.totalPages || 1)) break;
   page++;
 }
-console.log(`ya sembrados (nombres+urls): ${existentes.size}`);
+console.log(`ya sembrados: ${existentes.size} claves | ${emailsUsados.size} emails en uso`);
 
 const espera = (ms) => new Promise((r) => setTimeout(r, ms));
 
@@ -149,6 +151,14 @@ for (const zona of ZONAS_OSM.slice(0, N_ZONAS)) {
       continue;
     }
 
+    // Dos entradas de OSM pueden ser el mismo negocio con nombres distintos
+    // ("Albur" y "Albur - Bar"). El email es la identidad real: si ya lo
+    // tenemos, es la misma casilla y escribirle dos veces sería spam.
+    if (emailsUsados.has(email)) {
+      totalDup++;
+      continue;
+    }
+    emailsUsados.add(email);
     existentes.add(n.nombre.trim().toLowerCase());
     sembradosZona++;
     totalSembrados++;
