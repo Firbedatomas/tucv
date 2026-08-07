@@ -169,3 +169,20 @@ Lo que se mira hoy:
 
 **Qué se hizo con esto**
 - (a completar: qué se probó, qué funcionó, qué NO funcionó)
+
+## 2026-08-01
+**Evidencia**
+- Negocios: 5 total · 3 nunca publicaron · 0 publicaron una vez y no volvieron · 1 en plan pago
+- Búsquedas: 2 activas · 2 vencidas (30d) · 2 de esas sin ninguna postulación
+- Postulantes: 106 total · 41 incompletos
+- Objetivos (30d): recruiter_panel=7, sourced_me_interesa=12, sourced_reclamar_ver=2, sourced_ver=46
+
+**Hallazgos**
+- [alta] **Hay interés de candidatos que nadie usó para contactar al negocio** (empresa) — 31 negocios sembrados tienen candidatos interesados y NINGUNO de los 1485 sembrados fue contactado (todos siguen en "detected"). → El embudo no se corta por un problema de producto: el paso de contactar es manual y no se está haciendo. Está en /admin/captacion, que ya trae el mensaje y el link de WhatsApp listos.
+- [alta] **La captación de empresas no cierra el círculo** (empresa) — 46 vistas de empresas sembradas y solo 0 reclamos completados (se pierde el 100%). → Este es el mecanismo pensado para resolver el cuello del negocio (conseguir empresas). Si no convierte, es la palanca más importante para arreglar antes que cualquier otra cosa.
+- [media] **Negocios que se registran y nunca publican** (empresa) — 3 de 5 negocios (60%) se registraron hace más de 7 días y nunca publicaron una búsqueda. _(muestra chica: cualitativo, no estadístico)_ → Mirar dónde abandonan en /empresa/busquedas/nueva. Es el paso donde se pierde el usuario que YA decidió entrar -- el más caro de recuperar y el más barato de arreglar.
+- [media] **El reclutador entra al panel de candidatos pero no contacta** (empresa) — 7 entraron a /empresa/candidatos y solo 0 contactaron a alguien (se pierde el 100%). _(muestra chica: cualitativo, no estadístico)_ → Mirar los pasos intermedios (abrir perfil, marcar visto, guardar) para ubicar en cuál se corta. Contactar es el momento en que TuCV entrega su valor: si no pasa, nada más importa.
+- [baja] **Perfiles de postulante que quedan a medio completar** (postulante) — 41 de 106 perfiles (39%) están incompletos. → Un perfil incompleto no le sirve a la empresa que busca, así que resta de los dos lados. Ver en qué campo se abandona.
+
+**Qué se hizo con esto**
+- (a completar: qué se probó, qué funcionó, qué NO funcionó)
