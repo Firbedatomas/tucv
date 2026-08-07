@@ -15,6 +15,7 @@ import { AddressAutocomplete } from "@/components/ui/AddressAutocomplete";
 import { PhotoUpload } from "@/components/ui/PhotoUpload";
 import { Button } from "@/components/ui/Button";
 import { Card } from "@/components/ui/Card";
+import { MemberCelebration } from "@/components/celebration/MemberCelebration";
 
 export function RegistroForm() {
   const router = useRouter();
@@ -38,6 +39,9 @@ export function RegistroForm() {
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [submitting, setSubmitting] = useState(false);
   const [submitError, setSubmitError] = useState<string | null>(null);
+  // Negocio recién creado: se festeja antes de mandar al panel. `next` se
+  // resuelve al crearlo y se usa recién al cerrar la fiesta.
+  const [celebration, setCelebration] = useState<{ id: string; next: string } | null>(null);
 
   // Chequea dueño Y miembro invitado -- si no se hiciera así, alguien que ya
   // es colaborador de un negocio (business_members) podría crear el suyo
@@ -114,21 +118,18 @@ export function RegistroForm() {
       formData.append("instagram", values.instagram.trim());
       formData.append("terms_accepted", String(termsAccepted));
       if (logo) formData.append("logo", logo);
-      await pb().collection("business_accounts").create(formData);
+      const record = await pb().collection("business_accounts").create(formData);
       trackEvent("Empresa: registro completado");
       emitConversion("company_registered");
       // `next` = a dónde volver tras registrarse (ej. el formulario de crear
       // búsqueda que empezó sin cuenta). safeNextPath bloquea redirects
       // externos; sin `next` válido, al panel como siempre.
       const next = safeNextPath(new URLSearchParams(window.location.search).get("next"), "/empresa/panel");
-      // Recarga dura a propósito (no router.push): el Navbar ya está montado
-      // desde antes de crear el negocio, con isAuthenticated=true pero sin
-      // business_accounts todavía. Su chequeo de "hasBusiness" solo corre
-      // cuando isAuthenticated pasa de false a true -- como acá ya era true,
-      // nunca se entera de que el negocio se acaba de crear y se queda
-      // mostrando el nav de postulante hasta un reload. Es la única
-      // transición del flujo donde vale la pena perder la navegación SPA.
-      window.location.href = next || "/empresa/panel";
+      // El negocio ya está creado: primero la fiesta (número de empresa +
+      // tarjeta para compartir) y recién al cerrarla se navega. `submitting`
+      // queda en true a propósito para que no se pueda reenviar el formulario
+      // que quedó atrás del diálogo.
+      setCelebration({ id: record.id, next: next || "/empresa/panel" });
       return;
     } catch {
       setSubmitError("No pudimos guardar los datos de tu negocio. Probá de nuevo.");
@@ -139,6 +140,24 @@ export function RegistroForm() {
   if (!isAuthenticated || checkingExisting) return null;
 
   return (
+    <>
+    {celebration && (
+      <MemberCelebration
+        kind="business"
+        id={celebration.id}
+        onClose={() => {
+          // Recarga dura a propósito (no router.push): el Navbar ya está
+          // montado desde antes de crear el negocio, con isAuthenticated=true
+          // pero sin business_accounts todavía. Su chequeo de "hasBusiness"
+          // solo corre cuando isAuthenticated pasa de false a true -- como acá
+          // ya era true, nunca se entera de que el negocio se acaba de crear y
+          // se queda mostrando el nav de postulante hasta un reload. Es la
+          // única transición del flujo donde vale la pena perder la navegación
+          // SPA.
+          window.location.href = celebration.next;
+        }}
+      />
+    )}
     <form onSubmit={handleSubmit} noValidate>
       <Card>
         <Field label="Logo del negocio (opcional)" hint="Se muestra en tu link público y en el panel.">
@@ -234,5 +253,6 @@ export function RegistroForm() {
         </Button>
       </Card>
     </form>
+    </>
   );
 }

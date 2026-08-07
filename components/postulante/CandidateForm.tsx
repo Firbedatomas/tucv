@@ -45,6 +45,7 @@ import {
 import { ReferenceListInput, type ReferenceValue } from "@/components/postulante/ReferenceListInput";
 import { ThousandsInput } from "@/components/ui/ThousandsInput";
 import { OnboardingCandidate } from "@/components/onboarding/OnboardingCandidate";
+import { MemberCelebration } from "@/components/celebration/MemberCelebration";
 
 export type CandidateFormValues = {
   firstName: string;
@@ -187,6 +188,9 @@ export function CandidateForm({
     slug: string;
     applied: boolean;
   } | null>(null);
+  // La fiesta del alta se muestra una sola vez, encima de la pantalla de
+  // "listo": al cerrarla queda a la vista el onboarding de siempre.
+  const [partyClosed, setPartyClosed] = useState(false);
 
   useEffect(() => {
     if (!applyToJobPostId) return;
@@ -490,6 +494,9 @@ export function CandidateForm({
     const publicLink = success.slug ? `${origin}/p/${success.slug}` : null;
     return (
       <>
+      {mode.kind === "create" && !partyClosed && (
+        <MemberCelebration kind="candidate" id={success.id} onClose={() => setPartyClosed(true)} />
+      )}
       <Card>
         <h2 className="text-xl font-bold mb-2">
           {mode.kind === "create"
